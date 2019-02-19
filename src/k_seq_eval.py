@@ -5,39 +5,7 @@ __author__ = "Yuning Shen"
 __email__ = "yuningshen@ucsb.edu"
 
 
-def sample_overview(dircList, stdSeq=None):
-    import numpy as np
-    '''
-    1) survey count files to extract info of total/unique counts, counts of external standard and its
-    composition in the sample; 2) return a list of dictionary of basic info
-    '''
 
-    sampleInfo = []
-
-    for sampleIx, sampleDirc in enumerate(dircList):
-        with open(sampleDirc) as file:
-            sample = {
-                'name': sampleDirc[sampleDirc.rfind('/')+1:],
-                'unique': int(next(file).strip().split()[-1]),
-                'total': int(next(file).strip().split()[-1])
-            }
-            next(file)
-            line = next(file).strip().split()
-            eof = False
-            while line[0] != stdSeq and not eof:
-                try:
-                    line = next(file).strip().split()
-                except StopIteration:
-                    eof = True
-            if not eof:
-                sample['stdCount'] = int(line[-1])
-                sample['stdPct'] = sample['stdCount'] / sample['total']
-            else:
-                sample['stdCount'] = np.nan
-                sample['stdPct'] = np.nan
-        sampleInfo.append(sample)
-
-    return sampleInfo
 
 
 def get_seq_relaxed_count(sampleDirc, centerSeq, maxDist=10):
