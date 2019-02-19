@@ -74,7 +74,7 @@ def load_all_samples(sampleSetDirc=None):
 
     return sampleSet
 
-def print_sample_overview(sampleSet, table=False, figures=True):
+def print_sample_overview(sampleSet, table=False, figures=True, figSaveDirc=None):
     if table:
         print('|index|sample name| total counts | unique counts | ext. std. counts | ext. std. percent|')
         print('|:--:|:-----:|:-----:|:----:|:----:|:-----:|')
@@ -82,8 +82,44 @@ def print_sample_overview(sampleSet, table=False, figures=True):
             print('|%i|%s|%i|%i|%i|%.3f|' %(ix+1, sample.id, sample.totalSeq, sample.uniqueSeq, sample.stdCounts[0],
                                             sample.stdCounts[0]/sample.totalSeq))
     if figures:
-        ### insert figures for overviewing
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatch
+        import plot
 
+        sampleNum = len(sampleSet)
+        fig = plt.figure(figsize=[sampleNum * 0.5, 6])
+        # Plot bar for total seqs
+        ax = fig.add_subplot(111)
+        ax.bar(x=[i - 0.2 for i in range(sampleNum)], height=[sample.totalSeq for sample in sampleSet], align='center',
+               width=0.4, color='#2C73B4')
+        # plot bar for unique seqs
+        ax2 = ax.twinx()
+        ax2.bar(x=[i + 0.2 for i in range(sampleNum)], height=[sample.uniqueSeq for sample in sampleSet],
+                align='center', width=0.4, color='#FC820D')
+        # plot scatter for spike-in percentage
+        ax3 = ax.twinx()
+        ax3.scatter([i for i in range(sampleNum)], [sample.stdCounts[0] / sample.totalSeq for sample in sampleSet],
+                    color='#B2112A', marker='x')
+        ax3.plot([-0.5, sampleNum - 0.5], [0.2, 0.2], '#B2112A', ls='--', alpha=0.3)
+        ax3.plot([-0.5, sampleNum - 0.5], [0.4, 0.4], '#B2112A', ls='--', alpha=0.3)
+        ax3.plot([-0.5, sampleNum - 0.5], [0.6, 0.6], '#B2112A', ls='--', alpha=0.3)
+        ax3.plot([-0.5, sampleNum - 0.5], [0.8, 0.8], '#B2112A', ls='--', alpha=0.3)
+        ax3.set_ylim([0, 1])
+        ax3.set_yticks([])
 
+        # Aesthetic adjustment
+        ax.set_ylabel('Number of total reads in the sample', fontsize=14)
+        ax2.set_ylabel('Number of unique sequences in the sample', fontsize=14)
+        ax.set_xticks([i for i in range(sampleNum)])
+        ax.set_xticklabels([sample.id[:sample.id.find('_counts')] for sample in sampleSet], rotation=90)
+        plot.set_ticks_size(ax)
+        plot.set_ticks_size(ax2)
+        lgd = [mpatch.Patch(color='#2C73B4', label='Total Seqs'), mpatch.Patch(color='#FC820D', label='Unque Seqs'),
+               plt.plot([], [], lw=0, marker='x', color='#B2112A', label='Percent of spike-in')[0]]
+        plt.legend(handles=lgd)
+
+        if figSaveDirc:
+            fig.savefig(figSaveDirc, dpi=300)
+        plt.show()
 
 root, sampleList = basic_info()
