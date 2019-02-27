@@ -44,12 +44,14 @@ class Sample:
     def get_seq_length(self):
         return np.array([len(seq) for seq in self.seqs.keys()])
 
-    def get_seq_fraction(self, blackList=None):
-        if blackList:
-            totalSeq = self.totalSeq - np.sum([self.seqs[seq] for seq in blackList])
-            return (np.array([seq[1]/totalSeq for seq in self.seqs.items() if not(seq[0] in blackList)]), totalSeq)
-        return (np.array([seqCount/self.totalSeq for seqCount in self.seqs.values()]), self.totalSeq)
-
+    def get_seq_composition(self, fraction=False, blackList=None):
+        if not blackList:
+            blackList = []
+        totalSeqNew = self.totalSeq - np.sum([self.seqs[seq] for seq in blackList])
+        if fraction:
+            return np.array([seq[1]/totalSeqNew for seq in self.seqs.items() if seq[0] not in blackList])
+        else:
+            return np.array([seq[1] for seq in self.seqs.items() if seq[0] not in blackList])
 
 ###### FOLLOWS ARE BASIC UTILITY FUNCTIONS ######
 
@@ -188,5 +190,38 @@ def print_length_dist(sampleSet, figSaveDirc=None):
     plt.show()
 
 
+def print_composition_dist(sampleSet, fraction=False, figSaveDirc=None):
+    fig, axes = plt.subplots(7, 4, figsize=[12, 16])
+    for ix in range(len(sampleSet)):
+        ax = axes[ix % 7, int(ix / 7)]
+        composition = sampleSet[ix].get_seq_fraction(fraction)
+        bins = np.linspace(0, np.max(lengths), np.max(lengths) + 1)
+        ax.hist(lengths, bins=bins)
+        ax.set_yscale('log')
+        ax.set_title(sampleSet[ix].id)
+    fig.text(s='Sequence length (nt)', x=0.5, y=0, ha='center', va='top', fontsize=16)
+    fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    plt.tight_layout()
+    if figSaveDirc:
+        fig.savefig(figSaveDirc, dpi=300)
+    plt.show()
 
-
+def read_count_file(dirc):
+    """
+    :param dirc:
+    :param sampleType:
+    :return:
+    """
+    sample = {
+        'uniqueSeq': 0,
+        'totalSeq': 0,
+        'seqs': {}
+    }
+    with open(dirc, 'r') as file:
+        sample['uniqueSeq'] = int([elem for elem in next(file).strip().split()][-1])
+        sample['totalSeq'] = int([elem for elem in next(file).strip().split()][-1])
+        next(file)
+        for line in file:
+            seq = line.strip().split()
+            sample['seqs'][seq[0]] = int(seq[1])
+    return sample
