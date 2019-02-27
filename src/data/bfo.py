@@ -1,5 +1,6 @@
 import numpy as np
 
+
 ##### FOLLOWS ARE BASIC CLASSES USED IN BFO ANALYSIS #####
 class Sample:
 
@@ -39,6 +40,14 @@ class Sample:
             if dist <= maxDist:
                 self.stdCounts[dist] += self.seqs[seq]
 
+    def get_seq_length(self):
+        return np.array([len(seq) for seq in self.seqs.keys()])
+
+    def get_seq_fraction(self, blackList=None):
+        if blackList:
+            totalSeq = self.totalSeq - np.sum([self.seqs[seq] for seq in blackList])
+            return (np.array([seq[1]/totalSeq for seq in self.seqs.items() if not(seq[0] in blackList)]), totalSeq)
+        return (np.array([seqCount/self.totalSeq for seqCount in self.seqs.values()]), self.totalSeq)
 
 
 ###### FOLLOWS ARE BASIC UTILITY FUNCTIONS ######
@@ -52,6 +61,9 @@ def basic_info():
     sort_fn = lambda s: int(s.split('_')[1][1:])
     sampleList.sort(key=sort_fn)
     return root, sampleList
+
+
+root, sampleList = basic_info()
 
 
 def load_all_samples(sampleSetDirc=None):
@@ -74,13 +86,48 @@ def load_all_samples(sampleSetDirc=None):
 
     return sampleSet
 
+
 def print_sample_overview(sampleSet, table=False, figures=True, figSaveDirc=None):
     if table:
-        print('|index|sample name| total counts | unique counts | ext. std. counts | ext. std. percent|')
-        print('|:--:|:-----:|:-----:|:----:|:----:|:-----:|')
+        from IPython.display import HTML
+        tableHTML = """
+        <table>
+        <tr>
+        <th>{}</th>
+        <th>{}</th>
+        <th>{}</th>
+        <th>{}</th>
+        <th>{}</th>
+        <th>{}</th>
+        </tr>
+        """.format(
+            'index',
+            'sample name',
+            'total counts',
+            'unique counts',
+            'ext. std. counts',
+            'ext. std. percent'
+        )
         for ix,sample in enumerate(sampleSet):
-            print('|%i|%s|%i|%i|%i|%.3f|' %(ix+1, sample.id, sample.totalSeq, sample.uniqueSeq, sample.stdCounts[0],
-                                            sample.stdCounts[0]/sample.totalSeq))
+            tableHTML += """
+            <tr>
+            <td>{}</td>
+            <td>{}</td>
+            <td>{:,}</td>
+            <td>{:,}</td>
+            <td>{:,}</td>
+            <td>{:,}</td>
+            </tr>
+            """.format(
+                ix + 1,
+                sample.id,
+                sample.totalSeq,
+                sample.uniqueSeq,
+                sample.stdCounts[0],
+                sample.stdCounts[0] / sample.totalSeq
+            )
+        display(HTML(tableHTML))
+
     if figures:
         import matplotlib.pyplot as plt
         import matplotlib.patches as mpatch
@@ -122,4 +169,21 @@ def print_sample_overview(sampleSet, table=False, figures=True, figSaveDirc=None
             fig.savefig(figSaveDirc, dpi=300)
         plt.show()
 
-root, sampleList = basic_info()
+def print_length_dist(sampleSet):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    fig, axes = plt.subplots(7, 4, figsize=[12, 16])
+    for ix in range(28):
+        ax = axes[ix % 7, int(ix / 7)]
+        lengths = sampleSet[ix].get_seq_length()
+        bins = np.linspace(0, np.max(lengths), np.max(lengths) + 1)
+        ax.hist(lengths, bins=bins)
+        ax.set_yscale('log')
+        ax.set_title(sampleSet[ix].id)
+    plt.tight_layout()
+    plt.show()
+
+
+
+

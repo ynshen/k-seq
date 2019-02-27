@@ -1,0 +1,50 @@
+from yntools import dump_pickle
+
+def get_relaxed_count(sampleDirc, centerSeq, maxDist=10):
+    from yntools import progress_bar, progress_checkpoint
+    import numpy as np
+    import Levenshtein
+    
+    relaxedCounts = [0 for i in range(maxDist + 1)]
+    with open(sampleDirc) as file:
+        unique = int(next(file).strip().split()[-1])
+        total = int(next(file).strip().split()[-1])
+        next(file)
+
+        checkpoints = progress_checkpoint(unique)
+        for ix,line in enumerate(file):
+            seq = line.strip().split()
+            dist = Levenshtein.distance(centerSeq, seq[0])
+            if dist <= maxDist:
+                relaxedCounts[dist] += int(seq[1])
+            if ix in checkpoints:
+                progress_bar(ix/unique)
+
+    print('%s finished!' %sampleDirc)
+    return [total, unique, np.array(relaxedCounts)]
+
+if __name__=='__main__':
+    testSeqs = [
+        ['AP10','AGAAACACGTTGGAATGATGGGAATGTCCCATTCCGCGGTCTAAATATGAGTACAGAATAAGAGAACGTTTATATAATAGTGCTCTTGAATAATCCGTTACGGCCGGGATCGACCACGAGATGCCATCGGTGGTTCTTCAGTTTGGCCCT'],
+        ['AP12','GGGCCCACGCATGTGCCCCGAGCTCCCACAACTGCGCTGTGCTTTAGTCACAGTGAGGACGTCTACTTGTAACAGCTGACCGTGTCGACGTAGAGACTACTAAGACGCACTCAGCTATGTACACTAGCTCACGCAAATCCGGATTCAACT'],
+        ['AP15','ACTACTGGAATGACGTATTTCAATAAGAAAATTAAAGAATGGAAGATTAAGGCACACCTTAGATGACTCCACACCGTAACTTCCCTAACGAGCTGCCACACTGAAACAGCGGTTATCTCTCGGGACTAATCCGTGTCTGTTTCAGGATGA'],
+        ['AP19','GAAAGTAAACACCTGTTGTTTCCCGGTATTGAATGCCGCAGCGGGTTGAACTGCATTCCTGGGTCGCGCTTAGGATCCCAGATCCCGACGATTCAGTAAAATCTGCTGCGACGTACGAACTGAAATAATTCATATACGGCCAAGCCTTCT'],
+        ['AP20','GGGCCCACGCATGTGCCCCGAGCTCCCACAACTGCGCTGTGCTTTAGTCACAGTGAGGACGTCTACTTGTAACAGCTGACCGTGTCGACGTAGAGACTACTAAGACGCACTCAGCTATGTAATCTAGCTCACGCAAATCCGGATTCAACT'],
+        ['AP37','GCAGGAACGAGATGACTCAGAACTGAAATAACAGAACTACGAGGCCATGCAGGCCGCATATCCGCGCGGTATCTGTATATAATCGTAGCCACCATGTGCCGTCCGTAGAAAAACCTAAACGTCAATTGGCAAAAACAGTAATCTTTTTCGA'],
+        ['AP40','CGTGCGCGGGCCGCGCTACCCTCACCCGCGTATGATGAAAATGAAATGTTAGCTACGCTCTTTGCGTGTCTGCTTATGACGTTTCCCGAACTTGGAGGCTCGGCCAAGATACAGTACTCCCTTTCAGATAACTACAGTAAGGCCTACTGT'],
+        ['AP49','ACCCGATCAACGCGCTGAAAGGTGGTAGCCTATGCGGCTTACCGGTTTATAAAGCGTCTGTGTTTACGATGAGCGATCGATCGATTTCTTCCGCTTCCGCGATATGAAATTGCTCAATAAGTTCTAGCCTTTCCCGCCTACGGATATGTG'],
+        ['AP55','GCCCACCGAAAAGCCATCGGGCTGCGTGGAGGAAGAGACTGAGTATAAAACCTCGTACTCTTCTTCCGGATACGCTCGATTTCCACTTCGATTAGGCTGAAACCTGATATGGGCATGAGCGCTCTATTCCCGGAATGGCGAACTATCATCG'],
+        ['AP56','CTCTTGTAGTACGGTTGCATGTAATCATAAGCTATATGTACGGAGACTACCGCCAAGACCAAACCTTTGGTTCCCTAAATTGAAAGACTAGTAGCCCAAAAATCAAAATAATAAGGACTTAAGCGAAGACGTCTACCTCTGCCGTTTCCT']
+    ]
+    root = '/mnt/chen-nas/SequenceData/071318_UM_TMP_kSeq/counts/'
+    kSeqList = ['UM-kSeq-A_S1_counts.txt', 'UM-kSeq-B_S2_counts.txt', 'UM-kSeq-C_S3_counts.txt', 
+                'UM-kSeq-D_S4_counts.txt', 'UM-kSeq-E_S5_counts.txt']
+    
+    testSeqRelaxedCounts = []
+    for seq in testSeqs:
+        seqRelaxedCounts = [seq[1]]
+        for sampleDirc in kSeqList:
+            seqRelaxedCounts.append(get_relaxed_count(root+sampleDirc, seq[1], maxDist=10)[-1])
+        testSeqRelaxedCounts.append(seqRelaxedCounts)
+    
+    dump_pickle(dirc='/home/yuning/Work/ribozyme_pred/data/uli/testSeqRelaxedCounts.pkl', data=testSeqRelaxedCounts)
