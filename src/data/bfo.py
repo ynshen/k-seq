@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 ##### FOLLOWS ARE BASIC CLASSES USED IN BFO ANALYSIS #####
@@ -52,15 +53,14 @@ class Sample:
 
 ###### FOLLOWS ARE BASIC UTILITY FUNCTIONS ######
 
-def basic_info():
+def basic_info(countFileRoot='/mnt/storage/projects/k-seq/input/bfo_counts/'):
     from os import listdir
     from os.path import isfile, join
 
-    root = '/mnt/storage/projects/k-seq/input/bfo_counts/'
-    sampleList = [f for f in listdir(root) if isfile(join(root, f))]
+    sampleList = [f for f in listdir(countFileRoot) if isfile(join(countFileRoot, f))]
     sort_fn = lambda s: int(s.split('_')[1][1:])
     sampleList.sort(key=sort_fn)
-    return root, sampleList
+    return countFileRoot, sampleList
 
 
 root, sampleList = basic_info()
@@ -116,7 +116,7 @@ def print_sample_overview(sampleSet, table=False, figures=True, figSaveDirc=None
             <td>{:,}</td>
             <td>{:,}</td>
             <td>{:,}</td>
-            <td>{:,}</td>
+            <td>{:.3f}</td>
             </tr>
             """.format(
                 ix + 1,
@@ -169,19 +169,22 @@ def print_sample_overview(sampleSet, table=False, figures=True, figSaveDirc=None
             fig.savefig(figSaveDirc, dpi=300)
         plt.show()
 
-def print_length_dist(sampleSet):
-    import matplotlib.pyplot as plt
-    import numpy as np
+
+def print_length_dist(sampleSet, figSaveDirc=None):
 
     fig, axes = plt.subplots(7, 4, figsize=[12, 16])
-    for ix in range(28):
+    for ix in range(len(sampleSet)):
         ax = axes[ix % 7, int(ix / 7)]
         lengths = sampleSet[ix].get_seq_length()
         bins = np.linspace(0, np.max(lengths), np.max(lengths) + 1)
         ax.hist(lengths, bins=bins)
         ax.set_yscale('log')
         ax.set_title(sampleSet[ix].id)
+    fig.text(s='Sequence length (nt)', x=0.5, y=0, ha='center', va='top', fontsize=16)
+    fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
     plt.tight_layout()
+    if figSaveDirc:
+        fig.savefig(figSaveDirc, dpi=300)
     plt.show()
 
 
