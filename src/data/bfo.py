@@ -41,17 +41,19 @@ class Sample:
             if dist <= maxDist:
                 self.stdCounts[dist] += self.seqs[seq]
 
-    def get_seq_length(self):
-        return np.array([len(seq) for seq in self.seqs.keys()])
-
-    def get_seq_composition(self, fraction=False, blackList=None):
+    def get_seq_length(self, minCounts=1, blackList=None):
         if not blackList:
             blackList = []
-        totalSeqNew = self.totalSeq - np.sum([self.seqs[seq] for seq in blackList])
+        return np.array([len(seq[0]) for seq in self.seqs.items() if (seq[0] not in blackList)and(seq[1] >= minCounts)])
+
+    def get_seq_composition(self, fraction=False, minCounts=1, blackList=None):
+        if not blackList:
+            blackList = []
+        seqsNew = np.array([seq[1] for seq in self.seqs.items() if (seq[0] not in blackList)and(seq[1] >= minCounts)])
         if fraction:
-            return np.array([seq[1]/totalSeqNew for seq in self.seqs.items() if seq[0] not in blackList])
+            return seqsNew/np.sum(seqsNew)
         else:
-            return np.array([seq[1] for seq in self.seqs.items() if seq[0] not in blackList])
+            return seqsNew
 
 ###### FOLLOWS ARE BASIC UTILITY FUNCTIONS ######
 
@@ -77,7 +79,7 @@ def load_all_samples(sampleSetDirc=None):
         sampleSet = []
         for sample in sampleList:
             currentSample = Sample()
-            currentSample.id = sample
+            currentSample.id = sample[sample.find('-')-1:sample.find('_counts')]
             if sample.find('input') >= 0:
                 currentSample.import_count_file(dirc=root+sample, sampleType='input')
                 currentSample.survey_ext_std(maxDist=15)
@@ -172,42 +174,56 @@ def print_sample_overview(sampleSet, table=False, figures=True, figSaveDirc=None
         plt.show()
 
 
-def print_length_dist(sampleSet, figSaveDirc=None):
+def print_length_dist(sampleSet, unique=True, total=True, minCounts=1, figSaveDirc=None, blackList=None):
 
     fig, axes = plt.subplots(7, 4, figsize=[12, 16])
     for ix in range(len(sampleSet)):
         ax = axes[ix % 7, int(ix / 7)]
-        lengths = sampleSet[ix].get_seq_length()
+        lengths = sampleSet[ix].get_seq_length(minCounts=minCounts, blackList=blackList)
         bins = np.linspace(0, np.max(lengths), np.max(lengths) + 1)
-        ax.hist(lengths, bins=bins)
+        if total:
+            weights = sampleSet[ix].get_seq_composition(fraction=False, minCounts=minCounts, blackList=blackList)
+            ax.hist(lengths, weights=weights, bins=bins, color='#FC820D')
+        if unique:
+            ax.hist(lengths, bins=bins, color='#2C73B4')
         ax.set_yscale('log')
         ax.set_title(sampleSet[ix].id)
     fig.text(s='Sequence length (nt)', x=0.5, y=0, ha='center', va='top', fontsize=16)
-    fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    if unique and total:
+        fig.text(s='Number of total sequences (Orange)\n Number of unique sequences (Blue)',
+                 x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    elif unique:
+        fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    else:
+        fig.text(s='Number of total sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
     plt.tight_layout()
     if figSaveDirc:
         fig.savefig(figSaveDirc, dpi=300)
     plt.show()
 
 
-def print_composition_dist(sampleSet, fraction=False, figSaveDirc=None):
-    fig, axes = plt.subplots(7, 4, figsize=[12, 16])
-    for ix in range(len(sampleSet)):
-        ax = axes[ix % 7, int(ix / 7)]
-        composition = sampleSet[ix].get_seq_fraction(fraction)
-        bins = np.linspace(0, np.max(lengths), np.max(lengths) + 1)
-        ax.hist(lengths, bins=bins)
-        ax.set_yscale('log')
-        ax.set_title(sampleSet[ix].id)
-    fig.text(s='Sequence length (nt)', x=0.5, y=0, ha='center', va='top', fontsize=16)
-    fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
-    plt.tight_layout()
-    if figSaveDirc:
-        fig.savefig(figSaveDirc, dpi=300)
-    plt.show()
+# def print_composition_dist(sampleSet, unique=True, total=True, minCounts=1, fraction=False, figSaveDirc=None, blackList=None):
+#     fig, axes = plt.subplots(7, 4, figsize=[12, 16])
+#     for ix in range(len(sampleSet)):
+#         ax = axes[ix % 7, int(ix / 7)]
+#         composition = sampleSet[ix].get_seq_fraction(fraction)
+#         bins = np.logspace(np.log10(np.min(composition) * 0.8), np.log10(np.max(composition) * 1.1), 50)
+#         if total:
+#             weights = sampleSet[ix].get_seq_composition(fraction=False, minCounts)
+#         ax.hist(lengths, bins=bins)
+#         ax.set_yscale('log')
+#         ax.set_title(sampleSet[ix].id)
+#     fig.text(s='Sequence length (nt)', x=0.5, y=0, ha='center', va='top', fontsize=16)
+#     fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+#     plt.tight_layout()
+#     if figSaveDirc:
+#         fig.savefig(figSaveDirc, dpi=300)
+#     plt.show()
+
 
 def read_count_file(dirc):
     """
+    utility function to read the count files
     :param dirc:
     :param sampleType:
     :return:
@@ -225,3 +241,61 @@ def read_count_file(dirc):
             seq = line.strip().split()
             sample['seqs'][seq[0]] = int(seq[1])
     return sample
+
+
+def plot_std_peak_dist(sampleSet, norm=True, maxDist=15):
+
+    markerList = ['-o', '->', '-+', '-s']  # different marker for different replicates
+    colorList = ['#FC820D', '#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080', '#AEAEAE']  # different color for different type of samples
+    symbolList = []
+    for marker in markerList:
+        symbolList += [marker for i in range(7)]
+
+    plt.figure()
+    fig, ax = plt.subplots(1, 2, figsize=[24, 8])
+
+    for sampleIx, sample in enumerate(sampleSet):
+        counts = sample.stdCounts[:maxDist+1]
+        countsNormed = counts/counts[0]
+        ax[0].plot([i for i in range(maxDist + 1)], countsNormed,
+                   symbolList[sampleIx], color=colorList[sampleIx % 7],
+                   label=sample.id, alpha=0.5)
+
+    # add binomial distribution guide line
+    pList = [0.1, 0.01, 0.001, 0.0001]
+    from scipy.stats import binom
+    for p in pList:
+        rv = binom(21, p)
+        pmfs = np.array([rv.pmf(x) for x in range(7)])
+        pmfsNormed = pmfs/pmfs[0]
+        ax[0].plot([i for i in range(7)], pmfsNormed, color='k', ls = '--', alpha=0.3)
+    ax[0].text(s='p=0.1', x=6, y=1e-1, ha='left', va='center', fontsize=12)
+    ax[0].text(s='p=0.01', x=6, y=1e-6, ha='left', va='center', fontsize=12)
+    ax[0].text(s='p=0.001', x=3.8, y=5e-7, ha='left', va='center', fontsize=12)
+    ax[0].text(s='p=0.0001', x=0.8, y=3e-7, ha='left', va='center', fontsize=12)
+
+    ax[0].set_xlabel('Edit distance to spike-in sequence', fontsize=16)
+    ax[0].set_yscale('log')
+    ax[0].set_ylim([1e-7, 5])
+    ax[0].tick_params(labelsize=12)
+    ax[0].set_ylabel('Sequence counts\n(normalized on exact spike-in sequence)', fontsize=16)
+
+    for sampleIx, sample in enumerate(sampleSet):
+        counts = sample.stdCounts[:maxDist+1]
+        countsAccumulated = np.array([np.sum(counts[:i+1]) for i in range(maxDist + 1)])
+        countsAccumulatedNormed = countsAccumulated/countsAccumulated[0]
+        ax[1].plot([i for i in range(maxDist + 1)], countsAccumulatedNormed,
+                   symbolList[sampleIx], color=colorList[sampleIx % 7],
+                   label=sample.id, alpha=0.5)
+    ax[1].set_xlabel('Edit distance to spike-in sequence', fontsize=16)
+    ax[1].tick_params(labelsize=12)
+    ax[1].set_ylim([0.8, 1.5])
+    ax[1].set_ylabel('Accumulated sequence counts\n(normalized on exact spike-in sequence)', fontsize=16)
+    ax[1].legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
+    plt.tight_layout()
+    # fig.savefig('/home/yuning/Work/ribozyme_pred/fig/extStdErr.jpeg', dpi=300)
+    plt.show()
+
+def get_sequence_cluster(sample, center, maxDist=2):
+    import Levenshtein
+    return {seq[0]:seq[1] for seq in sample.seqs.items() if Levenshtein.distance(center, seq[0]) <= maxDist}
