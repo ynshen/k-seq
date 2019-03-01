@@ -38,7 +38,7 @@ class Sample:
         self.stdCounts = np.array([0 for _ in range(maxDist+1)])
         for seq in self.seqs.keys():
             dist = Levenshtein.distance(stdSeq, seq)
-            if dist <= maxDist:
+            if (dist <= maxDist)and(len(seq)==21):
                 self.stdCounts[dist] += self.seqs[seq]
 
     def get_seq_length(self, minCounts=1, blackList=None):
@@ -202,24 +202,58 @@ def print_length_dist(sampleSet, unique=True, total=True, minCounts=1, figSaveDi
     plt.show()
 
 
-# def print_composition_dist(sampleSet, unique=True, total=True, minCounts=1, fraction=False, figSaveDirc=None, blackList=None):
-#     fig, axes = plt.subplots(7, 4, figsize=[12, 16])
-#     for ix in range(len(sampleSet)):
-#         ax = axes[ix % 7, int(ix / 7)]
-#         composition = sampleSet[ix].get_seq_fraction(fraction)
-#         bins = np.logspace(np.log10(np.min(composition) * 0.8), np.log10(np.max(composition) * 1.1), 50)
-#         if total:
-#             weights = sampleSet[ix].get_seq_composition(fraction=False, minCounts)
-#         ax.hist(lengths, bins=bins)
-#         ax.set_yscale('log')
-#         ax.set_title(sampleSet[ix].id)
-#     fig.text(s='Sequence length (nt)', x=0.5, y=0, ha='center', va='top', fontsize=16)
-#     fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
-#     plt.tight_layout()
-#     if figSaveDirc:
-#         fig.savefig(figSaveDirc, dpi=300)
-#     plt.show()
+def print_composition_dist(sampleSet, unique=True, total=True, minCounts=1, fraction=False, figSaveDirc=None, blackList=None):
+    fig, axes = plt.subplots(7, 4, figsize=[12, 16])
+    for ix in range(len(sampleSet)):
+        ax = axes[ix % 7, int(ix / 7)]
+        compositions = sampleSet[ix].get_seq_composition(fraction=fraction, minCounts=minCounts, blackList=blackList)
+        bins = np.logspace(np.log10(np.min(compositions) * 0.8), np.log10(np.max(compositions) * 1.1), 50)
+        if total:
+            weights = compositions
+            ax.hist(compositions, weights=weights, bins=bins, color='#FC820D')
+        if unique:
+            ax.hist(compositions, bins=bins, color='#2C73B4')
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_title(sampleSet[ix].id)
+    fig.text(s='Counts in the sample', x=0.5, y=0, ha='center', va='top', fontsize=16)
+    if unique and total:
+        fig.text(s='Number of total sequences (Orange)\n Number of unique sequences (Blue)',
+                 x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    elif unique:
+        fig.text(s='Number of unique sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    else:
+        fig.text(s='Number of total sequences', x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    plt.tight_layout()
+    if figSaveDirc:
+        fig.savefig(figSaveDirc, dpi=300)
+    plt.show()
 
+
+def print_cutoff_changes(sampleSet, cutoffList=None, figSaveDirc=None, blackList=None):
+
+    def get_cutoff_seq_counts(compositions, cutoff):
+        compNew = compositions[compositions >= cutoff]
+        return [len(compNew), np.sum(compNew)]
+
+    fig, axes = plt.subplots(7, 4, figsize=[12, 16])
+    if not cutoffList:
+        cutoffList = [1, 5, 10, 20, 50, 100, 500, 1000, 10000, 100000, 200000]
+    for ix in range(len(sampleSet)):
+        ax = axes[ix % 7, int(ix / 7)]
+        compositions = sampleSet[ix].get_seq_composition(fraction=False, blackList=blackList)
+        cutoffCounts = np.array([get_cutoff_seq_counts(compositions, cutoff) for cutoff in cutoffList]).T
+        ax.plot(cutoffList, cutoffCounts[0], 'o-', color='#2C73B4')
+        ax.plot(cutoffList, cutoffCounts[1], 'o-', color='#FC820D')
+        ax.set_title(sampleSet[ix].id)
+        ax.set_yscale('log')
+    fig.text(s='Minimal counts of unique sequences', x=0.5, y=0, ha='center', va='top', fontsize=16)
+    fig.text(s='Number of total sequences (Orange)\n Number of unique sequences (Blue)',
+             x=0, y=0.5, ha='right', va='center', fontsize=16, rotation=90)
+    plt.tight_layout()
+    if figSaveDirc:
+        fig.savefig(figSaveDirc, dpi=300)
+    plt.show()
 
 def read_count_file(dirc):
     """
@@ -262,7 +296,7 @@ def plot_std_peak_dist(sampleSet, norm=True, maxDist=15):
                    label=sample.id, alpha=0.5)
 
     # add binomial distribution guide line
-    pList = [0.1, 0.01, 0.001, 0.0001]
+    pList = [0.1, 0.01, 0.001, 0.0005, 0.0001]
     from scipy.stats import binom
     for p in pList:
         rv = binom(21, p)
