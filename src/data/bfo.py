@@ -70,7 +70,7 @@ def basic_info(countFileRoot='/mnt/storage/projects/k-seq/input/bfo_counts/'):
 root, sampleList = basic_info()
 
 
-def load_all_samples(sampleSetDirc=None):
+def load_all_samples(sampleSetDirc=None, sampleList=sampleList):
     import util
 
     if sampleSetDirc:
