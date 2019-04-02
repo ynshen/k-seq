@@ -1,8 +1,7 @@
 '''
 This module contain methods for k-seq calculation
 '''
-__author__ = "Yuning Shen"
-__email__ = "yuningshen@ucsb.edu"
+
 
 
 def get_q_factor(dirc, std, amount, maxDist=1):

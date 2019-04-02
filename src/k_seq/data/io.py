@@ -78,10 +78,20 @@ def extract_sample_metadata(sample_name, name_pattern):
 
 
 
+def load_count_files(file_root, ):
+    from os import listdir
+    from os.path import isfile, join
 
+    sampleList = [f for f in listdir(file_root) if isfile(join(countFileRoot, f))]
+    sort_fn = lambda s: int(s.split('_')[1][1:])
+    sampleList.sort(key=sort_fn)
+    return countFileRoot, sampleList
 
+def get_sample_list(file_root, pattern=None):
+    import glob
 
-
-
-
-
+    if not pattern:
+        pattern = ''
+    sample_list = [file_name[file_name.rfind('/')+1:]
+                   for file_name in glob.glob("{}/*{}*".format(file_root, pattern)) if not '@' in file_name]
+    return sample_list
