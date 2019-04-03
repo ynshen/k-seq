@@ -1,13 +1,43 @@
-def random_data_generator(k, A, err, xTrue, replicate=1, average=False):
-    '''
-    Generate a set of data with given k, A and noise level
-    '''
+import numpy as np
 
-    # np.random.seed(23)
+def func_default(x, params):
+    A, k = params
+    return A * (1 - np.exp(-0.479 * 90 * k * x))
 
-    yTrue = A * (1 - np.exp(-0.479 * 90 * k * xTrue))
-    y_ = np.array(
-        [[np.max([np.random.normal(loc=yt, scale=yt * err), 10e-6]) for yt in yTrue] for _ in range(replicate)])
-    x_ = np.array([xTrue for _ in range(replicate)])
+def y_value_simulator(params, x_true, percent_noise=0.1, func=None,
+                      replicates=1, y_allow_zero=False, average=False):
+    """
+    Simulator to simulate y value of a function, given x and noise level
+    :param params: a list of parameters used in the function
+    :param x_true: a list of true values for x
+    :param percent_noise: percent standard deviation of normal noise, real value or a list of real value with same order
+                          of x_true for its corresponding y
+    :param func: callable, function used to fit, default Abe's BYO fitting function
+    :param replicates: int, number of replicates for each x value
+    :param y_allow_zero: boolean, if True, 0 is allowed for y; if False, resample until y_value larger than 0
+    :param average: boolean, if doing average on each x_true point for simulated y
+    :return: (x, y) two 1-d numpy array with same order and length
+    """
+    def add_noise(y, y_noise, y_allow_zero=False):
+        y = np.random.normal(loc=y, scale=y_noise)
+        while y < 0 and not y_allow_zero:
+            y = np.random.normal(loc=y, scale=y_noise)
+        return max(y, 0)
 
-    return (x_, y_)
+    np.random.seed(23)
+    x_true = np.array(x_true)
+
+    if not func:
+        func = func_default
+    y_true = func(x_true, params)
+    if type(noise) is float or type(noise) is int:
+        y_noise = [noise * y for y in y_true]
+    else:
+        y_noise = [tmp[0] * tmp[1] for tmp in zip(y_true, percent_noise)]
+
+    y_ = np.array([[add_noise(yt[0], yt[1], y_allow_zero) for yt in zip(y_true, y_noise)] for _ in range(replicates)])
+    if average:
+        return (x_true, np.mean(y_, axis=0))
+    else:
+        x_ = np.array([x_true for _ in range(replicates)])
+        return (x_.reshape(x_.shape[0] * x_.shape[1]), y_.reshape(y_.shape[0] * y_.shape[1]))
