@@ -2,6 +2,9 @@
 This module contains the methods for data input and output
 """
 
+import numpy as np
+import pandas as pd
+
 class SequencingSample:
 
     """
@@ -51,6 +54,31 @@ class SequencingSample:
             else:
                 self.sample_type = 'reacted'
 
+    def survey_spike_in(self, spike_in='AAAAACAAAAACAAAAACAAA', max_dist_to_survey=10):
+        """
+        This method will survey the spike in sequences in each sample
+        :param stdSeq:
+        :return:
+        """
+        import Levenshtein
+
+        self.spike_in_counts = np.array([0 for _ in range(max_dist_to_survey + 1)])
+        for seq in self.sequences.keys():
+            dist = Levenshtein.distance(spike_in, seq)
+            if dist <= max_dist_to_survey:
+                self.spike_in_counts[dist] += self.sequences[seq]
+        self.spike_in = spike_in
+
+    def get_quant_factor(self, max_dist, spike_in_amount):
+        """
+        Add quant_factor and quant_factor_max_dist attributes to SequencingSample
+        :param max_dist:
+        :param spike_in_amount:
+        :return:
+        """
+        self.quant_factor = spike_in_amount * self.total_counts / self.spike_in_counts[max_dist]
+        self.quant_factor_max_dist = max_dist
+        self.spike_in_amount = spike_in_amount
 
 class SequenceSet:
     def __init__(self):
@@ -177,33 +205,94 @@ def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, b
     return sample_set
 
 
-def convert_samples_to_sequences(sample_set, note=None):
+def get_quant_factors(sample_set, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, max_dist_to_survey=10,
+                      spike_in_amounts=None, manual_quant_factor=None):
+    if manual_quant_factor:
+        for sample_ix, sample in enumerate(sample_set):
+            sample.quant_factor = manual_quant_fasctor[sample_ix]
+    else:
+        for sample_ix, sample in enumerate(sample_set):
+            sample.survey_spike_in(spike_in = spike_in, max_dist_to_survey=max_dist_to_survey)
+            sample.get_quant_factor(max_dist, spike_in_amounts[sample_ix])
+    return sample_set
+
+
+def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
+    """
+    Convert a list of SequencingSample objects to a SequenceSet object. A typical SequenceSet object includes:
+        self.input_seq_num: number of unique sequences in all "input" samples
+        self.reacted_seq_num number of unique sequences in all "reacted" samples
+        self.valid_seq_num: number of valid unqiue sequences that detected in at least one "input" sample and one
+                            "reacted" sample
+        self.sample_info: a list of dictionaries, containing the information from original samples
+        self.seq_table: a pandas.DataFrame object of valid sequences and their original counts in samples
+        self.valid_seq_remove_spike_in: Boolean. If True, sequences considered as spike-in will not include in counting
+        self.note: Optional. Addtional notes regarding to the dataset
+    :param sample_set: a list of SequencingSample objects to convert
+    :param remove_spike_in: Boolean. See above
+    :param note: Optional. See above
+    :return: A SequenceSet object
+    """
+
+    import Levenshtein
+
     # find valid sequence set
     input_seq_set = []
-    for sample in sample_set:
-        if sample.sample_type == 'input':
-            input_seq_set += list(sample.sequences.keys())
-    input_seq_set = set(input_seq_set)
     reacted_seq_set = []
-    for sample in sample_set:
-        if sample.sample_type == 'reacted':
-            reacted_seq_set += list(sample.sequences.keys())
+    if remove_spike_in:
+        for sample in sample_set:
+            if sample.sample_type == 'input':
+                input_seq_set += list([seq for seq in sample.sequences.keys()
+                                       if Levenshtein.distance(seq, sample.spike_in) > sample.quant_factor_max_dist])
+        for sample in sample_set:
+            if sample.sample_type == 'reacted':
+                reacted_seq_set += list([seq for seq in sample.sequences.keys()
+                                         if Levenshtein.distance(seq, sample.spike_in) > sample.quant_factor_max_dist])
+    else:
+        for sample in sample_set:
+            if sample.sample_type == 'input':
+                input_seq_set += list(sample.sequences.keys())
+        input_seq_set = set(input_seq_set)
+        reacted_seq_set = []
+        for sample in sample_set:
+            if sample.sample_type == 'reacted':
+                reacted_seq_set += list(sample.sequences.keys())
+
+    input_seq_set = set(input_seq_set)
     reacted_seq_set = set(reacted_seq_set)
-    valid_set = input_seq_set && reacted_seq_set
+    valid_set = input_seq_set & reacted_seq_set
     sequence_set = SequenceSet()
+    sequence_set.note = note
     sequence_set.input_seq_num = len(input_seq_set)
     sequence_set.reacted_seq_num = len(reacted_seq_set)
     sequence_set.valid_seq_num = len(valid_set)
+    sequence_set.valid_seq_remove_spike_in = remove_spike_in
 
     # preserve sample info
+    sequence_set.sample_info = {}
     for sample in sample_set:
         sequence_set.sample_info[sample.name] = {
             'unique_seqs': sample.unique_seqs,
             'total_counts': sample.total_counts,
             'sample_type': sample.sample_type,
-            'passing_rate': get_passing_rate(sample, valid_set),
-            'quant_factor': sample.quant_factor
+            'valid_seqs': np.sum([1 for seq in sample.sequences.keys() if seq in valid_set]),
+            'quant_factor': sample.quant_factor,
         }
+        if hasattr(sample, 'quant_factor_max_dist'):
+            sequence_set.sample_info[sample.name]['quant_factor_max_dist'] = sample.quant_factor_max_dist
+        if hasattr(sample, 'spike_in_amount'):
+            sequence_set.sample_info[sample.name]['spike_in_amount'] = sample.spike_in_amount
+
+    # create valid sequence table
+    sequence_set.seq_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
+    for seq in valid_set:
+        for sample in sample_set:
+            if seq in sample.sequences.keys():
+                sequence_set.seq_table.loc[seq, sample.name] = sample.sequences[seq]
+
+    return sequence_set
+
+
 
 
 
