@@ -225,7 +225,7 @@ def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
         self.valid_seq_num: number of valid unqiue sequences that detected in at least one "input" sample and one
                             "reacted" sample
         self.sample_info: a list of dictionaries, containing the information from original samples
-        self.seq_table: a pandas.DataFrame object of valid sequences and their original counts in samples
+        self.count_table: a pandas.DataFrame object of valid sequences and their original counts in samples
         self.valid_seq_remove_spike_in: Boolean. If True, sequences considered as spike-in will not include in counting
         self.note: Optional. Addtional notes regarding to the dataset
     :param sample_set: a list of SequencingSample objects to convert
@@ -284,12 +284,34 @@ def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
             sequence_set.sample_info[sample.name]['spike_in_amount'] = sample.spike_in_amount
 
     # create valid sequence table
-    sequence_set.seq_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
+    sequence_set.count_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
     for seq in valid_set:
         for sample in sample_set:
             if seq in sample.sequences.keys():
-                sequence_set.seq_table.loc[seq, sample.name] = sample.sequences[seq]
+                sequence_set.count_table.loc[seq, sample.name] = sample.sequences[seq]
 
+    return sequence_set
+
+def survey_seqs_info(sequence_set):
+    sequence_set.seq_info = pd.DataFrame(index = sequence_set.count_table.index)
+    input_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'input']
+    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
+    sequence_set.seq_info['occur_in_inputs'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples] > 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info['occur_in_reacteds'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples] > 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info['total_counts_in_inputs'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info['total_counts_in_reacteds'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
     return sequence_set
 
 

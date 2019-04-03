@@ -1,3 +1,62 @@
+"""
+This module contains the methods used for k-seq dataset analysis
+"""
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+
+
+def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, fig_arg=None):
+    if sample_range == 'reacted':
+        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
+        occurrence = sequence_set.seq_info['occur_in_reacteds'][1:]
+        total_counts = sequence_set.seq_info['total_counts_in_reacteds'][1:]
+    elif sample_range == 'inputs':
+        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'input']
+        occurrence = sequence_set.seq_info['occur_in_inputs'][1:]
+        total_counts = sequence_set.seq_info['total_counts_in_inputs'][1:]
+    else:
+        samples = [sample[0] for sample in sequence_set.sample_info.items()]
+        occurrence = sequence_set.seq_info['occur_in_inputs'][1:] + sequence_set.seq_info['occur_in_reacteds'][1:]
+        total_counts = sequence_set.seq_info['total_counts_in_inputs'][1:] + sequence_set.seq_info['total_counts_in_reacteds'][1:]
+    count_bins = np.bincount(occurrence, minlength=len(samples) + 1)[1:]
+    count_bins_weighted = np.bincount(occurrence, minlength=len(samples) + 1, weights=total_counts)[1:]
+
+    if display:
+        fig = plt.figure(figsize=[16, 8])
+        gs = gridspec.GridSpec(2, 3, figure=fig)
+
+        ax11 = fig.add_subplot(gs[0, 0])
+        ax11.pie(x=count_bins, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={'fontsize':12})
+        ax12 = fig.add_subplot(gs[0, 1:])
+        ax12.bar(height=count_bins, x=[i+1 for i in range(len(samples))])
+        ax12.set_xticks([i+1 for i in range(len(samples))])
+        ax21 = fig.add_subplot(gs[1, 0])
+        ax21.pie(x=count_bins_weighted, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={'fontsize':12})
+        ax22 = fig.add_subplot(gs[1, 1:])
+        ax22.bar(height=count_bins_weighted, x=[i+1 for i in range(len(samples))])
+        ax22.set_xticks([i + 1 for i in range(len(samples))])
+        y_lim = ax11.get_ylim()
+        x_lim = ax11.get_xlim()
+        ax11.text(s='Unique sequences', x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1])/2, ha='left', va='center', rotation=90, fontsize=14)
+        y_lim = ax21.get_ylim()
+        x_lim = ax21.get_xlim()
+        ax21.text(s='Total counts', x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1]) / 2, ha='left', va='center', rotation=90, fontsize=14)
+        ax21.text(s='Percentage', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.1,
+                  ha='center', va='top', fontsize=14)
+        y_lim = ax22.get_ylim()
+        x_lim = ax22.get_xlim()
+        ax22.text(s='Number of occurrence', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
+                  ha='center', va='top', fontsize=14)
+        plt.show()
+        plt.tight_layout()
+    return count_bins, count_bins_weighted
+
+
+
+
 def fitting_check(k, A, xTrue, y, size=100, average=True):
     np.random.seed(23)
 
