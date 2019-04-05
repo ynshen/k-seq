@@ -63,6 +63,23 @@ def get_replicates(sequence_set, key_domain):
         groups[key] = [x[0] for x in group]
     return groups
 
+
+def analyze_rep_variability(sequence_set, key_domain, subsample_size=100, statistic='MAD', percentage=True, display=True):
+
+    def select_seq(seq_counts, num_rep, subsample_size):
+
+
+
+    groups = get_replicates(sequence_set, key_domain)
+    for group_name, group_elems in groups.items:
+        rep_tot_num = len(group.elems)
+
+
+
+
+
+
+
 def fitting_check(k, A, xTrue, y, size=100, average=True):
     np.random.seed(23)
 

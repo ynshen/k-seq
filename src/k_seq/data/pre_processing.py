@@ -80,6 +80,8 @@ class SequencingSample:
         self.quant_factor_max_dist = max_dist
         self.spike_in_amount = spike_in_amount
 
+
+
 class SequenceSet:
     def __init__(self):
         pass
@@ -316,6 +318,12 @@ def survey_seqs_info(sequence_set):
     return sequence_set
 
 
+def get_reacted_frac(sequence_set, black_list=None, inplace=False):
+    if black_list:
+        input_samples = [sample[0] for sample in sequence_set.sample_info.items()
+                         if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
+        reacted_samples = [sample[0] for sample in sequence_set.sample_info.items()
+                         if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
 
 
 
