@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from . import pre_processing
 
 
 def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, fig_arg=None):
@@ -57,6 +58,7 @@ def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, fi
 def get_replicates(sequence_set, key_domain):
     from itertools import groupby
 
+    sample_type = [(sample[0], sample[1]['metadata'][key_domain]) for sample in sequence_set.sample_info.items()]
     sample_type.sort(key=lambda x: x[1])
     groups = {}
     for key, group in groupby(sample_type, key=lambda x: x[1]):
@@ -64,14 +66,33 @@ def get_replicates(sequence_set, key_domain):
     return groups
 
 
-# def analyze_rep_variability(sequence_set, key_domain, subsample_size=100, statistic='MAD', percentage=True, display=True):
-#
-#     def select_seq(seq_counts, num_rep, subsample_size):
-#
-#
-#     groups = get_replicates(sequence_set, key_domain)
-#     for group_name, group_elems in groups.items:
-#         rep_tot_num = len(group.elems)
+def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability='MAD', percentage=True, display=True):
+
+    def get_variability(seq_subset, num_rep):
+        seq_subset = seq_subset[np.sum(seq_subset.isnull(), axis=1) == num_rep]
+        if variability == 'MAD':
+            variability_list = abs(seq_subset.subtract(seq_subset.median(axis=1), axis='index')).median(axis=1)
+        elif variability == 'SD':
+            variability_list = seq_subset.std(axis=1, ddof=1)
+        if len(variability_list) > subsample_size:
+            variability_list = np.random.choice(variability, size=subsample_size)
+        return variability_list
+
+    variability_res = {}
+    groups = get_replicates(sequence_set, key_domain)
+    for (group_name, group_elems) in groups.items():
+        variability_list = []
+        for i in range(len(group.elems) - 1):
+            num_rep = i + 2
+            variability_list.append(
+                get_variability(seq_subset=sequence_set.reacted_frac_table.loc[:,group_elems], num_rep=num_rep)
+            )
+        variability_res[group_name] = variability_list
+
+    if display:
+
+
+
 
 
 
