@@ -54,8 +54,14 @@ def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, fi
         plt.tight_layout()
     return count_bins, count_bins_weighted
 
+def get_replicates(sequence_set, key_domain):
+    from itertools import groupby
 
-
+    sample_type.sort(key=lambda x: x[1])
+    groups = {}
+    for key, group in groupby(sample_type, key=lambda x: x[1]):
+        groups[key] = [x[0] for x in group]
+    return groups
 
 def fitting_check(k, A, xTrue, y, size=100, average=True):
     np.random.seed(23)

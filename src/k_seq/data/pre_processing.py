@@ -282,7 +282,8 @@ def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
             sequence_set.sample_info[sample.name]['quant_factor_max_dist'] = sample.quant_factor_max_dist
         if hasattr(sample, 'spike_in_amount'):
             sequence_set.sample_info[sample.name]['spike_in_amount'] = sample.spike_in_amount
-
+        if hasattr(sample, 'metadata'):
+            sequence_set.sample_info[sample.name]['metadata'] = sample.metadata
     # create valid sequence table
     sequence_set.count_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
     for seq in valid_set:
