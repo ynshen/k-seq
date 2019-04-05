@@ -64,15 +64,14 @@ def get_replicates(sequence_set, key_domain):
     return groups
 
 
-def analyze_rep_variability(sequence_set, key_domain, subsample_size=100, statistic='MAD', percentage=True, display=True):
-
-    def select_seq(seq_counts, num_rep, subsample_size):
-
-
-
-    groups = get_replicates(sequence_set, key_domain)
-    for group_name, group_elems in groups.items:
-        rep_tot_num = len(group.elems)
+# def analyze_rep_variability(sequence_set, key_domain, subsample_size=100, statistic='MAD', percentage=True, display=True):
+#
+#     def select_seq(seq_counts, num_rep, subsample_size):
+#
+#
+#     groups = get_replicates(sequence_set, key_domain)
+#     for group_name, group_elems in groups.items:
+#         rep_tot_num = len(group.elems)
 
 
 

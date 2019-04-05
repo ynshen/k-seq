@@ -318,12 +318,36 @@ def survey_seqs_info(sequence_set):
     return sequence_set
 
 
-def get_reacted_frac(sequence_set, black_list=None, inplace=False):
-    if black_list:
-        input_samples = [sample[0] for sample in sequence_set.sample_info.items()
-                         if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
-        reacted_samples = [sample[0] for sample in sequence_set.sample_info.items()
-                         if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
-
-
-
+def get_reacted_frac(sequence_set, input_average='median', black_list=None, inplace=False):
+    if not black_list:
+        black_list = []
+    input_samples = [sample[0] for sample in sequence_set.sample_info.items()
+                     if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
+    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items()
+                       if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
+    reacted_frac_table = pd.DataFrame(index=sequence_set.count_table.index)
+    avg_method = 'input_{}'.format(input_average)
+    if input_average == 'median':
+        input_amount_avg = np.nanmedian(np.array([
+            list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+            sequence_set.sample_info[sample]['quant_factor'])
+            for sample in input_samples
+        ]), axis=0)
+    elif input_average == 'mean':
+        input_amount_avg = np.nanmean(np.array([
+            list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+                 sequence_set.sample_info[sample]['quant_factor'])
+            for sample in input_samples
+        ]), axis=0)
+    else:
+        raise Exception("Error: input_average should be 'median' or 'mean'")
+    reacted_frac_table[avg_method] = input_amount_avg
+    for sample in reacted_samples:
+        reacted_frac_table[sample] = (
+            sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+            sequence_set.sample_info[sample]['quant_factor']
+        )/reacted_frac_table[avg_method]
+    if inplace:
+        sequence_set.reacted_frac_table = reacted_frac_table
+    else:
+        return reacted_frac_table
