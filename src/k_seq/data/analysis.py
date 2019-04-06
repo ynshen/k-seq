@@ -99,7 +99,7 @@ def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, varia
         fig, axes = plt.subplots(1, len(groups), figsize=[3*len(groups), 3], sharey=True)
         plt.subplots_adjust(hspace=0, wspace=0)
         for (ix, (group_name, variability_list)) in enumerate(variability_res.items()):
-            axes[ix].violinplot(variability_list, positions=[i + 2 for i in range(len(variability_list))])
+            axes[ix].violinplot(variability_list, positions=[i + 2 for i in range(len(variability_list))], showmedians=True)
             axes[ix].set_title(group_name, fontsize=14)
             # axes[ix].set_xlabel('Replicates', fontsize=14)
             axes[ix].set_xticks([i + 2 for i in range(len(variability_list))])
