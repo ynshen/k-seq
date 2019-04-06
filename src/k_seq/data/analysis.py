@@ -67,22 +67,28 @@ def get_replicates(sequence_set, key_domain):
 
 
 def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability='MAD', percentage=True, display=True):
+    np.random.seed(23)
 
     def get_variability(seq_subset, num_rep):
-        seq_subset = seq_subset[np.sum(seq_subset.isnull(), axis=1) == num_rep]
+        seq_subset_subset = seq_subset[np.sum(~seq_subset.isnull(), axis=1) == num_rep]
         if variability == 'MAD':
-            variability_list = abs(seq_subset.subtract(seq_subset.median(axis=1), axis='index')).median(axis=1)
+            variability_list = abs(seq_subset_subset.subtract(seq_subset_subset.median(axis=1), axis='index')).median(axis=1)
+            if percentage:
+                variability_list = variability_list.divide(seq_subset_subset.median(axis=1), axis='index')
         elif variability == 'SD':
-            variability_list = seq_subset.std(axis=1, ddof=1)
+            variability_list = seq_subset_subset.std(axis=1, ddof=1)
+            if percentage:
+                variability_list = variability_list.divide(seq_subset_subset.mean(axis=1), axis='index')
         if len(variability_list) > subsample_size:
-            variability_list = np.random.choice(variability, size=subsample_size)
+            variability_list = np.random.choice(variability_list, size=subsample_size)
+
         return variability_list
 
     variability_res = {}
     groups = get_replicates(sequence_set, key_domain)
     for (group_name, group_elems) in groups.items():
         variability_list = []
-        for i in range(len(group.elems) - 1):
+        for i in range(len(group_elems) - 1):
             num_rep = i + 2
             variability_list.append(
                 get_variability(seq_subset=sequence_set.reacted_frac_table.loc[:,group_elems], num_rep=num_rep)
@@ -90,13 +96,17 @@ def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, varia
         variability_res[group_name] = variability_list
 
     if display:
-
-
-
-
-
-
-
+        fig, axes = plt.subplots(1, len(groups), figsize=[3*len(groups), 3], sharey=True)
+        plt.subplots_adjust(hspace=0, wspace=0)
+        for (ix, (group_name, variability_list)) in enumerate(variability_res.items()):
+            axes[ix].violinplot(variability_list, positions=[i + 2 for i in range(len(variability_list))])
+            axes[ix].set_title(group_name, fontsize=14)
+            # axes[ix].set_xlabel('Replicates', fontsize=14)
+            axes[ix].set_xticks([i + 2 for i in range(len(variability_list))])
+            axes[ix].set_xticklabels(['{}\n({})'.format(i + 2, len(variability_list[i])) for i in range(len(variability_list))])
+        axes[0].set_ylabel('{}{}'.format('P' if percentage else '', variability), fontsize=14)
+        plt.show()
+    return variability_res
 
 
 

@@ -347,6 +347,11 @@ def get_reacted_frac(sequence_set, input_average='median', black_list=None, inpl
             sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
             sequence_set.sample_info[sample]['quant_factor']
         )/reacted_frac_table[avg_method]
+    for sample in input_samples:
+        reacted_frac_table[sample] = (
+            sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+            sequence_set.sample_info[sample]['quant_factor']
+        )/reacted_frac_table[avg_method]
     if inplace:
         sequence_set.reacted_frac_table = reacted_frac_table
     else:
