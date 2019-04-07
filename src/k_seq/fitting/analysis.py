@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 
-def func_default(x, k, A):
+def func_default(x, A, k):
     return A * (1 - np.exp(-0.479 * 90 * k * x))
 
 # def fitting_check(k, A, xTrue, y, size=100, average=True):

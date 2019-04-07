@@ -1,27 +1,14 @@
+import sys
+if '/home/yuning/Work/k-seq/src/' not in sys.path:
+    sys.path.append('/home/yuning/Work/k-seq/src/')
+
 import util
-import numpy as np
-from scipy.optimize import curve_fit
 import time
+import k_seq.data.simu
+import k_seq.
 
 def func(x, A, k):
     return A * (1 - np.exp(-0.479 * 90 * k * x))
-
-def mse(x, y_, k, A):
-    yTrue = A * (1 - np.exp(-0.479 * 90 * k * x))
-    return np.mean((y_ - yTrue) ** 2)
-
-def random_data_generator(k, A, err, xTrue, replicate=1, average=False):
-    '''
-    Generate a set of data with given k, A and noise level
-    '''
-
-    # np.random.seed(23)
-
-    yTrue = A * (1 - np.exp(-0.479 * 90 * k * xTrue))
-    y_ = np.array([[np.max([np.random.normal(loc=yt, scale=yt * err), 10e-6]) for yt in yTrue] for _ in range(replicate)])
-    x_ = np.array([xTrue for _ in range(replicate)])
-
-    return (x_, y_)
 
 
 def fitting_check(k, A, xTrue, y, size=100, average=True):
@@ -89,8 +76,9 @@ def calculate_convergence(k, A, err):
 
 if __name__ == '__main__':
     timeStart = time.time()
+
     xSeries = [2e-6, 1e-5, 2e-5, 2.5e-4, 1e-3, 5e-3]
-    xTrue = np.array([2e-6, 2e-5, 2.5e-4, 5e-3])
+    x = np.array([2e-6, 2e-5, 2.5e-4, 5e-3])
     print('Selected concetration for [BTO]: %r' %xTrue)
     kValues = np.logspace(-1, 4, 100)
     AValues = np.linspace(0, 1, 101)[1:]

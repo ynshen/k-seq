@@ -1,10 +1,10 @@
 import numpy as np
+import util
 
-def func_default(x, params):
-    A, k = params
+def func_default(x, A, k):
     return A * (1 - np.exp(-0.479 * 90 * k * x))
 
-def y_value_simulator(params, x_true, func=None, percent_noise=0.1,
+def y_value_simulator(params, x_true, func=None, percent_noise=0.2,
                       replicates=1, y_allow_zero=False, average=False):
     """
     Simulator to simulate y value of a function, given x and noise level
@@ -24,14 +24,13 @@ def y_value_simulator(params, x_true, func=None, percent_noise=0.1,
             y = np.random.normal(loc=y, scale=y_noise)
         return max(y, 0)
 
-    np.random.seed(23)
     x_true = np.array(x_true)
 
     if not func:
         func = func_default
-    y_true = func(x_true, params)
-    if type(noise) is float or type(noise) is int:
-        y_noise = [noise * y for y in y_true]
+    y_true = func(x_true, *params)
+    if type(percent_noise) is float or type(percent_noise) is int:
+        y_noise = [percent_noise * y for y in y_true]
     else:
         y_noise = [tmp[0] * tmp[1] for tmp in zip(y_true, percent_noise)]
 
@@ -43,4 +42,35 @@ def y_value_simulator(params, x_true, func=None, percent_noise=0.1,
         return (x_.reshape(x_.shape[0] * x_.shape[1]), y_.reshape(y_.shape[0] * y_.shape[1]))
 
 
+def data_simulator_convergence_map(A_range, k_range, x, save_dir=None, percent_noise=0.0, func=func_default, replicates=5, A_res=100, k_res=100, A_log=False, k_log=True):
 
+    if A_log:
+        A_values = np.logspace(np.log10(A_range[0]), np.log10(A_range[1]), A_res)
+    else:
+        A_values = np.linspace(A_range[0], A_range[1], A_res+1)[1:] # avoid A=0
+    if k_log:
+        k_values = np.logspace(np.log10(k_range[0]), np.log10(k_range[0]), k_res)
+    else:
+        k_values = np.linspace(k_range[0], k_range[1], k_res)
+
+    data_tensor = np.zeros((A_res, k_res, replicates, len(x)))
+    for A_ix in range(A_res):
+        for k_ix in range(k_res):
+            for rep in range(replicates):
+                data_tensor[A_ix, k_ix, rep, :] = y_value_simulator(
+                    params=[A_values[A_ix], k_values[k_ix]],
+                    x_true=x,
+                    func=func,
+                    percent_noise=percent_noise,
+                    y_allow_zero=False,
+                    average=False
+                )[1]
+    dataset_to_dump = {
+        'x': x,
+        'y_tensor': data_tensor
+    }
+    if save_dir:
+        util.dump_pickle(dataset_to_dump, save_dir,
+                         log='Simulated dataset for convergence map of k ({}), A ({}), with x:{} and percent_noise:{}'.format(k_range, A_range, x, percent_noise),
+                         overwrite=True)
+    return dataset_to_dump
