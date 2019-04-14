@@ -31,7 +31,7 @@ class SequencingSample:
                                  }
         """
         self.file_dirc = '{}/{}'.format(file_root, sample_name)
-        with open(self.dirc, 'r') as file:
+        with open(self.file_dirc, 'r') as file:
             self.unique_seqs = int([elem for elem in next(file).strip().split()][-1])
             self.total_counts = int([elem for elem in next(file).strip().split()][-1])
             next(file)
@@ -173,7 +173,7 @@ def get_file_list(file_root, pattern=None):
 def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, black_list=[]):
     """
     load all count files under file_root if comply with pattern. A list of SequencingSample will return, each includes
-        self.dirc: full directory to the count file
+        self.file_dirc: full directory to the count file
         self.name: sample_name or indicated by name_pattern
         self.unqiue_seqs: number of unique sequences reported in count file
         self.total_counts: number of total counts reported in count file
