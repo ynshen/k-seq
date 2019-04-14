@@ -30,7 +30,7 @@ class SequencingSample:
                                     'id': 16.0
                                  }
         """
-        self.dirc = '{}/{}'.format(file_root, sample_name)
+        self.file_dirc = '{}/{}'.format(file_root, sample_name)
         with open(self.dirc, 'r') as file:
             self.unique_seqs = int([elem for elem in next(file).strip().split()][-1])
             self.total_counts = int([elem for elem in next(file).strip().split()][-1])
