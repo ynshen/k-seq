@@ -4,6 +4,8 @@ This module contains the methods for data input and output
 
 import numpy as np
 import pandas as pd
+from . import io
+
 
 class SequencingSample:
 
@@ -11,12 +13,9 @@ class SequencingSample:
     This class defines and describe the experimental samples sequenced in k-seq experiments
     """
 
-    def __init__(self):
-        pass
-
-    def read_count_file(self, file_root, sample_name, name_pattern=None):
+    def __init__(self, file_root, sample_name, silent=True, name_pattern=None):
         """
-        read single count file to object SequencingSample
+        initialize a SequencingSample instance by reading single count file
         :param file_root: root directory of the sample folder
         :param sample_name: the name (without directory) of the sample
         :param name_pattern: optional. pattern to extract metadata. pattern rules: [...] to include the region of
@@ -30,64 +29,92 @@ class SequencingSample:
                                     'id': 16.0
                                  }
         """
-        self.file_dirc = '{}/{}'.format(file_root, sample_name)
-        with open(self.file_dirc, 'r') as file:
-            self.unique_seqs = int([elem for elem in next(file).strip().split()][-1])
-            self.total_counts = int([elem for elem in next(file).strip().split()][-1])
-            next(file)
-            self.sequences = {}
-            for line in file:
-                seq = line.strip().split()
-                self.sequences[seq[0]] = int(seq[1])
+        import datetime
+
+        self.metadata = {}
+        if file_root[-1] != '/':
+            file_root += '/'
+        self.metadata['file_dirc'] = '{}{}'.format(file_root, sample_name)
+        self.unique_seq, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_dirc'])
+
         if name_pattern:
             metadata = extract_sample_metadata(sample_name=sample_name, name_pattern=name_pattern)
             self.name = metadata.pop('name', None)
-            self.metadata = metadata
-            if 'input' in self.name or 'Input' in self.name:
-                self.sample_type = 'input'
-            else:
-                self.sample_type = 'reacted'
+            self.metadata.update(metadata)
         else:
             self.name = sample_name
-            if 'input' in self.name or 'Input' in self.name:
-                self.sample_type = 'input'
-            else:
-                self.sample_type = 'reacted'
 
-    def survey_spike_in(self, spike_in='AAAAACAAAAACAAAAACAAA', max_dist_to_survey=10):
+        if 'input' in self.name or 'Input' in self.name:
+            self.sample_type = 'input'
+        else:
+            self.sample_type = 'reacted'
+
+        self.metadata['timestamp'] = str(datetime.datetime.now())
+        if not silent:
+            print("Sample {} imported.".format(self.name))
+
+    def survey_spike_in(self, spike_in, max_dist_to_survey=10, silent=True):
         """
-        This method will survey the spike in sequences in each sample
-        :param stdSeq:
-        :return:
+        This method will survey the number of spike-in sequences in the sample, with edit distance to the center
+        spike-in sequence
+        Following attributes will be added to the instance:
+        - spike_in: dict, {
+            spike_in_counts: list of int with length max_dist_to_survey + 1, number of total counts with distance i to
+                             the center spike-in sequence
+            spike_in: string, spike_in sequence
+          }
+        :param spike_in: string, the sequence of spike-in, consider as the center sequence
+        :param max_dist_to_survey: int, the maximum distance to survey
+        :return: None
         """
         import Levenshtein
 
-        self.spike_in_counts = np.array([0 for _ in range(max_dist_to_survey + 1)])
+        self.spike_in = {}
+        self.spike_in['spike_in_counts'] = np.array([0 for _ in range(max_dist_to_survey + 1)])
+        self.spike_in['spike_in'] = spike_in
         for seq in self.sequences.keys():
             dist = Levenshtein.distance(spike_in, seq)
             if dist <= max_dist_to_survey:
-                self.spike_in_counts[dist] += self.sequences[seq]
-        self.spike_in = spike_in
+                self.spike_in['spike_in_counts'][dist] += self.sequences[seq]
+        if not silent:
+            print("Survey spike-in counts for sample {}. Done.".format(self.name))
 
-    def get_quant_factor(self, max_dist, spike_in_amount):
+    def get_quant_factor(self, spike_in_amount, max_dist=0, silent=True):
         """
         Add quant_factor and quant_factor_max_dist attributes to SequencingSample
+        quant_factor here is defined as spike_in_amount/total_counts/np.sum(spike_in_counts[:max_dist + 1])
         :param max_dist:
         :param spike_in_amount:
         :return:
         """
-        self.quant_factor = spike_in_amount * self.total_counts / self.spike_in_counts[max_dist]
-        self.quant_factor_max_dist = max_dist
-        self.spike_in_amount = spike_in_amount
 
+        self.quant_factor = spike_in_amount * self.total_counts / np.sum(self.spike_in_counts[:max_dist + 1])
+        self.spike_in['quant_factor_max_dist'] = max_dist
+        self.spike_in['spike_in_amount'] = spike_in_amount
 
-
-class SequenceSet:
-    def __init__(self):
-        pass
+        if not silent:
+            print("Calculate quant-factor for sample {}. Done.".format(self.name))
 
 
 def extract_sample_metadata(sample_name, name_pattern):
+    """
+    Auxiliary function to extract sample information from sample_name, provided name_pattern
+    :param sample_name: string, sample name
+    :param name_pattern: pattern to extract metadata.
+                         pattern rules:
+                             [...] to include the region of sample_name,
+                             {domain_name[, digit]} to indicate region of domain to extract as metadata, including
+                             [,digit] will convert the domain value to number, otherwise, string
+                         e.g. R4B-1250A_S16_counts.txt
+                              with pattern = "R4[{exp_rep}-{concentration, digit}{seq_rep}_S{id, digit}_counts.txt"
+                              will return SequencingSample.metadata = {
+                                              'exp_rep': 'B',
+                                              'concentration': 1250.0,
+                                              'seq_rep': 'A',
+                                              'id': 16.0
+                                           }
+    :return: metadata
+    """
     import re
 
     def divide_string(string):
@@ -107,9 +134,9 @@ def extract_sample_metadata(sample_name, name_pattern):
     def extract_domain_name(domain):
         digit_ix = max(domain.find(',digit'), domain.find(', digit'), domain.find(',d'), domain.find(', '))
         if digit_ix > 0:
-            return (domain[:digit_ix], True)
+            return domain[:digit_ix], True
         elif domain != '':
-            return (domain, False)
+            return domain, False
         else:
             return None
 
@@ -170,7 +197,7 @@ def get_file_list(file_root, pattern=None):
     return sample_list
 
 
-def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, black_list=[]):
+def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, black_list=[], silent=True):
     """
     load all count files under file_root if comply with pattern. A list of SequencingSample will return, each includes
         self.file_dirc: full directory to the count file
@@ -193,31 +220,38 @@ def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, b
                                            }
     :param sort_fn: optional, callable to sort sample order
     :param black_list: name of sample files that will be excluded in loading
-    :return:
+    :return: sample_set: a list of SequencingSample class
     """
     sample_list = get_file_list(file_root=file_root, pattern=pattern)
     sample_set = []
     for sample_name in sample_list:
         if sample_name not in black_list:
-            sample = SequencingSample()
-            sample.read_count_file(file_root=file_root, sample_name=sample_name, name_pattern=name_pattern)
+            sample = SequencingSample(file_root=file_root,
+                                      sample_name=sample_name,
+                                      name_pattern=name_pattern,
+                                      silent=silent)
             sample_set.append(sample)
     if sort_fn:
-        sample_set.sort(key = sort_fn)
+        sample_set.sort(key=sort_fn)
     return sample_set
 
 
 def get_quant_factors(sample_set, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, max_dist_to_survey=10,
-                      spike_in_amounts=None, manual_quant_factor=None):
+                      spike_in_amounts=None, manual_quant_factor=None, silent=True):
     if manual_quant_factor:
         for sample_ix, sample in enumerate(sample_set):
             sample.quant_factor = manual_quant_fasctor[sample_ix]
     else:
         for sample_ix, sample in enumerate(sample_set):
-            sample.survey_spike_in(spike_in = spike_in, max_dist_to_survey=max_dist_to_survey)
-            sample.get_quant_factor(max_dist, spike_in_amounts[sample_ix])
+            sample.survey_spike_in(spike_in = spike_in, max_dist_to_survey=max_dist_to_survey, silent=silent)
+            sample.get_quant_factor(spike_in_amount = spike_in_amounts[sample_ix], max_dist=max_dist)
+
     return sample_set
 
+
+class SequenceSet:
+    def __init__(self):
+        pass
 
 def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
     # TODO: use object.__dict__ instead of copying
