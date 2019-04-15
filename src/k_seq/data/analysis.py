@@ -14,7 +14,7 @@ marker_list = ['o', 'x', '^', 's', '*', 'D', '+', 'v', '1', 'p']
 color_list = ['#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080',
               '#F8DB36', '#AEAEAE', '#87554C', '#151515']
 
-
+######################### Sequencing sample analysis ###############################
 def sequencing_sample_info_table(sample_set):
     """
     Print out HTML table of basic infos for sequencing samples, including spike-in info if applicable
@@ -185,12 +185,10 @@ def plot_std_peak_dist(sampleSet, norm=True, maxDist=15):
 
 
 
+######################### Valid sequence analysis ###############################
 
 
-
-
-
-def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, fig_save_dirc=None, fig_arg=None):
+def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, save_dirc=None):
     if sample_range == 'reacted':
         samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
         occurrence = sequence_set.seq_info['occur_in_reacteds'][1:]
@@ -233,8 +231,8 @@ def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, fi
         ax22.text(s='Number of occurrence', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
                   ha='center', va='top', fontsize=14)
         plt.tight_layout()
-        if fig_save_dirc is not None:
-            fig.savefig(dirc=fig_save_dirc, dpi=300, bbox_inches='tight')
+        if save_dirc is not None:
+            fig.savefig(dirc=save_dirc, dpi=300, bbox_inches='tight')
         plt.show()
 
     return count_bins, count_bins_weighted

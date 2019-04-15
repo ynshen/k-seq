@@ -220,6 +220,8 @@ def get_quant_factors(sample_set, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, 
 
 
 def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
+    # TODO: use object.__dict__ instead of copying
+    # TODO: reorganize the structure of object data storage
     """
     Convert a list of SequencingSample objects to a SequenceSet object. A typical SequenceSet object includes:
         self.input_seq_num: number of unique sequences in all "input" samples
