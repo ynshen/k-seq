@@ -37,7 +37,7 @@ class SequencingSample:
         if file_root[-1] != '/':
             file_root += '/'
         self.metadata['file_dirc'] = '{}{}'.format(file_root, sample_name)
-        self.unique_seq, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_dirc'])
+        self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_dirc'])
 
         if name_pattern:
             metadata = extract_sample_metadata(sample_name=sample_name, name_pattern=name_pattern)
@@ -359,43 +359,46 @@ class SequenceSet:
 
         self.metadata['timestamp'] = str(datetime.datetime.now())
 
-    def get_reacted_frac(sequence_set, input_average='median', black_list=None, inplace=False):
+    def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
 
         if not black_list:
             black_list = []
-        input_samples = [sample[0] for sample in sequence_set.sample_info.items()
+        input_samples = [sample[0] for sample in self.sample_info.items()
                          if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
-        reacted_samples = [sample[0] for sample in sequence_set.sample_info.items()
+        reacted_samples = [sample[0] for sample in self.sample_info.items()
                            if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
-        reacted_frac_table = pd.DataFrame(index=sequence_set.count_table.index)
-        avg_method = 'input_{}'.format(input_average)
+        reacted_frac_table = pd.DataFrame(index=self.count_table.index, columns=reacted_samples)
+        reacted_frac_table.input_avg_type = input_average
+        reacted_frac_table.col_x_values = [self.sample_info[sample]['x_value'] for sample in reacted_frac_table.columns]
+
         if input_average == 'median':
             input_amount_avg = np.nanmedian(np.array([
-                list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-                sequence_set.sample_info[sample]['quant_factor'])
+                list(self.count_table[sample] / self.sample_info[sample]['total_counts'] *
+                self.sample_info[sample]['quant_factor'])
                 for sample in input_samples
             ]), axis=0)
         elif input_average == 'mean':
             input_amount_avg = np.nanmean(np.array([
-                list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-                     sequence_set.sample_info[sample]['quant_factor'])
+                list(self.count_table[sample] / self.sample_info[sample]['total_counts'] *
+                     self.sample_info[sample]['quant_factor'])
                 for sample in input_samples
             ]), axis=0)
         else:
             raise Exception("Error: input_average should be 'median' or 'mean'")
-        reacted_frac_table[avg_method] = input_amount_avg
+
+        reacted_frac_table.input_avg = input_amount_avg
         for sample in reacted_samples:
             reacted_frac_table[sample] = (
-                sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-                sequence_set.sample_info[sample]['quant_factor']
+                self.count_table[sample] / self.sample_info[sample]['total_counts'] *
+                self.sample_info[sample]['quant_factor']
             )/reacted_frac_table[avg_method]
         for sample in input_samples:
             reacted_frac_table[sample] = (
-                sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-                sequence_set.sample_info[sample]['quant_factor']
+                self.count_table[sample] / self.sample_info[sample]['total_counts'] *
+                self.sample_info[sample]['quant_factor']
             )/reacted_frac_table[avg_method]
         if inplace:
-            sequence_set.reacted_frac_table = reacted_frac_table
+            self.reacted_frac_table = reacted_frac_table
         else:
             return reacted_frac_table
 

@@ -29,12 +29,15 @@ def sequencing_sample_info_table(sample_set):
     table['name'] = [sample.name for sample in sample_set]
     table['total counts'] = [sample.total_counts for sample in sample_set]
     table['unique sequences'] = [sample.unique_seqs for sample in sample_set]
+    table['x_value'] = [sample.x_value for sample in sample_set]
     if 'spike_in' in sample_set[0].__dict__.keys():
-        table['spike-in amount'] = [sample.spike_in_amount for sample in sample_set]
-        table['spike-in counts (dist={})'.format(sample_set[0].quant_factor_max_dist)] = \
-            [np.sum(sample.spike_in_counts[0:sample.quant_factor_max_dist + 1]) for sample in sample_set]
+        table['spike-in amount'] = [sample.spike_in['spike_in_amount'] for sample in sample_set]
+        table['spike-in counts (dist={})'.format(sample_set[0].spike_in['quant_factor_max_dist'])] = [
+            np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])
+            for sample in sample_set
+        ]
         table['spike-in percent'] = [
-            np.sum(sample.spike_in_counts[0:sample.quant_factor_max_dist + 1])/sample.total_counts
+            np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
             for sample in sample_set
         ]
         table['quantification factor'] = [sample.quant_factor for sample in sample_set]
@@ -42,7 +45,7 @@ def sequencing_sample_info_table(sample_set):
         formatters={
             'total counts': lambda x: '{:,}'.format(x),
             'unique sequences': lambda x: '{:,}'.format(x),
-            'spike-in counts (dist{})'.format(sample_set[0].quant_factor_max_dist): lambda x: '{:,}'.format(x),
+            'spike-in counts (dist{})'.format(sample_set[0].spike_in['quant_factor_max_dist']): lambda x: '{:,}'.format(x),
             'spike-in percent': lambda x: '{:.3f}'.format(x),
             'quantification factor': lambda x:'{:.3e}'.format(x)
         }
@@ -73,7 +76,7 @@ def sequencing_sample_info_plot(sample_set, save_dirc=None):
     # plot scatter for spike-in percentage
     ax3 = ax.twinx()
     ax3.scatter([i for i in range(sample_num)],
-                [np.sum(sample.spike_in_counts[0:sample.quant_factor_max_dist + 1])/sample.total_counts
+                [np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
                  for sample in sample_set],
                 color='#B2112A', marker='x')
     ax3.plot([-0.5, sample_num - 0.5], [0.2, 0.2], '#B2112A', ls='--', alpha=0.3)
