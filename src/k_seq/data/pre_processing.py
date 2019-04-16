@@ -13,14 +13,16 @@ class SequencingSample:
     This class defines and describe the experimental samples sequenced in k-seq experiments
     """
 
-    def __init__(self, file_root, sample_name, silent=True, name_pattern=None):
+    def __init__(self, file_root, sample_name, x_value, silent=True, name_pattern=None):
         """
         initialize a SequencingSample instance by reading single count file
         :param file_root: root directory of the sample folder
         :param sample_name: the name (without directory) of the sample
+        :param corresponding x_value for the sample. If string, will automatically inspect the domain with the name
+        :param silent: [Optional] boolean.
         :param name_pattern: optional. pattern to extract metadata. pattern rules: [...] to include the region of
                sample_name, {domain_name[, digit]} to indicate region of domain to extract as metadata, including
-               [,digit] will convert the domain value to number, otherwise, string
+               [,digit] will convert the domain value to float in applicable, otherwise, string
                e.g. R4B-1250A_S16_counts.txt with pattern = "R4[{exp_rep}-{concentration, digit}{seq_rep}_S{id, digit}_counts.txt"
                will return SequencingSample.metadata = {
                                     'exp_rep': 'B',
@@ -48,6 +50,14 @@ class SequencingSample:
             self.sample_type = 'input'
         else:
             self.sample_type = 'reacted'
+
+        if self.sample_type == 'input':
+            self.x_value = np.nan
+        else:
+            if type(x_value) == str:
+                self.x_value = self.metadata[x_value]
+            else:
+                self.x_value = x_value
 
         self.metadata['timestamp'] = str(datetime.datetime.now())
         if not silent:
@@ -265,10 +275,11 @@ def get_quant_factors(sample_set, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, 
 
 
 class SequenceSet:
+    """
+    This class containing the dataset of valid sequences aligned from a list of SequencingSample
+    """
 
     def __init__(self, sample_set, remove_spike_in=True, note=None):
-        # TODO: use object.__dict__ instead of copying
-        # TODO: reorganize the structure of object data storage
         """
         Convert a list of SequencingSample objects to a SequenceSet object. A typical SequenceSet object includes:
             self.input_seq_num: number of unique sequences in all "input" samples
@@ -284,7 +295,7 @@ class SequenceSet:
         :param note: Optional. See above
         :return: A SequenceSet object
         """
-
+        import datetime
         import Levenshtein
 
         # find valid sequence set
@@ -338,75 +349,46 @@ class SequenceSet:
                 if seq in sample.sequences.keys():
                     self.count_table.loc[seq, sample.name] = sample.sequences[seq]
 
-    def survey_seqs_info(self):
-        self.seq_info = pd.DataFrame(index = self.count_table.index)
-        input_samples = [sample[0] for sample in self.sample_info.items() if sample[1]['sample_type'] == 'input']
-        reacted_samples = [sample[0] for sample in self.sample_info.items() if sample[1]['sample_type'] == 'reacted']
-        self.seq_info['occur_in_inputs'] = pd.Series(
-            np.sum(self.count_table.loc[:, input_samples] > 0, axis=1),
-            index=self.count_table.index
-        )
-        self.seq_info['occur_in_reacteds'] = pd.Series(
-            np.sum(self.count_table.loc[:, reacted_samples] > 0, axis=1),
-            index=self.count_table.index
-        )
-        self.seq_info['total_counts_in_inputs'] = pd.Series(
-            np.sum(self.count_table.loc[:, input_samples], axis=1),
-            index=self.count_table.index
-        )
-        self.seq_info['total_counts_in_reacteds'] = pd.Series(
-            np.sum(self.count_table.loc[:, reacted_samples], axis=1),
-            index=self.count_table.index
-        )
-        return self
+        self.metadata['timestamp'] = str(datetime.datetime.now())
+
+    def get_reacted_frac(sequence_set, input_average='median', black_list=None, inplace=False):
+
+        if not black_list:
+            black_list = []
+        input_samples = [sample[0] for sample in sequence_set.sample_info.items()
+                         if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
+        reacted_samples = [sample[0] for sample in sequence_set.sample_info.items()
+                           if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
+        reacted_frac_table = pd.DataFrame(index=sequence_set.count_table.index)
+        avg_method = 'input_{}'.format(input_average)
+        if input_average == 'median':
+            input_amount_avg = np.nanmedian(np.array([
+                list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+                sequence_set.sample_info[sample]['quant_factor'])
+                for sample in input_samples
+            ]), axis=0)
+        elif input_average == 'mean':
+            input_amount_avg = np.nanmean(np.array([
+                list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+                     sequence_set.sample_info[sample]['quant_factor'])
+                for sample in input_samples
+            ]), axis=0)
+        else:
+            raise Exception("Error: input_average should be 'median' or 'mean'")
+        reacted_frac_table[avg_method] = input_amount_avg
+        for sample in reacted_samples:
+            reacted_frac_table[sample] = (
+                sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+                sequence_set.sample_info[sample]['quant_factor']
+            )/reacted_frac_table[avg_method]
+        for sample in input_samples:
+            reacted_frac_table[sample] = (
+                sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
+                sequence_set.sample_info[sample]['quant_factor']
+            )/reacted_frac_table[avg_method]
+        if inplace:
+            sequence_set.reacted_frac_table = reacted_frac_table
+        else:
+            return reacted_frac_table
 
 
-def get_reacted_frac(sequence_set, input_average='median', black_list=None, inplace=False):
-    if not black_list:
-        black_list = []
-    input_samples = [sample[0] for sample in sequence_set.sample_info.items()
-                     if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
-    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items()
-                       if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
-    reacted_frac_table = pd.DataFrame(index=sequence_set.count_table.index)
-    avg_method = 'input_{}'.format(input_average)
-    if input_average == 'median':
-        input_amount_avg = np.nanmedian(np.array([
-            list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-            sequence_set.sample_info[sample]['quant_factor'])
-            for sample in input_samples
-        ]), axis=0)
-    elif input_average == 'mean':
-        input_amount_avg = np.nanmean(np.array([
-            list(sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-                 sequence_set.sample_info[sample]['quant_factor'])
-            for sample in input_samples
-        ]), axis=0)
-    else:
-        raise Exception("Error: input_average should be 'median' or 'mean'")
-    reacted_frac_table[avg_method] = input_amount_avg
-    for sample in reacted_samples:
-        reacted_frac_table[sample] = (
-            sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-            sequence_set.sample_info[sample]['quant_factor']
-        )/reacted_frac_table[avg_method]
-    for sample in input_samples:
-        reacted_frac_table[sample] = (
-            sequence_set.count_table[sample] / sequence_set.sample_info[sample]['total_counts'] *
-            sequence_set.sample_info[sample]['quant_factor']
-        )/reacted_frac_table[avg_method]
-    if inplace:
-        sequence_set.reacted_frac_table = reacted_frac_table
-    else:
-        return reacted_frac_table
-
-
-def get_replicates(sequence_set, key_domain):
-    from itertools import groupby
-
-    sample_type = [(sample[0], sample[1]['metadata'][key_domain]) for sample in sequence_set.sample_info.items()]
-    sample_type.sort(key=lambda x: x[1])
-    groups = {}
-    for key, group in groupby(sample_type, key=lambda x: x[1]):
-        groups[key] = [x[0] for x in group]
-    return groups

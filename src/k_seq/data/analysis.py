@@ -186,7 +186,27 @@ def plot_std_peak_dist(sampleSet, norm=True, maxDist=15):
 
 
 ######################### Valid sequence analysis ###############################
-
+def survey_seqs_info(sequence_set):
+    sequence_set.seq_info = pd.DataFrame(index = sequence_set.count_table.index)
+    input_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'input']
+    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
+    sequence_set.seq_info['occur_in_inputs'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples] > 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info['occur_in_reacteds'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples] > 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info['total_counts_in_inputs'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info['total_counts_in_reacteds'] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    return sequence_set
 
 def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, save_dirc=None):
     if sample_range == 'reacted':
@@ -238,7 +258,15 @@ def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, sa
     return count_bins, count_bins_weighted
 
 
+def get_replicates(sequence_set, key_domain):
+    from itertools import groupby
 
+    sample_type = [(sample[0], sample[1]['metadata'][key_domain]) for sample in sequence_set.sample_info.items()]
+    sample_type.sort(key=lambda x: x[1])
+    groups = {}
+    for key, group in groupby(sample_type, key=lambda x: x[1]):
+        groups[key] = [x[0] for x in group]
+    return groups
 
 def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability='MAD', percentage=True, display=True):
     np.random.seed(23)
