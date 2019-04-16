@@ -173,7 +173,10 @@ def extract_sample_metadata(sample_name, name_pattern):
             domain_values = [sample_name[start_ix:end_ix]]
         for ix, domain in enumerate(domain_list):
             if domain[1]:
-                metadata[domain[0]] = int(domain_values[ix])
+                try:
+                    metadata[domain[0]] = float(domain_values[ix])
+                except:
+                    metadata[domain[0]] = domain_values[ix]
             else:
                 metadata[domain[0]] = domain_values[ix]
         brace_ix += 1
@@ -220,6 +223,7 @@ def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, b
                                            }
     :param sort_fn: optional, callable to sort sample order
     :param black_list: name of sample files that will be excluded in loading
+    :param slient: boolean, false: print calculation progress to the screen
     :return: sample_set: a list of SequencingSample class
     """
     sample_list = get_file_list(file_root=file_root, pattern=pattern)
@@ -238,6 +242,17 @@ def load_count_files(file_root, pattern=None, name_pattern=None, sort_fn=None, b
 
 def get_quant_factors(sample_set, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, max_dist_to_survey=10,
                       spike_in_amounts=None, manual_quant_factor=None, silent=True):
+    """
+    Assign/calculate quant_factor for SequencingSet instances in sample_set
+    :param sample_set:
+    :param spike_in:
+    :param max_dist:
+    :param max_dist_to_survey:
+    :param spike_in_amounts:
+    :param manual_quant_factor:
+    :param silent:
+    :return:
+    """
     if manual_quant_factor:
         for sample_ix, sample in enumerate(sample_set):
             sample.quant_factor = manual_quant_fasctor[sample_ix]
@@ -250,108 +265,100 @@ def get_quant_factors(sample_set, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, 
 
 
 class SequenceSet:
-    def __init__(self):
-        pass
 
-def convert_samples_to_sequences(sample_set, remove_spike_in=True, note=None):
-    # TODO: use object.__dict__ instead of copying
-    # TODO: reorganize the structure of object data storage
-    """
-    Convert a list of SequencingSample objects to a SequenceSet object. A typical SequenceSet object includes:
-        self.input_seq_num: number of unique sequences in all "input" samples
-        self.reacted_seq_num number of unique sequences in all "reacted" samples
-        self.valid_seq_num: number of valid unqiue sequences that detected in at least one "input" sample and one
-                            "reacted" sample
-        self.sample_info: a list of dictionaries, containing the information from original samples
-        self.count_table: a pandas.DataFrame object of valid sequences and their original counts in samples
-        self.valid_seq_remove_spike_in: Boolean. If True, sequences considered as spike-in will not include in counting
-        self.note: Optional. Addtional notes regarding to the dataset
-    :param sample_set: a list of SequencingSample objects to convert
-    :param remove_spike_in: Boolean. See above
-    :param note: Optional. See above
-    :return: A SequenceSet object
-    """
+    def __init__(self, sample_set, remove_spike_in=True, note=None):
+        # TODO: use object.__dict__ instead of copying
+        # TODO: reorganize the structure of object data storage
+        """
+        Convert a list of SequencingSample objects to a SequenceSet object. A typical SequenceSet object includes:
+            self.input_seq_num: number of unique sequences in all "input" samples
+            self.reacted_seq_num number of unique sequences in all "reacted" samples
+            self.valid_seq_num: number of valid unqiue sequences that detected in at least one "input" sample and one
+                                "reacted" sample
+            self.sample_info: a list of dictionaries, containing the information from original samples
+            self.count_table: a pandas.DataFrame object of valid sequences and their original counts in samples
+            self.valid_seq_remove_spike_in: Boolean. If True, sequences considered as spike-in will not include in counting
+            self.note: Optional. Addtional notes regarding to the dataset
+        :param sample_set: a list of SequencingSample objects to convert
+        :param remove_spike_in: Boolean. See above
+        :param note: Optional. See above
+        :return: A SequenceSet object
+        """
 
-    import Levenshtein
+        import Levenshtein
 
-    # find valid sequence set
-    input_seq_set = []
-    reacted_seq_set = []
-    if remove_spike_in:
-        for sample in sample_set:
-            if sample.sample_type == 'input':
-                input_seq_set += list([seq for seq in sample.sequences.keys()
-                                       if Levenshtein.distance(seq, sample.spike_in) > sample.quant_factor_max_dist])
-        for sample in sample_set:
-            if sample.sample_type == 'reacted':
-                reacted_seq_set += list([seq for seq in sample.sequences.keys()
-                                         if Levenshtein.distance(seq, sample.spike_in) > sample.quant_factor_max_dist])
-    else:
-        for sample in sample_set:
-            if sample.sample_type == 'input':
-                input_seq_set += list(sample.sequences.keys())
-        input_seq_set = set(input_seq_set)
-        reacted_seq_set = []
-        for sample in sample_set:
-            if sample.sample_type == 'reacted':
-                reacted_seq_set += list(sample.sequences.keys())
+        # find valid sequence set
+        input_seq_set = set()
+        reacted_seq_set = set()
 
-    input_seq_set = set(input_seq_set)
-    reacted_seq_set = set(reacted_seq_set)
-    valid_set = input_seq_set & reacted_seq_set
-    sequence_set = SequenceSet()
-    sequence_set.note = note
-    sequence_set.input_seq_num = len(input_seq_set)
-    sequence_set.reacted_seq_num = len(reacted_seq_set)
-    sequence_set.valid_seq_num = len(valid_set)
-    sequence_set.valid_seq_remove_spike_in = remove_spike_in
+        if remove_spike_in:
+            for sample in sample_set:
+                if sample.sample_type == 'input':
+                    input_seq_set.update([
+                        seq for seq in sample.sequences.keys()
+                        if Levenshtein.distance(seq, sample.spike_in['spike_in']) > sample.spike_in['quant_factor_max_dist']
+                    ])
+                elif sample.sample_type == 'reacted':
+                    reacted_seq_set.update([
+                        seq for seq in sample.sequences.keys()
+                        if Levenshtein.distance(seq, sample.spike_in['spike_in']) > sample.spike_in['quant_factor_max_dist']
+                    ])
+        else:
+            for sample in sample_set:
+                if sample.sample_type == 'input':
+                    input_seq_set.update(list(sample.sequences.keys()))
+                elif sample.sample_type == 'reacted':
+                    reacted_seq_set.update(list(sample.sequences.keys()))
 
-    # preserve sample info
-    sequence_set.sample_info = {}
-    for sample in sample_set:
-        sequence_set.sample_info[sample.name] = {
-            'unique_seqs': sample.unique_seqs,
-            'total_counts': sample.total_counts,
-            'sample_type': sample.sample_type,
-            'valid_seqs': np.sum([1 for seq in sample.sequences.keys() if seq in valid_set]),
-            'quant_factor': sample.quant_factor,
+        valid_set = input_seq_set & reacted_seq_set
+        self.dataset_info = {
+            'input_seq_num': len(input_seq_set),
+            'reacted_seq_num': len(reacted_seq_set),
+            'valid_seq_num': len(valid_set),
+            'remove_spike_in': remove_spike_in
         }
-        if hasattr(sample, 'quant_factor_max_dist'):
-            sequence_set.sample_info[sample.name]['quant_factor_max_dist'] = sample.quant_factor_max_dist
-        if hasattr(sample, 'spike_in_amount'):
-            sequence_set.sample_info[sample.name]['spike_in_amount'] = sample.spike_in_amount
-        if hasattr(sample, 'metadata'):
-            sequence_set.sample_info[sample.name]['metadata'] = sample.metadata
-    # create valid sequence table
-    sequence_set.count_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
-    for seq in valid_set:
+        if note:
+            self.dataset_info['note'] = note
+
+        # preserve sample info
+        self.sample_info = {}
         for sample in sample_set:
-            if seq in sample.sequences.keys():
-                sequence_set.count_table.loc[seq, sample.name] = sample.sequences[seq]
+            sample_info_dict = sample.__dict__
+            sequences = sample_info_dict.pop('sequences', None)
+            self.sample_info[sample.name] = {
+                'valid_seqs_num': np.sum([1 for seq in sequences.keys() if seq in valid_set]),
+                'valid_seqs_counts': np.sum([seq[1] for seq in sequences.items() if seq[0] in valid_set])
+            }
+            self.sample_info[sample.name].update(sample_info_dict)
 
-    return sequence_set
+        # create valid sequence table
+        self.count_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
+        for seq in valid_set:
+            for sample in sample_set:
+                if seq in sample.sequences.keys():
+                    self.count_table.loc[seq, sample.name] = sample.sequences[seq]
 
-def survey_seqs_info(sequence_set):
-    sequence_set.seq_info = pd.DataFrame(index = sequence_set.count_table.index)
-    input_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'input']
-    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
-    sequence_set.seq_info['occur_in_inputs'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, input_samples] > 0, axis=1),
-        index=sequence_set.count_table.index
-    )
-    sequence_set.seq_info['occur_in_reacteds'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, reacted_samples] > 0, axis=1),
-        index=sequence_set.count_table.index
-    )
-    sequence_set.seq_info['total_counts_in_inputs'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, input_samples], axis=1),
-        index=sequence_set.count_table.index
-    )
-    sequence_set.seq_info['total_counts_in_reacteds'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, reacted_samples], axis=1),
-        index=sequence_set.count_table.index
-    )
-    return sequence_set
+    def survey_seqs_info(self):
+        self.seq_info = pd.DataFrame(index = self.count_table.index)
+        input_samples = [sample[0] for sample in self.sample_info.items() if sample[1]['sample_type'] == 'input']
+        reacted_samples = [sample[0] for sample in self.sample_info.items() if sample[1]['sample_type'] == 'reacted']
+        self.seq_info['occur_in_inputs'] = pd.Series(
+            np.sum(self.count_table.loc[:, input_samples] > 0, axis=1),
+            index=self.count_table.index
+        )
+        self.seq_info['occur_in_reacteds'] = pd.Series(
+            np.sum(self.count_table.loc[:, reacted_samples] > 0, axis=1),
+            index=self.count_table.index
+        )
+        self.seq_info['total_counts_in_inputs'] = pd.Series(
+            np.sum(self.count_table.loc[:, input_samples], axis=1),
+            index=self.count_table.index
+        )
+        self.seq_info['total_counts_in_reacteds'] = pd.Series(
+            np.sum(self.count_table.loc[:, reacted_samples], axis=1),
+            index=self.count_table.index
+        )
+        return self
 
 
 def get_reacted_frac(sequence_set, input_average='median', black_list=None, inplace=False):
@@ -392,3 +399,14 @@ def get_reacted_frac(sequence_set, input_average='median', black_list=None, inpl
         sequence_set.reacted_frac_table = reacted_frac_table
     else:
         return reacted_frac_table
+
+
+def get_replicates(sequence_set, key_domain):
+    from itertools import groupby
+
+    sample_type = [(sample[0], sample[1]['metadata'][key_domain]) for sample in sequence_set.sample_info.items()]
+    sample_type.sort(key=lambda x: x[1])
+    groups = {}
+    for key, group in groupby(sample_type, key=lambda x: x[1]):
+        groups[key] = [x[0] for x in group]
+    return groups

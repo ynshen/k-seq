@@ -237,15 +237,7 @@ def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, sa
 
     return count_bins, count_bins_weighted
 
-def get_replicates(sequence_set, key_domain):
-    from itertools import groupby
 
-    sample_type = [(sample[0], sample[1]['metadata'][key_domain]) for sample in sequence_set.sample_info.items()]
-    sample_type.sort(key=lambda x: x[1])
-    groups = {}
-    for key, group in groupby(sample_type, key=lambda x: x[1]):
-        groups[key] = [x[0] for x in group]
-    return groups
 
 
 def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability='MAD', percentage=True, display=True):
