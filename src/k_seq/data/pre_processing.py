@@ -342,7 +342,7 @@ class SequenceSet:
         # preserve sample info
         self.sample_info = {}
         for sample in sample_set:
-            sample_info_dict = sample.__dict__
+            sample_info_dict = sample.__dict__.copy()
             sequences = sample_info_dict.pop('sequences', None)
             self.sample_info[sample.name] = {
                 'valid_seqs_num': np.sum([1 for seq in sequences.keys() if seq in valid_set]),
@@ -351,13 +351,13 @@ class SequenceSet:
             self.sample_info[sample.name].update(sample_info_dict)
 
         # create valid sequence table
-        self.count_table = pd.DataFrame(index = list(valid_set), columns=[sample.name for sample in sample_set])
+        self.count_table = pd.DataFrame(index=list(valid_set), columns=[sample.name for sample in sample_set])
         for seq in valid_set:
             for sample in sample_set:
                 if seq in sample.sequences.keys():
                     self.count_table.loc[seq, sample.name] = sample.sequences[seq]
 
-        self.metadata['timestamp'] = str(datetime.datetime.now())
+        self.dataset_info['timestamp'] = str(datetime.datetime.now())
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
 
@@ -391,12 +391,8 @@ class SequenceSet:
             reacted_frac_table[sample] = (
                 self.count_table[sample] / self.sample_info[sample]['total_counts'] *
                 self.sample_info[sample]['quant_factor']
-            )/reacted_frac_table[avg_method]
-        for sample in input_samples:
-            reacted_frac_table[sample] = (
-                self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                self.sample_info[sample]['quant_factor']
-            )/reacted_frac_table[avg_method]
+            )/reacted_frac_table.input_avg
+
         if inplace:
             self.reacted_frac_table = reacted_frac_table
         else:
