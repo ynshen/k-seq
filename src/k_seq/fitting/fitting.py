@@ -25,7 +25,7 @@ def func_default(x, A, k):
 
 def get_args_num(func, exclude_x=True):
     """
-    utility function to get the number of arguments for a callable
+    Utility function to get the number of arguments for a callable
     :param func: callable, the function
     :param exclude_x: boolean, return the number of arguments minus 1 if true
     :return: number of arguments of the function func
@@ -41,8 +41,28 @@ def get_args_num(func, exclude_x=True):
 
 def fitting_single(x_data, y_data, func=func_default, weights=None, bounds=None,
                    bootstrap=True, bs_depth=1000, bs_return_verbose=True, bs_residue=False,
-                   missing_data_as_zero=False, y_max=None):
+                   missing_data_as_zero=False, y_max=None, **kwargs):
 
+    """
+    Core method for fitting. Fit on a single sequence
+    :param x_data: list-like. A list of x values of data points to fit
+    :param y_data: list-like, same size as x_data. y values of data points to fit, should keep same order as x_data.
+                   np.nan is allowed
+    :param func: callable. Model function for fitting.
+    :param weights: optional. Weights of each data points in fitting, same size as x_data
+    :param bounds: a tuple of two tuples.
+                   ((lower_bound_0, lower_bound_1, ..., lower_bound_k),
+                    (upper_bound_0, upper_bound_1, ..., upper_bound_k))
+    :param bootstrap: boolean. If true, use bootstrap to estimate the confidence interval of parameters
+    :param bs_depth: int. Number of bootstrap samples to use to estimate the confidence interval
+    :param bs_return_verbose: boolean. If true, return the list of parameters for each bootstrap sample
+    :param bs_residue: boolean. If true, resample precent residue instead of data points in bootstrap
+    :param missing_data_as_zero: boolean. If true, the missing data (np.nan) will be treated as zero
+    :param y_max: optional. float if not None. The maximum y value can be accepted
+    :param kwargs: no other key arguments, only for completeness
+    :return: results: a dictionary of fitting results,
+             param_list: a list of parameters from each bootstrap samples. None if bs_return_verbose = False
+    """
     param_num = get_args_num(func)
     # regularize data format
     x_data = np.array(list(x_data))
@@ -110,23 +130,37 @@ def fitting_single(x_data, y_data, func=func_default, weights=None, bounds=None,
 
 
 def fitting_master(seq, **kwargs):
+    """
+    Master fitting function to convert a iteration from pd.DataFrame.iterrows() to input type for fitting_single
+    :param seq: one item from pd.DataFrame.iterrows()
+    :param kwargs: all other keyword arguments need to pass to fitting_single()
+    :return: return pd.Series object containing the fitting results
+    """
 
     single_res = fitting_single(y_data=list(seq[1]), **kwargs)
-
     return pd.Series(single_res[0], name=seq[0]), (seq[0], single_res[1])
 
 
 def fitting_sequence_set(sequence_set, bs_return_verbose=True, parallel_threads=None, inplace=True, **kwargs):
+    """
+    Method to apply fitting on all sequences in sequence_set
+    :param sequence_set:
+    :param bs_return_verbose:
+    :param parallel_threads:
+    :param inplace:
+    :param kwargs:
+    :return:
+    """
     from functools import partial
 
-    partial_fun = partial(fitting_master,
-                          x_data=sequence_set.reacted_frac_table.col_x_values,
-                          bs_return_verbose=bs_return_verbose,
-                          **kwargs)
+    partial_func = partial(fitting_master,
+                           x_data=sequence_set.reacted_frac_table.col_x_values,
+                           bs_return_verbose=bs_return_verbose,
+                           **kwargs)
 
     if parallel_threads:
         pool = mp.Pool(processes=int(parallel_threads))
-        results = pool.map(partial_fun, sequence_set.reacted_frac_table.iterrows())
+        results = pool.map(partial_func, sequence_set.reacted_frac_table.iterrows())
     else:
         results = [partial_fun(seq) for seq in sequence_set.reacted_frac_table.iterrows()]
 
