@@ -13,7 +13,7 @@ def func_default(x, A, k):
     Default kinetic model used in BYO k-seq fitting:
                     A * (1 - np.exp(- 0.479 * 90 * k * x))
     90: t, reaction time (min)
-    0.479: alpha, degradation adjustment parameter
+    0.479: alpha, degradation adjustment parameter for BYO in 90 min
 
     :param x: predictor for the regression model, here is initial concentration of BYO
     :param A: parameter represents the maximal conversion of reactants
@@ -173,3 +173,6 @@ def fitting_sequence_set(sequence_set, bs_return_verbose=True, parallel_threads=
             return pd.DataFrame([res[0] for res in results]), {res[1][0]:res[1][1] for res in results}
         else:
             return pd.DataFrame([res[0] for res in results])
+
+
+# TODO: make a full script to run the whole

@@ -1,6 +1,7 @@
 """
 This module contains the methods for input and output
 """
+from ..data.pre_processing import SequenceSet
 
 def read_count_file(file_dirc):
     """
@@ -21,3 +22,7 @@ def read_count_file(file_dirc):
             seq = line.strip().split()
             sequences[seq[0]] = int(seq[1])
     return (unique_seqs, total_counts, sequences)
+
+
+
+def export_to_csv():

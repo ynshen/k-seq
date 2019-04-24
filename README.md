@@ -1,5 +1,6 @@
 k-seq
 ==============================
+TODO: learn github markdown file writing rules
 
 kinetic sequencing to estimate the kinetic coefficient of ribozymes in a high throughput manner
 
