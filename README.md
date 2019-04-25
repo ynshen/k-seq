@@ -6,6 +6,10 @@ k-seq
 - look up spike-in sequence counts and quantification sequence amount
 - select valid sequences and
 
+
+# Documentation website (under construction)
+[k-seq](https://ynshen.github.io/k-seq/)
+
 # Todos
 TODO: update top-level README
 TODO: Use Sphix or pdoc for documentation websites

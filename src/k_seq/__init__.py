@@ -5,5 +5,5 @@ This is the k-seq package
 
 __author__ = "Yuning Shen"
 __email__ = "yuningshen@ucsb.edu"
-__version__ = '0.0'
+__version__ = '0.1dev'
 __status__ = 'Developing'

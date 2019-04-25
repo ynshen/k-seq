@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.5.4" />
+<title>k_seq.data.analysis API documentation</title>
+<meta name="description" content="This module contains the methods used for k-seq dataset analysis" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.name small{font-weight:normal}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase;cursor:pointer}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title"><code>k_seq.data.analysis</code> module</h1>
+</header>
+<section id="section-intro">
+<p>This module contains the methods used for k-seq dataset analysis</p>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">&#34;&#34;&#34;
+This module contains the methods used for k-seq dataset analysis
+&#34;&#34;&#34;
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import matplotlib.patches as mpatch
+from . import pre_processing
+from IPython.display import HTML
+
+marker_list = [&#39;o&#39;, &#39;x&#39;, &#39;^&#39;, &#39;s&#39;, &#39;*&#39;, &#39;D&#39;, &#39;+&#39;, &#39;v&#39;, &#39;1&#39;, &#39;p&#39;]
+color_list = [&#39;#2C73B4&#39;, &#39;#1C7725&#39;, &#39;#B2112A&#39;, &#39;#70C7C7&#39;, &#39;#810080&#39;,
+              &#39;#F8DB36&#39;, &#39;#AEAEAE&#39;, &#39;#87554C&#39;, &#39;#151515&#39;]
+
+######################### Sequencing sample analysis ###############################
+def sequencing_sample_info_table(sample_set):
+    &#34;&#34;&#34;
+    Print out HTML table of basic infos for sequencing samples, including spike-in info if applicable
+    return a pd.DataFrame including same info
+
+    :param sample_set: list of SequencingSample objects
+    :return: table: pd.DataFrame
+    &#34;&#34;&#34;
+
+    table = pd.DataFrame()
+    table[&#39;sample type&#39;] = [sample.sample_type for sample in sample_set]
+    table[&#39;name&#39;] = [sample.name for sample in sample_set]
+    table[&#39;total counts&#39;] = [sample.total_counts for sample in sample_set]
+    table[&#39;unique sequences&#39;] = [sample.unique_seqs for sample in sample_set]
+    table[&#39;x_value&#39;] = [sample.x_value for sample in sample_set]
+    if &#39;spike_in&#39; in sample_set[0].__dict__.keys():
+        table[&#39;spike-in amount&#39;] = [sample.spike_in[&#39;spike_in_amount&#39;] for sample in sample_set]
+        table[&#39;spike-in counts (dist={})&#39;.format(sample_set[0].spike_in[&#39;quant_factor_max_dist&#39;])] = [
+            np.sum(sample.spike_in[&#39;spike_in_counts&#39;][0:sample.spike_in[&#39;quant_factor_max_dist&#39;] + 1])
+            for sample in sample_set
+        ]
+        table[&#39;spike-in percent&#39;] = [
+            np.sum(sample.spike_in[&#39;spike_in_counts&#39;][0:sample.spike_in[&#39;quant_factor_max_dist&#39;] + 1])/sample.total_counts
+            for sample in sample_set
+        ]
+        table[&#39;quantification factor&#39;] = [sample.quant_factor for sample in sample_set]
+    table_html = table.to_html(
+        formatters={
+            &#39;total counts&#39;: lambda x: &#39;{:,}&#39;.format(x),
+            &#39;unique sequences&#39;: lambda x: &#39;{:,}&#39;.format(x),
+            &#39;spike-in counts (dist{})&#39;.format(sample_set[0].spike_in[&#39;quant_factor_max_dist&#39;]): lambda x: &#39;{:,}&#39;.format(x),
+            &#39;spike-in percent&#39;: lambda x: &#39;{:.3f}&#39;.format(x),
+            &#39;quantification factor&#39;: lambda x:&#39;{:.3e}&#39;.format(x)
+        }
+    )
+    display(HTML(table_html))
+    return table
+
+
+def sequencing_sample_info_plot(sample_set, save_dirc=None):
+    &#34;&#34;&#34;
+    An overview plot of unique sequences, total counts and spike-in ratios
+    :param sample_set: list of SequencingSample objects
+    :param save_dirc: string, directory to save the plot
+    :return:
+    &#34;&#34;&#34;
+
+    import plot
+    sample_num = len(sample_set)
+    fig = plt.figure(figsize=[sample_num * 0.5, 6])
+    # Plot bar for total seqs
+    ax = fig.add_subplot(111)
+    ax.bar(x=[i - 0.2 for i in range(sample_num)], height=[sample.total_counts for sample in sample_set],
+           align=&#39;center&#39;,width=0.4, color=&#39;#2C73B4&#39;)
+    # plot bar for unique seqs
+    ax2 = ax.twinx()
+    ax2.bar(x=[i + 0.2 for i in range(sample_num)], height=[sample.unique_seqs for sample in sample_set],
+            align=&#39;center&#39;, width=0.4, color=&#39;#FC820D&#39;)
+    # plot scatter for spike-in percentage
+    ax3 = ax.twinx()
+    ax3.scatter([i for i in range(sample_num)],
+                [np.sum(sample.spike_in[&#39;spike_in_counts&#39;][0:sample.spike_in[&#39;quant_factor_max_dist&#39;] + 1])/sample.total_counts
+                 for sample in sample_set],
+                color=&#39;#B2112A&#39;, marker=&#39;x&#39;)
+    ax3.plot([-0.5, sample_num - 0.5], [0.2, 0.2], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;20%&#39;, x=-0.55, y=0.2, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.plot([-0.5, sample_num - 0.5], [0.4, 0.4], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;40%&#39;, x=-0.55, y=0.4, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.plot([-0.5, sample_num - 0.5], [0.6, 0.6], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;60%&#39;, x=-0.55, y=0.6, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.plot([-0.5, sample_num - 0.5], [0.8, 0.8], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;80%&#39;, x=-0.55, y=0.8, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.set_ylim([0, 1])
+    ax3.set_yticks([])
+    # Aesthetic adjustment
+    ax.set_ylabel(&#39;Number of total reads in the sample&#39;, fontsize=14)
+    ax2.set_ylabel(&#39;Number of unique sequences in the sample&#39;, fontsize=14)
+    ax.set_xticks([i for i in range(sample_num)])
+    ax.set_xticklabels([sample.name for sample in sample_set], rotation=90)
+    plot.set_ticks_size(ax)
+    plot.set_ticks_size(ax2)
+    lgd = [mpatch.Patch(color=&#39;#2C73B4&#39;, label=&#39;Total counts&#39;),
+           mpatch.Patch(color=&#39;#FC820D&#39;, label=&#39;Unique sequences&#39;),
+           plt.plot([], [], lw=0, marker=&#39;x&#39;, color=&#39;#B2112A&#39;, label=&#39;Percent of spike-in&#39;)[0]]
+    plt.legend(handles=lgd)
+    if save_dirc:
+        fig.savefig(save_dirc, dpi=300)
+    plt.show()
+
+
+def plot_std_peak_dist(sampleSet, norm=True, maxDist=15):
+
+    markerList = [&#39;-o&#39;, &#39;-&gt;&#39;, &#39;-+&#39;, &#39;-s&#39;]  # different marker for different replicates
+    colorList = [&#39;#FC820D&#39;, &#39;#2C73B4&#39;, &#39;#1C7725&#39;, &#39;#B2112A&#39;, &#39;#70C7C7&#39;, &#39;#810080&#39;, &#39;#AEAEAE&#39;]  # different color for different type of samples
+    symbolList = []
+    for marker in markerList:
+        symbolList += [marker for i in range(7)]
+
+    plt.figure()
+    fig, ax = plt.subplots(1, 2, figsize=[24, 8])
+
+    for sampleIx, sample in enumerate(sampleSet):
+        counts = sample.stdCounts[:maxDist+1]
+        countsNormed = counts/counts[0]
+        ax[0].plot([i for i in range(maxDist + 1)], countsNormed,
+                   symbolList[sampleIx], color=colorList[sampleIx % 7],
+                   label=sample.id, alpha=0.5)
+
+    # add binomial distribution guide line
+    pList = [0.1, 0.01, 0.001, 0.0005, 0.0001]
+    from scipy.stats import binom
+    for p in pList:
+        rv = binom(21, p)
+        pmfs = np.array([rv.pmf(x) for x in range(7)])
+        pmfsNormed = pmfs/pmfs[0]
+        ax[0].plot([i for i in range(7)], pmfsNormed, color=&#39;k&#39;, ls = &#39;--&#39;, alpha=0.3)
+    ax[0].text(s=&#39;p=0.1&#39;, x=6, y=1e-1, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+    ax[0].text(s=&#39;p=0.01&#39;, x=6, y=1e-6, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+    ax[0].text(s=&#39;p=0.001&#39;, x=3.8, y=5e-7, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+    ax[0].text(s=&#39;p=0.0001&#39;, x=0.8, y=3e-7, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+
+    ax[0].set_xlabel(&#39;Edit distance to spike-in sequence&#39;, fontsize=16)
+    ax[0].set_yscale(&#39;log&#39;)
+    ax[0].set_ylim([1e-7, 5])
+    ax[0].tick_params(labelsize=12)
+    ax[0].set_ylabel(&#39;Sequence counts\n(normalized on exact spike-in sequence)&#39;, fontsize=16)
+
+    for sampleIx, sample in enumerate(sampleSet):
+        counts = sample.stdCounts[:maxDist+1]
+        countsAccumulated = np.array([np.sum(counts[:i+1]) for i in range(maxDist + 1)])
+        countsAccumulatedNormed = countsAccumulated/countsAccumulated[0]
+        ax[1].plot([i for i in range(maxDist + 1)], countsAccumulatedNormed,
+                   symbolList[sampleIx], color=colorList[sampleIx % 7],
+                   label=sample.id, alpha=0.5)
+    ax[1].set_xlabel(&#39;Edit distance to spike-in sequence&#39;, fontsize=16)
+    ax[1].tick_params(labelsize=12)
+    ax[1].set_ylim([0.8, 1.5])
+    ax[1].set_ylabel(&#39;Accumulated sequence counts\n(normalized on exact spike-in sequence)&#39;, fontsize=16)
+    ax[1].legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
+    plt.tight_layout()
+    # fig.savefig(&#39;/home/yuning/Work/ribozyme_pred/fig/extStdErr.jpeg&#39;, dpi=300)
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################### Valid sequence analysis ###############################
+def survey_seqs_info(sequence_set):
+    sequence_set.seq_info = pd.DataFrame(index = sequence_set.count_table.index)
+    input_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;input&#39;]
+    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;reacted&#39;]
+    sequence_set.seq_info[&#39;occur_in_inputs&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples] &gt; 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info[&#39;occur_in_reacteds&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples] &gt; 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info[&#39;total_counts_in_inputs&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info[&#39;total_counts_in_reacteds&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    return sequence_set
+
+def survey_seq_occurrence(sequence_set, sample_range=&#39;reacted&#39;, display=True, save_dirc=None):
+    if sample_range == &#39;reacted&#39;:
+        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;reacted&#39;]
+        occurrence = sequence_set.seq_info[&#39;occur_in_reacteds&#39;][1:]
+        total_counts = sequence_set.seq_info[&#39;total_counts_in_reacteds&#39;][1:]
+    elif sample_range == &#39;inputs&#39;:
+        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;input&#39;]
+        occurrence = sequence_set.seq_info[&#39;occur_in_inputs&#39;][1:]
+        total_counts = sequence_set.seq_info[&#39;total_counts_in_inputs&#39;][1:]
+    else:
+        samples = [sample[0] for sample in sequence_set.sample_info.items()]
+        occurrence = sequence_set.seq_info[&#39;occur_in_inputs&#39;][1:] + sequence_set.seq_info[&#39;occur_in_reacteds&#39;][1:]
+        total_counts = sequence_set.seq_info[&#39;total_counts_in_inputs&#39;][1:] + sequence_set.seq_info[&#39;total_counts_in_reacteds&#39;][1:]
+    count_bins = np.bincount(occurrence, minlength=len(samples) + 1)[1:]
+    count_bins_weighted = np.bincount(occurrence, minlength=len(samples) + 1, weights=total_counts)[1:]
+
+    if display:
+        fig = plt.figure(figsize=[16, 8])
+        gs = gridspec.GridSpec(2, 3, figure=fig)
+
+        ax11 = fig.add_subplot(gs[0, 0])
+        ax11.pie(x=count_bins, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={&#39;fontsize&#39;:12})
+        ax12 = fig.add_subplot(gs[0, 1:])
+        ax12.bar(height=count_bins, x=[i+1 for i in range(len(samples))])
+        ax12.set_xticks([i+1 for i in range(len(samples))])
+        ax21 = fig.add_subplot(gs[1, 0])
+        ax21.pie(x=count_bins_weighted, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={&#39;fontsize&#39;:12})
+        ax22 = fig.add_subplot(gs[1, 1:])
+        ax22.bar(height=count_bins_weighted, x=[i+1 for i in range(len(samples))])
+        ax22.set_xticks([i + 1 for i in range(len(samples))])
+        y_lim = ax11.get_ylim()
+        x_lim = ax11.get_xlim()
+        ax11.text(s=&#39;Unique sequences&#39;, x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1])/2, ha=&#39;left&#39;, va=&#39;center&#39;, rotation=90, fontsize=14)
+        y_lim = ax21.get_ylim()
+        x_lim = ax21.get_xlim()
+        ax21.text(s=&#39;Total counts&#39;, x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1]) / 2, ha=&#39;left&#39;, va=&#39;center&#39;, rotation=90, fontsize=14)
+        ax21.text(s=&#39;Percentage&#39;, x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.1,
+                  ha=&#39;center&#39;, va=&#39;top&#39;, fontsize=14)
+        y_lim = ax22.get_ylim()
+        x_lim = ax22.get_xlim()
+        ax22.text(s=&#39;Number of occurrence&#39;, x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
+                  ha=&#39;center&#39;, va=&#39;top&#39;, fontsize=14)
+        plt.tight_layout()
+        if save_dirc is not None:
+            fig.savefig(dirc=save_dirc, dpi=300, bbox_inches=&#39;tight&#39;)
+        plt.show()
+
+    return count_bins, count_bins_weighted
+
+
+def get_replicates(sequence_set, key_domain):
+    from itertools import groupby
+
+    sample_type = [(sample[0], sample[1][&#39;metadata&#39;][key_domain]) for sample in sequence_set.sample_info.items()]
+    sample_type.sort(key=lambda x: x[1])
+    groups = {}
+    for key, group in groupby(sample_type, key=lambda x: x[1]):
+        groups[key] = [x[0] for x in group]
+    return groups
+
+def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability=&#39;MAD&#39;, percentage=True, display=True):
+    np.random.seed(23)
+
+    def get_variability(seq_subset, num_rep):
+        seq_subset_subset = seq_subset[np.sum(~seq_subset.isnull(), axis=1) == num_rep]
+        if variability == &#39;MAD&#39;:
+            variability_list = abs(seq_subset_subset.subtract(seq_subset_subset.median(axis=1), axis=&#39;index&#39;)).median(axis=1)
+            if percentage:
+                variability_list = variability_list.divide(seq_subset_subset.median(axis=1), axis=&#39;index&#39;)
+        elif variability == &#39;SD&#39;:
+            variability_list = seq_subset_subset.std(axis=1, ddof=1)
+            if percentage:
+                variability_list = variability_list.divide(seq_subset_subset.mean(axis=1), axis=&#39;index&#39;)
+        if len(variability_list) &gt; subsample_size:
+            variability_list = np.random.choice(variability_list, size=subsample_size)
+
+        return variability_list
+
+    variability_res = {}
+    groups = get_replicates(sequence_set, key_domain)
+    for (group_name, group_elems) in groups.items():
+        variability_list = []
+        for i in range(len(group_elems) - 1):
+            num_rep = i + 2
+            variability_list.append(
+                get_variability(seq_subset=sequence_set.reacted_frac_table.loc[:,group_elems], num_rep=num_rep)
+            )
+        variability_res[group_name] = variability_list
+
+    if display:
+        fig, axes = plt.subplots(1, len(groups), figsize=[3*len(groups), 3], sharey=True)
+        plt.subplots_adjust(hspace=0, wspace=0)
+        for (ix, (group_name, variability_list)) in enumerate(variability_res.items()):
+            axes[ix].violinplot(variability_list, positions=[i + 2 for i in range(len(variability_list))], showmedians=True)
+            axes[ix].set_title(group_name, fontsize=14)
+            # axes[ix].set_xlabel(&#39;Replicates&#39;, fontsize=14)
+            axes[ix].set_xticks([i + 2 for i in range(len(variability_list))])
+            axes[ix].set_xticklabels([&#39;{}\n({})&#39;.format(i + 2, len(variability_list[i])) for i in range(len(variability_list))])
+        axes[0].set_ylabel(&#39;{}{}&#39;.format(&#39;P&#39; if percentage else &#39;&#39;, variability), fontsize=14)
+        plt.show()
+    return variability_res
+
+
+
+def fitting_check(k, A, xTrue, y, size=100, average=True):
+    np.random.seed(23)
+
+    fittingRes = {
+        &#39;y_&#39;: None,
+        &#39;x_&#39;: None,
+        &#39;k&#39;: [],
+        &#39;kerr&#39;: [],
+        &#39;A&#39;: [],
+        &#39;Aerr&#39;: [],
+        &#39;kA&#39;: [],
+        &#39;kAerr&#39;: [],
+        &#39;mse&#39;: [],
+        &#39;mseTrue&#39;: [],
+        &#39;r2&#39;: []
+    }
+
+    if average:
+        y_ = np.mean(y, axis=0)
+        x_ = np.mean(xTrue, axis=0)
+    else:
+        y_ = np.reshape(y, y.shape[0] * y.shape[1])
+        x_ = np.reshape(xTrue, xTrue.shape[0] * xTrue.shape[1])
+
+    for epochs in range(size):
+        # initGuess= (np.random.random(), np.random.random()*k*100)
+        initGuess = (np.random.random(), np.random.random())
+
+        try:
+            popt, pcov = curve_fit(func, x_, y_, method=&#39;trf&#39;, bounds=([0, 0], [1., np.inf]), p0=initGuess)
+        except RuntimeError:
+            popt = [np.nan, np.nan]
+
+        if fittingRes[&#39;y_&#39;] is None:
+            fittingRes[&#39;y_&#39;] = y_
+        if fittingRes[&#39;x_&#39;] is None:
+            fittingRes[&#39;x_&#39;] = x_
+        fittingRes[&#39;k&#39;].append(popt[1])
+        fittingRes[&#39;kerr&#39;].append((popt[1] - k) / k)
+        fittingRes[&#39;A&#39;].append(popt[0])
+        fittingRes[&#39;Aerr&#39;].append((popt[0] - A) / A)
+        fittingRes[&#39;kA&#39;].append(popt[0] * popt[1])
+        fittingRes[&#39;kAerr&#39;].append((popt[0] * popt[1] - k * A) / (k * A))
+
+        fittingRes[&#39;mse&#39;].append(mse(x_, y_, A=popt[0], k=popt[1]))
+        fittingRes[&#39;mseTrue&#39;].append(mse(x_, y_, A=A, k=k))
+
+        res = y_ - (1 - np.exp(-0.479 * 90 * popt[1] * x_)) * popt[0]
+        ss_res = np.sum(res ** 2)
+        ss_tot = np.sum((y_ - np.mean(y_)) ** 2)
+        fittingRes[&#39;r2&#39;].append(1 - ss_res / ss_tot)
+
+    return fittingRes</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="k_seq.data.analysis.analyze_rep_variability"><code class="name flex">
+<span>def <span class="ident">analyze_rep_variability</span></span>(<span>sequence_set, key_domain, subsample_size=1000, variability=&#39;MAD&#39;, percentage=True, display=True)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability=&#39;MAD&#39;, percentage=True, display=True):
+    np.random.seed(23)
+
+    def get_variability(seq_subset, num_rep):
+        seq_subset_subset = seq_subset[np.sum(~seq_subset.isnull(), axis=1) == num_rep]
+        if variability == &#39;MAD&#39;:
+            variability_list = abs(seq_subset_subset.subtract(seq_subset_subset.median(axis=1), axis=&#39;index&#39;)).median(axis=1)
+            if percentage:
+                variability_list = variability_list.divide(seq_subset_subset.median(axis=1), axis=&#39;index&#39;)
+        elif variability == &#39;SD&#39;:
+            variability_list = seq_subset_subset.std(axis=1, ddof=1)
+            if percentage:
+                variability_list = variability_list.divide(seq_subset_subset.mean(axis=1), axis=&#39;index&#39;)
+        if len(variability_list) &gt; subsample_size:
+            variability_list = np.random.choice(variability_list, size=subsample_size)
+
+        return variability_list
+
+    variability_res = {}
+    groups = get_replicates(sequence_set, key_domain)
+    for (group_name, group_elems) in groups.items():
+        variability_list = []
+        for i in range(len(group_elems) - 1):
+            num_rep = i + 2
+            variability_list.append(
+                get_variability(seq_subset=sequence_set.reacted_frac_table.loc[:,group_elems], num_rep=num_rep)
+            )
+        variability_res[group_name] = variability_list
+
+    if display:
+        fig, axes = plt.subplots(1, len(groups), figsize=[3*len(groups), 3], sharey=True)
+        plt.subplots_adjust(hspace=0, wspace=0)
+        for (ix, (group_name, variability_list)) in enumerate(variability_res.items()):
+            axes[ix].violinplot(variability_list, positions=[i + 2 for i in range(len(variability_list))], showmedians=True)
+            axes[ix].set_title(group_name, fontsize=14)
+            # axes[ix].set_xlabel(&#39;Replicates&#39;, fontsize=14)
+            axes[ix].set_xticks([i + 2 for i in range(len(variability_list))])
+            axes[ix].set_xticklabels([&#39;{}\n({})&#39;.format(i + 2, len(variability_list[i])) for i in range(len(variability_list))])
+        axes[0].set_ylabel(&#39;{}{}&#39;.format(&#39;P&#39; if percentage else &#39;&#39;, variability), fontsize=14)
+        plt.show()
+    return variability_res</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.fitting_check"><code class="name flex">
+<span>def <span class="ident">fitting_check</span></span>(<span>k, A, xTrue, y, size=100, average=True)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def fitting_check(k, A, xTrue, y, size=100, average=True):
+    np.random.seed(23)
+
+    fittingRes = {
+        &#39;y_&#39;: None,
+        &#39;x_&#39;: None,
+        &#39;k&#39;: [],
+        &#39;kerr&#39;: [],
+        &#39;A&#39;: [],
+        &#39;Aerr&#39;: [],
+        &#39;kA&#39;: [],
+        &#39;kAerr&#39;: [],
+        &#39;mse&#39;: [],
+        &#39;mseTrue&#39;: [],
+        &#39;r2&#39;: []
+    }
+
+    if average:
+        y_ = np.mean(y, axis=0)
+        x_ = np.mean(xTrue, axis=0)
+    else:
+        y_ = np.reshape(y, y.shape[0] * y.shape[1])
+        x_ = np.reshape(xTrue, xTrue.shape[0] * xTrue.shape[1])
+
+    for epochs in range(size):
+        # initGuess= (np.random.random(), np.random.random()*k*100)
+        initGuess = (np.random.random(), np.random.random())
+
+        try:
+            popt, pcov = curve_fit(func, x_, y_, method=&#39;trf&#39;, bounds=([0, 0], [1., np.inf]), p0=initGuess)
+        except RuntimeError:
+            popt = [np.nan, np.nan]
+
+        if fittingRes[&#39;y_&#39;] is None:
+            fittingRes[&#39;y_&#39;] = y_
+        if fittingRes[&#39;x_&#39;] is None:
+            fittingRes[&#39;x_&#39;] = x_
+        fittingRes[&#39;k&#39;].append(popt[1])
+        fittingRes[&#39;kerr&#39;].append((popt[1] - k) / k)
+        fittingRes[&#39;A&#39;].append(popt[0])
+        fittingRes[&#39;Aerr&#39;].append((popt[0] - A) / A)
+        fittingRes[&#39;kA&#39;].append(popt[0] * popt[1])
+        fittingRes[&#39;kAerr&#39;].append((popt[0] * popt[1] - k * A) / (k * A))
+
+        fittingRes[&#39;mse&#39;].append(mse(x_, y_, A=popt[0], k=popt[1]))
+        fittingRes[&#39;mseTrue&#39;].append(mse(x_, y_, A=A, k=k))
+
+        res = y_ - (1 - np.exp(-0.479 * 90 * popt[1] * x_)) * popt[0]
+        ss_res = np.sum(res ** 2)
+        ss_tot = np.sum((y_ - np.mean(y_)) ** 2)
+        fittingRes[&#39;r2&#39;].append(1 - ss_res / ss_tot)
+
+    return fittingRes</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.get_replicates"><code class="name flex">
+<span>def <span class="ident">get_replicates</span></span>(<span>sequence_set, key_domain)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_replicates(sequence_set, key_domain):
+    from itertools import groupby
+
+    sample_type = [(sample[0], sample[1][&#39;metadata&#39;][key_domain]) for sample in sequence_set.sample_info.items()]
+    sample_type.sort(key=lambda x: x[1])
+    groups = {}
+    for key, group in groupby(sample_type, key=lambda x: x[1]):
+        groups[key] = [x[0] for x in group]
+    return groups</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.plot_std_peak_dist"><code class="name flex">
+<span>def <span class="ident">plot_std_peak_dist</span></span>(<span>sampleSet, norm=True, maxDist=15)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def plot_std_peak_dist(sampleSet, norm=True, maxDist=15):
+
+    markerList = [&#39;-o&#39;, &#39;-&gt;&#39;, &#39;-+&#39;, &#39;-s&#39;]  # different marker for different replicates
+    colorList = [&#39;#FC820D&#39;, &#39;#2C73B4&#39;, &#39;#1C7725&#39;, &#39;#B2112A&#39;, &#39;#70C7C7&#39;, &#39;#810080&#39;, &#39;#AEAEAE&#39;]  # different color for different type of samples
+    symbolList = []
+    for marker in markerList:
+        symbolList += [marker for i in range(7)]
+
+    plt.figure()
+    fig, ax = plt.subplots(1, 2, figsize=[24, 8])
+
+    for sampleIx, sample in enumerate(sampleSet):
+        counts = sample.stdCounts[:maxDist+1]
+        countsNormed = counts/counts[0]
+        ax[0].plot([i for i in range(maxDist + 1)], countsNormed,
+                   symbolList[sampleIx], color=colorList[sampleIx % 7],
+                   label=sample.id, alpha=0.5)
+
+    # add binomial distribution guide line
+    pList = [0.1, 0.01, 0.001, 0.0005, 0.0001]
+    from scipy.stats import binom
+    for p in pList:
+        rv = binom(21, p)
+        pmfs = np.array([rv.pmf(x) for x in range(7)])
+        pmfsNormed = pmfs/pmfs[0]
+        ax[0].plot([i for i in range(7)], pmfsNormed, color=&#39;k&#39;, ls = &#39;--&#39;, alpha=0.3)
+    ax[0].text(s=&#39;p=0.1&#39;, x=6, y=1e-1, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+    ax[0].text(s=&#39;p=0.01&#39;, x=6, y=1e-6, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+    ax[0].text(s=&#39;p=0.001&#39;, x=3.8, y=5e-7, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+    ax[0].text(s=&#39;p=0.0001&#39;, x=0.8, y=3e-7, ha=&#39;left&#39;, va=&#39;center&#39;, fontsize=12)
+
+    ax[0].set_xlabel(&#39;Edit distance to spike-in sequence&#39;, fontsize=16)
+    ax[0].set_yscale(&#39;log&#39;)
+    ax[0].set_ylim([1e-7, 5])
+    ax[0].tick_params(labelsize=12)
+    ax[0].set_ylabel(&#39;Sequence counts\n(normalized on exact spike-in sequence)&#39;, fontsize=16)
+
+    for sampleIx, sample in enumerate(sampleSet):
+        counts = sample.stdCounts[:maxDist+1]
+        countsAccumulated = np.array([np.sum(counts[:i+1]) for i in range(maxDist + 1)])
+        countsAccumulatedNormed = countsAccumulated/countsAccumulated[0]
+        ax[1].plot([i for i in range(maxDist + 1)], countsAccumulatedNormed,
+                   symbolList[sampleIx], color=colorList[sampleIx % 7],
+                   label=sample.id, alpha=0.5)
+    ax[1].set_xlabel(&#39;Edit distance to spike-in sequence&#39;, fontsize=16)
+    ax[1].tick_params(labelsize=12)
+    ax[1].set_ylim([0.8, 1.5])
+    ax[1].set_ylabel(&#39;Accumulated sequence counts\n(normalized on exact spike-in sequence)&#39;, fontsize=16)
+    ax[1].legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
+    plt.tight_layout()
+    # fig.savefig(&#39;/home/yuning/Work/ribozyme_pred/fig/extStdErr.jpeg&#39;, dpi=300)
+    plt.show()</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.sequencing_sample_info_plot"><code class="name flex">
+<span>def <span class="ident">sequencing_sample_info_plot</span></span>(<span>sample_set, save_dirc=None)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>An overview plot of unique sequences, total counts and spike-in ratios
+:param sample_set: list of SequencingSample objects
+:param save_dirc: string, directory to save the plot
+:return:</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def sequencing_sample_info_plot(sample_set, save_dirc=None):
+    &#34;&#34;&#34;
+    An overview plot of unique sequences, total counts and spike-in ratios
+    :param sample_set: list of SequencingSample objects
+    :param save_dirc: string, directory to save the plot
+    :return:
+    &#34;&#34;&#34;
+
+    import plot
+    sample_num = len(sample_set)
+    fig = plt.figure(figsize=[sample_num * 0.5, 6])
+    # Plot bar for total seqs
+    ax = fig.add_subplot(111)
+    ax.bar(x=[i - 0.2 for i in range(sample_num)], height=[sample.total_counts for sample in sample_set],
+           align=&#39;center&#39;,width=0.4, color=&#39;#2C73B4&#39;)
+    # plot bar for unique seqs
+    ax2 = ax.twinx()
+    ax2.bar(x=[i + 0.2 for i in range(sample_num)], height=[sample.unique_seqs for sample in sample_set],
+            align=&#39;center&#39;, width=0.4, color=&#39;#FC820D&#39;)
+    # plot scatter for spike-in percentage
+    ax3 = ax.twinx()
+    ax3.scatter([i for i in range(sample_num)],
+                [np.sum(sample.spike_in[&#39;spike_in_counts&#39;][0:sample.spike_in[&#39;quant_factor_max_dist&#39;] + 1])/sample.total_counts
+                 for sample in sample_set],
+                color=&#39;#B2112A&#39;, marker=&#39;x&#39;)
+    ax3.plot([-0.5, sample_num - 0.5], [0.2, 0.2], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;20%&#39;, x=-0.55, y=0.2, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.plot([-0.5, sample_num - 0.5], [0.4, 0.4], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;40%&#39;, x=-0.55, y=0.4, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.plot([-0.5, sample_num - 0.5], [0.6, 0.6], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;60%&#39;, x=-0.55, y=0.6, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.plot([-0.5, sample_num - 0.5], [0.8, 0.8], &#39;#B2112A&#39;, ls=&#39;--&#39;, alpha=0.3)
+    ax3.text(s=&#39;80%&#39;, x=-0.55, y=0.8, ha=&#39;right&#39;, va=&#39;center&#39;, color=&#39;#B2112A&#39;, fontsize=10, alpha=0.5)
+    ax3.set_ylim([0, 1])
+    ax3.set_yticks([])
+    # Aesthetic adjustment
+    ax.set_ylabel(&#39;Number of total reads in the sample&#39;, fontsize=14)
+    ax2.set_ylabel(&#39;Number of unique sequences in the sample&#39;, fontsize=14)
+    ax.set_xticks([i for i in range(sample_num)])
+    ax.set_xticklabels([sample.name for sample in sample_set], rotation=90)
+    plot.set_ticks_size(ax)
+    plot.set_ticks_size(ax2)
+    lgd = [mpatch.Patch(color=&#39;#2C73B4&#39;, label=&#39;Total counts&#39;),
+           mpatch.Patch(color=&#39;#FC820D&#39;, label=&#39;Unique sequences&#39;),
+           plt.plot([], [], lw=0, marker=&#39;x&#39;, color=&#39;#B2112A&#39;, label=&#39;Percent of spike-in&#39;)[0]]
+    plt.legend(handles=lgd)
+    if save_dirc:
+        fig.savefig(save_dirc, dpi=300)
+    plt.show()</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.sequencing_sample_info_table"><code class="name flex">
+<span>def <span class="ident">sequencing_sample_info_table</span></span>(<span>sample_set)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Print out HTML table of basic infos for sequencing samples, including spike-in info if applicable
+return a pd.DataFrame including same info</p>
+<p>:param sample_set: list of SequencingSample objects
+:return: table: pd.DataFrame</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def sequencing_sample_info_table(sample_set):
+    &#34;&#34;&#34;
+    Print out HTML table of basic infos for sequencing samples, including spike-in info if applicable
+    return a pd.DataFrame including same info
+
+    :param sample_set: list of SequencingSample objects
+    :return: table: pd.DataFrame
+    &#34;&#34;&#34;
+
+    table = pd.DataFrame()
+    table[&#39;sample type&#39;] = [sample.sample_type for sample in sample_set]
+    table[&#39;name&#39;] = [sample.name for sample in sample_set]
+    table[&#39;total counts&#39;] = [sample.total_counts for sample in sample_set]
+    table[&#39;unique sequences&#39;] = [sample.unique_seqs for sample in sample_set]
+    table[&#39;x_value&#39;] = [sample.x_value for sample in sample_set]
+    if &#39;spike_in&#39; in sample_set[0].__dict__.keys():
+        table[&#39;spike-in amount&#39;] = [sample.spike_in[&#39;spike_in_amount&#39;] for sample in sample_set]
+        table[&#39;spike-in counts (dist={})&#39;.format(sample_set[0].spike_in[&#39;quant_factor_max_dist&#39;])] = [
+            np.sum(sample.spike_in[&#39;spike_in_counts&#39;][0:sample.spike_in[&#39;quant_factor_max_dist&#39;] + 1])
+            for sample in sample_set
+        ]
+        table[&#39;spike-in percent&#39;] = [
+            np.sum(sample.spike_in[&#39;spike_in_counts&#39;][0:sample.spike_in[&#39;quant_factor_max_dist&#39;] + 1])/sample.total_counts
+            for sample in sample_set
+        ]
+        table[&#39;quantification factor&#39;] = [sample.quant_factor for sample in sample_set]
+    table_html = table.to_html(
+        formatters={
+            &#39;total counts&#39;: lambda x: &#39;{:,}&#39;.format(x),
+            &#39;unique sequences&#39;: lambda x: &#39;{:,}&#39;.format(x),
+            &#39;spike-in counts (dist{})&#39;.format(sample_set[0].spike_in[&#39;quant_factor_max_dist&#39;]): lambda x: &#39;{:,}&#39;.format(x),
+            &#39;spike-in percent&#39;: lambda x: &#39;{:.3f}&#39;.format(x),
+            &#39;quantification factor&#39;: lambda x:&#39;{:.3e}&#39;.format(x)
+        }
+    )
+    display(HTML(table_html))
+    return table</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.survey_seq_occurrence"><code class="name flex">
+<span>def <span class="ident">survey_seq_occurrence</span></span>(<span>sequence_set, sample_range=&#39;reacted&#39;, display=True, save_dirc=None)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def survey_seq_occurrence(sequence_set, sample_range=&#39;reacted&#39;, display=True, save_dirc=None):
+    if sample_range == &#39;reacted&#39;:
+        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;reacted&#39;]
+        occurrence = sequence_set.seq_info[&#39;occur_in_reacteds&#39;][1:]
+        total_counts = sequence_set.seq_info[&#39;total_counts_in_reacteds&#39;][1:]
+    elif sample_range == &#39;inputs&#39;:
+        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;input&#39;]
+        occurrence = sequence_set.seq_info[&#39;occur_in_inputs&#39;][1:]
+        total_counts = sequence_set.seq_info[&#39;total_counts_in_inputs&#39;][1:]
+    else:
+        samples = [sample[0] for sample in sequence_set.sample_info.items()]
+        occurrence = sequence_set.seq_info[&#39;occur_in_inputs&#39;][1:] + sequence_set.seq_info[&#39;occur_in_reacteds&#39;][1:]
+        total_counts = sequence_set.seq_info[&#39;total_counts_in_inputs&#39;][1:] + sequence_set.seq_info[&#39;total_counts_in_reacteds&#39;][1:]
+    count_bins = np.bincount(occurrence, minlength=len(samples) + 1)[1:]
+    count_bins_weighted = np.bincount(occurrence, minlength=len(samples) + 1, weights=total_counts)[1:]
+
+    if display:
+        fig = plt.figure(figsize=[16, 8])
+        gs = gridspec.GridSpec(2, 3, figure=fig)
+
+        ax11 = fig.add_subplot(gs[0, 0])
+        ax11.pie(x=count_bins, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={&#39;fontsize&#39;:12})
+        ax12 = fig.add_subplot(gs[0, 1:])
+        ax12.bar(height=count_bins, x=[i+1 for i in range(len(samples))])
+        ax12.set_xticks([i+1 for i in range(len(samples))])
+        ax21 = fig.add_subplot(gs[1, 0])
+        ax21.pie(x=count_bins_weighted, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={&#39;fontsize&#39;:12})
+        ax22 = fig.add_subplot(gs[1, 1:])
+        ax22.bar(height=count_bins_weighted, x=[i+1 for i in range(len(samples))])
+        ax22.set_xticks([i + 1 for i in range(len(samples))])
+        y_lim = ax11.get_ylim()
+        x_lim = ax11.get_xlim()
+        ax11.text(s=&#39;Unique sequences&#39;, x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1])/2, ha=&#39;left&#39;, va=&#39;center&#39;, rotation=90, fontsize=14)
+        y_lim = ax21.get_ylim()
+        x_lim = ax21.get_xlim()
+        ax21.text(s=&#39;Total counts&#39;, x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1]) / 2, ha=&#39;left&#39;, va=&#39;center&#39;, rotation=90, fontsize=14)
+        ax21.text(s=&#39;Percentage&#39;, x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.1,
+                  ha=&#39;center&#39;, va=&#39;top&#39;, fontsize=14)
+        y_lim = ax22.get_ylim()
+        x_lim = ax22.get_xlim()
+        ax22.text(s=&#39;Number of occurrence&#39;, x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
+                  ha=&#39;center&#39;, va=&#39;top&#39;, fontsize=14)
+        plt.tight_layout()
+        if save_dirc is not None:
+            fig.savefig(dirc=save_dirc, dpi=300, bbox_inches=&#39;tight&#39;)
+        plt.show()
+
+    return count_bins, count_bins_weighted</code></pre>
+</details>
+</dd>
+<dt id="k_seq.data.analysis.survey_seqs_info"><code class="name flex">
+<span>def <span class="ident">survey_seqs_info</span></span>(<span>sequence_set)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def survey_seqs_info(sequence_set):
+    sequence_set.seq_info = pd.DataFrame(index = sequence_set.count_table.index)
+    input_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;input&#39;]
+    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1][&#39;sample_type&#39;] == &#39;reacted&#39;]
+    sequence_set.seq_info[&#39;occur_in_inputs&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples] &gt; 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info[&#39;occur_in_reacteds&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples] &gt; 0, axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info[&#39;total_counts_in_inputs&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, input_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    sequence_set.seq_info[&#39;total_counts_in_reacteds&#39;] = pd.Series(
+        np.sum(sequence_set.count_table.loc[:, reacted_samples], axis=1),
+        index=sequence_set.count_table.index
+    )
+    return sequence_set</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="k_seq.data" href="index.html">k_seq.data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="k_seq.data.analysis.analyze_rep_variability" href="#k_seq.data.analysis.analyze_rep_variability">analyze_rep_variability</a></code></li>
+<li><code><a title="k_seq.data.analysis.fitting_check" href="#k_seq.data.analysis.fitting_check">fitting_check</a></code></li>
+<li><code><a title="k_seq.data.analysis.get_replicates" href="#k_seq.data.analysis.get_replicates">get_replicates</a></code></li>
+<li><code><a title="k_seq.data.analysis.plot_std_peak_dist" href="#k_seq.data.analysis.plot_std_peak_dist">plot_std_peak_dist</a></code></li>
+<li><code><a title="k_seq.data.analysis.sequencing_sample_info_plot" href="#k_seq.data.analysis.sequencing_sample_info_plot">sequencing_sample_info_plot</a></code></li>
+<li><code><a title="k_seq.data.analysis.sequencing_sample_info_table" href="#k_seq.data.analysis.sequencing_sample_info_table">sequencing_sample_info_table</a></code></li>
+<li><code><a title="k_seq.data.analysis.survey_seq_occurrence" href="#k_seq.data.analysis.survey_seq_occurrence">survey_seq_occurrence</a></code></li>
+<li><code><a title="k_seq.data.analysis.survey_seqs_info" href="#k_seq.data.analysis.survey_seqs_info">survey_seqs_info</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.4</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
