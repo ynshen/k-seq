@@ -1,58 +1,46 @@
 k-seq
 ==============================
-TODO: learn github markdown file writing rules
 
-kinetic sequencing to estimate the kinetic coefficient of ribozymes in a high throughput manner
+# Current basic functions
+- import count files for k-seq samples
+- look up spike-in sequence counts and quantification sequence amount
+- select valid sequences and
 
-Project Organization
+# Todos
+TODO: update top-level README
+TODO: Use Sphix or pdoc for documentation websites
+TODO: clean up example of BYO analysis
+
+
+kinetic sequencing to estimate the kinetic coefficient of ribozymes
+
+Here is the potential project organization
 ------------
-
     ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
+    ├── Makefile           <- Makefile for reproducibility, with commands like `make data` or `make fit_byo`
+    ├── README.md          <- The top-level README file with overview
     │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
+    ├── docs\              <- package documents
     │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
+    ├── notebooks\         <- Jupyter notebooks used for analysis
     │
     ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
     │
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
+    │   └── figures        <- Generated figures to be used in reporting
     │
     ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
     │                         generated with `pip freeze > requirements.txt`
     │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
+    ├── setup.py           <- makes project pip installable, so src can be imported
     │
-    └── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
+    └── src                <- Source code of k-seq package for use in this project.
+        ├── data           <- Modules for data generation, preprocessing, io, etc
+        │
+        └── fitting        <- Modules for fitting and other estimation
+
 
 
 --------
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+<p><small>Project structure modified from <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
