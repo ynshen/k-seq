@@ -54,7 +54,7 @@ API
 .. automodule:: k_seq
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Package Content
    :glob:
 
