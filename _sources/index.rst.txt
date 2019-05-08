@@ -22,7 +22,6 @@ Example:
    sys.path.insert(0, '/your/local/dirctory/k-seq/src/')
    import k_seq.data.io as io
 
-
 To update to newer version of ``k-seq``:
 
 >>> git pull

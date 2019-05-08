@@ -283,7 +283,8 @@ Initialize a <code class="docutils literal"><span class="pre">SequencingSample</
 <li><strong>x_value</strong> (<em>float</em><em> or </em><em>str</em>) – corresponding x_value for the sample. If string, will automatically
 inspect the domain with the name</li>
 <li><strong>silent</strong> (<em>bool</em>) – optional. Print progress to std.out if True</li>
-<li><strong>name_pattern</strong> (<em>str</em>) – optional. pattern to extract metadata. Use <code class="docutils literal"><span class="pre">[...]</span></code> to include the region of sample_name,
+<li><strong>name_pattern</strong> (<em>str</em>) – optional. pattern to extract metadata using <a class="reference internal" href="k_seq.utility.html#k_seq.utility.extract_metadata" title="k_seq.utility.extract_metadata"><code class="xref py py-func docutils literal"><span class="pre">extract_metadata()</span></code></a>.
+Use <code class="docutils literal"><span class="pre">[...]</span></code> to include the region of sample_name,
 use <code class="docutils literal"><span class="pre">{domain_name[,</span> <span class="pre">int/float]}</span></code> to indicate region of domain to extract as metadata,
 including <code class="docutils literal"><span class="pre">[,int/float]</span></code> will convert the domain value to float in applicable, otherwise, string</li>
 </ul>
