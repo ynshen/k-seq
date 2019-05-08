@@ -7,8 +7,8 @@ k-seq
 - select valid sequences and
 
 
-# Documentation website (under construction)
-[k-seq](https://ynshen.github.io/k-seq/)
+# See [documentation website](https://ynshen.github.io/k-seq/) for usage
+
 
 # Todos
 TODO: update top-level README

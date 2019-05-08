@@ -1,10 +1,24 @@
-k\_seq\.data package
+k\_seq\.data
 ====================
 
-Submodules
-----------
+k\_seq\.data
+------------------------------------
 
-k\_seq\.data\.analysis module
+.. automodule:: k_seq.data
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :member-order: 'bysource'
+
+k\_seq\.data\.pre\_processing
+------------------------------------
+
+.. automodule:: k_seq.data.pre_processing
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+k\_seq\.data\.analysis
 -----------------------------
 
 .. automodule:: k_seq.data.analysis
@@ -12,7 +26,7 @@ k\_seq\.data\.analysis module
     :undoc-members:
     :show-inheritance:
 
-k\_seq\.data\.io module
+k\_seq\.data\.io
 -----------------------
 
 .. automodule:: k_seq.data.io
@@ -20,15 +34,8 @@ k\_seq\.data\.io module
     :undoc-members:
     :show-inheritance:
 
-k\_seq\.data\.pre\_processing module
-------------------------------------
 
-.. automodule:: k_seq.data.pre_processing
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-k\_seq\.data\.simu module
+k\_seq\.data\.simu
 -------------------------
 
 .. automodule:: k_seq.data.simu
@@ -37,10 +44,4 @@ k\_seq\.data\.simu module
     :show-inheritance:
 
 
-Module contents
----------------
 
-.. automodule:: k_seq.data
-    :members:
-    :undoc-members:
-    :show-inheritance:

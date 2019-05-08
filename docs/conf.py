@@ -85,6 +85,11 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
+# include docstring under __init__ in class
+autoclass_content = 'init'
+
+# Set up autodoc default options
+autodoc_member_order = 'bysource'
 
 # -- Options for HTML output ----------------------------------------------
 

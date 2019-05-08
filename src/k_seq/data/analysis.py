@@ -1,5 +1,4 @@
-"""
-This module contains the methods used for k-seq dataset analysis
+"""This module contains the methods used for k-seq dataset analysis
 """
 
 import numpy as np
