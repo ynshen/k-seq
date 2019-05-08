@@ -1,0 +1,281 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>k_seq.utility &mdash; k-seq 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../',
+              VERSION:'0.1',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="k_seq.fitting package" href="k_seq.fitting.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> k-seq
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Package Content</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="k_seq.data.html">k_seq.data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k_seq.fitting.html">k_seq.fitting package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">k_seq.utility</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">k-seq</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>k_seq.utility</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="k-seq-utility">
+<h1>k_seq.utility<a class="headerlink" href="#k-seq-utility" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-k_seq.utility"></span><p>This module contains project level utility functions</p>
+<dl class="function">
+<dt id="k_seq.utility.get_file_list">
+<code class="descclassname">k_seq.utility.</code><code class="descname">get_file_list</code><span class="sig-paren">(</span><em>file_root</em>, <em>pattern=None</em>, <em>full_directory=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.utility.get_file_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>list all files under the given file root, folders are not included</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file_root</strong> (<em>str</em>) – root directory</li>
+<li><strong>pattern</strong> (<em>str</em>) – optional, only include the files with the substring</li>
+<li><strong>full_directory</strong> (<em>bool</em>) – return full directory instead of name if True</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">list of file names/full directory</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of str</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.utility.extract_metadata">
+<code class="descclassname">k_seq.utility.</code><code class="descname">extract_metadata</code><span class="sig-paren">(</span><em>target</em>, <em>pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.utility.extract_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to extract metadata info from target given pattern</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>target</strong> (<em>str</em>) – string to extract info from, e.g. sample file name</li>
+<li><strong>pattern</strong> (<em>str</em>) – string indicate the method to extract metadata. Use <code class="docutils literal"><span class="pre">[...]</span></code> to include the region of sample_name,
+use <code class="docutils literal"><span class="pre">{domain_name[,</span> <span class="pre">int/float]}</span></code> to indicate region of domain to extract as metadata, including
+<code class="docutils literal"><span class="pre">[,int/float]</span></code> will convert the domain value to float in applicable, otherwise, string</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">dictionary of all metadata extracted from domains indicated in <code class="docutils literal"><span class="pre">pattern</span></code></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<p>Example on metadata extraction from pattern:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">extract_metadata</span><span class="p">(</span>
+<span class="go">        sample_name = &quot;R4B-1250A_S16_counts.txt&quot;</span>
+<span class="go">        pattern = &quot;R4[{exp_rep}-{concentration, float}{seq_rep}_S{id, int}]_counts.txt&quot;</span>
+<span class="go">    )</span>
+<span class="go">metadata = {</span>
+<span class="go">    &#39;name&#39;: &#39;B-1250A_S16&#39;,</span>
+<span class="go">    &#39;exp_rep&#39;: &#39;B&#39;,</span>
+<span class="go">    &#39;concentration&#39;: 1250.0,</span>
+<span class="go">    &#39;seq_rep&#39;: &#39;A&#39;,</span>
+<span class="go">    &#39;id&#39;: 16</span>
+<span class="go">    }</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="k_seq.fitting.html" class="btn btn-neutral float-left" title="k_seq.fitting package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Yuning Shen
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k_seq.data package &mdash; k-seq 0.1 documentation</title>
+  <title>k_seq.data &mdash; k-seq 0.1 documentation</title>
   
 
   
@@ -44,7 +44,9 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="k_seq.fitting" href="k_seq.fitting.html" />
+    <link rel="prev" title="k-seq: kinetic sequencing data analysis" href="../index.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -92,19 +94,20 @@
               
             
             
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">k_seq.data package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-k_seq.data.analysis">k_seq.data.analysis module</a></li>
-<li><a class="reference internal" href="#module-k_seq.data.io">k_seq.data.io module</a></li>
-<li><a class="reference internal" href="#module-k_seq.data.pre_processing">k_seq.data.pre_processing module</a></li>
-<li><a class="reference internal" href="#k-seq-data-simu-module">k_seq.data.simu module</a></li>
-<li><a class="reference internal" href="#module-k_seq.data">Module contents</a></li>
+              <p class="caption"><span class="caption-text">Package Content</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">k_seq.data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">k_seq.data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-k_seq.data.pre_processing">k_seq.data.pre_processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-k_seq.data.analysis">k_seq.data.analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-k_seq.data.io">k_seq.data.io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#k-seq-data-simu">k_seq.data.simu</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="k_seq.fitting.html">k_seq.fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k_seq.utility.html">k_seq.utility</a></li>
 </ul>
-</div>
+
             
           
         </div>
@@ -148,7 +151,7 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>k_seq.data package</li>
+      <li>k_seq.data</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -165,225 +168,269 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="k-seq-data-package">
-<h1>k_seq.data package<a class="headerlink" href="#k-seq-data-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-k_seq.data.analysis">
-<span id="k-seq-data-analysis-module"></span><h2>k_seq.data.analysis module<a class="headerlink" href="#module-k_seq.data.analysis" title="Permalink to this headline">¶</a></h2>
-<p>This module contains the methods used for k-seq dataset analysis</p>
-<dl class="function">
-<dt id="k_seq.data.analysis.analyze_rep_variability">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">analyze_rep_variability</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>key_domain</em>, <em>subsample_size=1000</em>, <em>variability='MAD'</em>, <em>percentage=True</em>, <em>display=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.analyze_rep_variability" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.fitting_check">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">fitting_check</code><span class="sig-paren">(</span><em>k</em>, <em>A</em>, <em>xTrue</em>, <em>y</em>, <em>size=100</em>, <em>average=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.fitting_check" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.get_replicates">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">get_replicates</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>key_domain</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.get_replicates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.plot_std_peak_dist">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">plot_std_peak_dist</code><span class="sig-paren">(</span><em>sampleSet</em>, <em>norm=True</em>, <em>maxDist=15</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.plot_std_peak_dist" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.sequencing_sample_info_plot">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">sequencing_sample_info_plot</code><span class="sig-paren">(</span><em>sample_set</em>, <em>save_dirc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.sequencing_sample_info_plot" title="Permalink to this definition">¶</a></dt>
-<dd><p>An overview plot of unique sequences, total counts and spike-in ratios
-:param sample_set: list of SequencingSample objects
-:param save_dirc: string, directory to save the plot
-:return:</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.sequencing_sample_info_table">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">sequencing_sample_info_table</code><span class="sig-paren">(</span><em>sample_set</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.sequencing_sample_info_table" title="Permalink to this definition">¶</a></dt>
-<dd><p>Print out HTML table of basic infos for sequencing samples, including spike-in info if applicable
-return a pd.DataFrame including same info</p>
+  <div class="section" id="k-seq-data">
+<h1>k_seq.data<a class="headerlink" href="#k-seq-data" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>k_seq.data<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-k_seq.data"></span><p>This sub-package includes the modules for data handling, including:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">pre_processing</span></code>: core module in data pre-processing from count file to <em>SequenceSeq</em> for fitting</li>
+<li><code class="docutils literal"><span class="pre">io</span></code>: module contains utility function for read, write and convert different file formats</li>
+<li><code class="docutils literal"><span class="pre">analysis</span></code>: module contains functions for extra analysis for sequencing samples or reads to sample investigation
+and sample pipeline quality control</li>
+<li><code class="docutils literal"><span class="pre">simu</span></code>: module contains codes to generate simulated data used in analysis in paper (TODO: add paper citation)</li>
+</ul>
+<dl class="class">
+<dt id="k_seq.data.SequenceSet">
+<em class="property">class </em><code class="descclassname">k_seq.data.</code><code class="descname">SequenceSet</code><span class="sig-paren">(</span><em>sample_set</em>, <em>remove_spike_in=True</em>, <em>note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.SequenceSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Initialize from a list of <code class="docutils literal"><span class="pre">SequencingSample</span></code> to a SequenceSet object.
+Find all valid sequences that occur at least once in any ‘input’ sample and once in any ‘reacted’ sample</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sample_set</strong> – list of SequencingSample objects</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">table: pd.DataFrame</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.survey_seq_occurrence">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">survey_seq_occurrence</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>sample_range='reacted'</em>, <em>display=True</em>, <em>save_dirc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.survey_seq_occurrence" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.analysis.survey_seqs_info">
-<code class="descclassname">k_seq.data.analysis.</code><code class="descname">survey_seqs_info</code><span class="sig-paren">(</span><em>sequence_set</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.survey_seqs_info" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</div>
-<div class="section" id="module-k_seq.data.io">
-<span id="k-seq-data-io-module"></span><h2>k_seq.data.io module<a class="headerlink" href="#module-k_seq.data.io" title="Permalink to this headline">¶</a></h2>
-<p>This module contains the methods for input and output</p>
-<dl class="function">
-<dt id="k_seq.data.io.export_to_csv">
-<code class="descclassname">k_seq.data.io.</code><code class="descname">export_to_csv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.io.export_to_csv" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.data.io.read_count_file">
-<code class="descclassname">k_seq.data.io.</code><code class="descname">read_count_file</code><span class="sig-paren">(</span><em>file_dirc</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.io.read_count_file" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read single count file generated from Galaxy</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_dirc</strong> (<em>str</em>) – full directory to the count file</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">number of unique sequences in the count file
-total_counts (int): number of total reads in the count file
-sequences (dict): {sequence: count}</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">unique_seqs (int)</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sample_set</strong> (list of <code class="docutils literal"><span class="pre">SequencingSample</span></code>) – valid samples to convert to <code class="docutils literal"><span class="pre">SequenceSet</span></code></li>
+<li><strong>remove_spike_in</strong> (<em>bool</em>) – sequences considered as spike-in will be removed</li>
+<li><strong>note</strong> (<em>str</em>) – optional. Additional note to add to the dataset</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="k_seq.data.SequenceSet.dataset_info">
+<code class="descname">dataset_info</code><a class="headerlink" href="#k_seq.data.SequenceSet.dataset_info" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> – dictionary of basic info of dataset:</p>
+<ul class="simple">
+<li>input_seq_num (int): number of unique sequences in all “input” samples</li>
+<li>reacted_seq_num (int): number of unique sequences in all “reacted” samples</li>
+<li>valid_seq_num (int): number of valid unqiue sequences that detected in at least one “input” sample
+and one “reacted” sample</li>
+<li>remove_spike_in (bool): indicate if spike-in sequences are removed</li>
+<li>timestamp (time): time the instance created</li>
+<li>note (str): optional. Additional notes of the dataset</li>
+</ul>
 </dd></dl>
 
-</div>
-<div class="section" id="module-k_seq.data.pre_processing">
-<span id="k-seq-data-pre-processing-module"></span><h2>k_seq.data.pre_processing module<a class="headerlink" href="#module-k_seq.data.pre_processing" title="Permalink to this headline">¶</a></h2>
-<p>This module contains the methods for data input and output</p>
-<dl class="class">
-<dt id="k_seq.data.pre_processing.SequenceSet">
-<em class="property">class </em><code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">SequenceSet</code><span class="sig-paren">(</span><em>sample_set</em>, <em>remove_spike_in=True</em>, <em>note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.SequenceSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>This class containing the dataset of valid sequences aligned from a list of SequencingSample</p>
-<dl class="method">
-<dt id="k_seq.data.pre_processing.SequenceSet.get_reacted_frac">
-<code class="descname">get_reacted_frac</code><span class="sig-paren">(</span><em>input_average='median'</em>, <em>black_list=None</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.SequenceSet.get_reacted_frac" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
+<dl class="attribute">
+<dt id="k_seq.data.SequenceSet.sample_info">
+<code class="descname">sample_info</code><a class="headerlink" href="#k_seq.data.SequenceSet.sample_info" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> – a list of dictionaries that preserve original sample information (exclude
+<code class="docutils literal"><span class="pre">SequencingSample.sequences</span></code>). Two new item:</p>
+<ul class="simple">
+<li>valid_seq_num (int): number of valid sequences in this sample</li>
+<li>valid_seq_count (int): total counts of valid sequences in this sample</li>
+</ul>
 </dd></dl>
 
-<dl class="class">
-<dt id="k_seq.data.pre_processing.SequencingSample">
-<em class="property">class </em><code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">SequencingSample</code><span class="sig-paren">(</span><em>file_root</em>, <em>sample_name</em>, <em>x_value</em>, <em>silent=True</em>, <em>name_pattern=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.SequencingSample" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>This class defines and describe the experimental samples sequenced in k-seq experiments</p>
-<dl class="method">
-<dt id="k_seq.data.pre_processing.SequencingSample.get_quant_factor">
-<code class="descname">get_quant_factor</code><span class="sig-paren">(</span><em>spike_in_amount</em>, <em>max_dist=0</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.SequencingSample.get_quant_factor" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add quant_factor and quant_factor_max_dist attributes to SequencingSample
-quant_factor here is defined as spike_in_amount/total_counts/np.sum(spike_in_counts[:max_dist + 1])
-:param max_dist:
-:param spike_in_amount:
-:return:</p>
+<dl class="attribute">
+<dt id="k_seq.data.SequenceSet.count_table">
+<code class="descname">count_table</code><a class="headerlink" href="#k_seq.data.SequenceSet.count_table" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal"><span class="pre">pandas.DataFrame</span></code> – valid sequences and their original counts in valid samples</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="k_seq.data.pre_processing.SequencingSample.survey_spike_in">
-<code class="descname">survey_spike_in</code><span class="sig-paren">(</span><em>spike_in</em>, <em>max_dist_to_survey=10</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.SequencingSample.survey_spike_in" title="Permalink to this definition">¶</a></dt>
-<dd><p>This method will survey the number of spike-in sequences in the sample, with edit distance to the center
-spike-in sequence
-Following attributes will be added to the instance:
-- spike_in: dict, {</p>
-<blockquote>
-<div><blockquote>
-<div><dl class="docutils">
-<dt>spike_in_counts: list of int with length max_dist_to_survey + 1, number of total counts with distance i to</dt>
-<dd>the center spike-in sequence</dd>
-</dl>
-<p>spike_in: string, spike_in sequence</p>
-</div></blockquote>
-<p>}</p>
-</div></blockquote>
+<dt id="k_seq.data.SequenceSet.get_reacted_frac">
+<code class="descname">get_reacted_frac</code><span class="sig-paren">(</span><em>input_average='median'</em>, <em>black_list=None</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.SequenceSet.get_reacted_frac" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate reacted fraction for sequences</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>spike_in</strong> – string, the sequence of spike-in, consider as the center sequence</li>
-<li><strong>max_dist_to_survey</strong> – int, the maximum distance to survey</li>
+<li><strong>input_average</strong> (<em>'median'</em><em> or </em><em>'mean'</em>) – method to calculate the average amount of input for a sequence</li>
+<li><strong>black_list</strong> (<em>list of str</em>) – optional, list of names of samples to be excluded in calculation</li>
+<li><strong>inplace</strong> (<em>bool</em>) – add <code class="docutils literal"><span class="pre">reacted_frac_table</span></code> to the attribute of instance if True; return
+<code class="docutils literal"><span class="pre">reacted_frac_table</span></code> if False</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">reacted_frac_table (if <em>inplace</em> is False)</p>
 </td>
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="k_seq.data.SequenceSet.reacted_frac_table">
+<code class="descname">reacted_frac_table</code><a class="headerlink" href="#k_seq.data.SequenceSet.reacted_frac_table" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal"><span class="pre">pandas.DataFrame</span></code> – a <code class="docutils literal"><span class="pre">DataFrame</span></code> object containing the reacted fraction of “reacted”
+samples for all valid sequences. Extra attributes are added to the <code class="docutils literal"><span class="pre">DataFrame</span></code>:</p>
+<ul class="simple">
+<li>input_avg_type (‘median’ or ‘mean’): method used to calculate input average</li>
+<li>col_x_values (list of float): time points or concentration points values for “reacted” samples</li>
+<li>input_avg (numpy.Array): 1D array containing the average values on input for valid sequences</li>
+</ul>
 </dd></dl>
 
 </dd></dl>
 
-<dl class="function">
-<dt id="k_seq.data.pre_processing.extract_sample_metadata">
-<code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">extract_sample_metadata</code><span class="sig-paren">(</span><em>sample_name</em>, <em>name_pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.extract_sample_metadata" title="Permalink to this definition">¶</a></dt>
-<dd><p>Auxiliary function to extract sample information from sample_name, provided name_pattern
-:param sample_name: string, sample name
-:param name_pattern: pattern to extract metadata.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>pattern rules:</dt>
-<dd>[…] to include the region of sample_name,
-{domain_name[, digit]} to indicate region of domain to extract as metadata, including
-[,digit] will convert the domain value to number, otherwise, string</dd>
-<dt>e.g. R4B-1250A_S16_counts.txt</dt>
-<dd><p class="first">with pattern = “R4[{exp_rep}-{concentration, digit}{seq_rep}_S{id, digit}_counts.txt”
-will return SequencingSample.metadata = {</p>
-<blockquote class="last">
-<div><blockquote>
-<div>‘exp_rep’: ‘B’,
-‘concentration’: 1250.0,
-‘seq_rep’: ‘A’,
-‘id’: 16.0</div></blockquote>
-<p>}</p>
-</div></blockquote>
-</dd>
-</dl>
-</div></blockquote>
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.SequencingSample">
+<em class="property">class </em><code class="descclassname">k_seq.data.</code><code class="descname">SequencingSample</code><span class="sig-paren">(</span><em>file_dirc</em>, <em>x_value</em>, <em>silent=True</em>, <em>name_pattern=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.SequencingSample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p><code class="docutils literal"><span class="pre">SequencingSample</span></code> instance store the data of each sequencing sample in k-seq experiment
+Initialize a <code class="docutils literal"><span class="pre">SequencingSample</span></code> instance by reading a count file</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">metadata</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file_dirc</strong> (<em>str</em>) – directory to the count file of sample</li>
+<li><strong>x_value</strong> (<em>float</em><em> or </em><em>str</em>) – corresponding x_value for the sample. If string, will automatically
+inspect the domain with the name</li>
+<li><strong>silent</strong> (<em>bool</em>) – optional. Print progress to std.out if True</li>
+<li><strong>name_pattern</strong> (<em>str</em>) – optional. pattern to extract metadata. Use <code class="docutils literal"><span class="pre">[...]</span></code> to include the region of sample_name,
+use <code class="docutils literal"><span class="pre">{domain_name[,</span> <span class="pre">int/float]}</span></code> to indicate region of domain to extract as metadata,
+including <code class="docutils literal"><span class="pre">[,int/float]</span></code> will convert the domain value to float in applicable, otherwise, string</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Example</p>
+<p>Example on metadata extraction from pattern:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">SequencingSample</span><span class="p">{</span>
+    <span class="n">sample_name</span> <span class="o">=</span> <span class="s2">&quot;R4B-1250A_S16_counts.txt&quot;</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;R4[{exp_rep}-{concentration, float}{seq_rep}_S{id, int}_counts.txt&quot;</span>
+    <span class="o">...</span>
+ <span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>will return</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">SequencingSample</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;exp_rep&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;concentration&#39;</span><span class="p">:</span> <span class="mf">1250.0</span><span class="p">,</span>
+    <span class="s1">&#39;seq_rep&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">16</span>
+ <span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.name">
+<code class="descname">name</code><a class="headerlink" href="#k_seq.data.SequencingSample.name" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – name of sample, extracted from file name</p>
 </dd></dl>
 
-<dl class="function">
-<dt id="k_seq.data.pre_processing.get_file_list">
-<code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">get_file_list</code><span class="sig-paren">(</span><em>file_root</em>, <em>pattern=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.get_file_list" title="Permalink to this definition">¶</a></dt>
-<dd><p>list all files under the given file root
-:param file_root: root directory
-:param pattern: optional, file name pattern to identify count files
-:return: a list of file names</p>
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.unique_seqs">
+<code class="descname">unique_seqs</code><a class="headerlink" href="#k_seq.data.SequencingSample.unique_seqs" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – number of unique sequences in the sample</p>
 </dd></dl>
 
-<dl class="function">
-<dt id="k_seq.data.pre_processing.get_quant_factors">
-<code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">get_quant_factors</code><span class="sig-paren">(</span><em>sample_set</em>, <em>spike_in='AAAAACAAAAACAAAAACAAA'</em>, <em>max_dist=2</em>, <em>max_dist_to_survey=10</em>, <em>spike_in_amounts=None</em>, <em>manual_quant_factor=None</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.get_quant_factors" title="Permalink to this definition">¶</a></dt>
-<dd><p>Assign/calculate quant_factor for SequencingSet instances in sample_set
-:param sample_set:
-:param spike_in:
-:param max_dist:
-:param max_dist_to_survey:
-:param spike_in_amounts:
-:param manual_quant_factor:
-:param silent:
-:return:</p>
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.total_counts">
+<code class="descname">total_counts</code><a class="headerlink" href="#k_seq.data.SequencingSample.total_counts" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – number of total reads in the sample</p>
 </dd></dl>
 
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.sequences">
+<code class="descname">sequences</code><a class="headerlink" href="#k_seq.data.SequencingSample.sequences" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> – a dictionary of counts for each unique sequences
+{seq: counts}</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.sample_type">
+<code class="descname">sample_type</code><a class="headerlink" href="#k_seq.data.SequencingSample.sample_type" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>‘input’ or ‘reacted’</em> – ‘input’ if sample is initial pool; ‘reacted’ if sample is reacted pool</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.x_value">
+<code class="descname">x_value</code><a class="headerlink" href="#k_seq.data.SequencingSample.x_value" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – the value of time point or concentration point for the sample</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.metadata">
+<code class="descname">metadata</code><a class="headerlink" href="#k_seq.data.SequencingSample.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> – a dictionary contains metadata of the sample:</p>
+<ul class="simple">
+<li>file_dirc (str):</li>
+<li>time_stamp (time): time the instance created</li>
+<li>Other metadata extracted from file name</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.SequencingSample.get_quant_factor">
+<code class="descname">get_quant_factor</code><span class="sig-paren">(</span><em>spike_in_amount</em>, <em>max_dist=0</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.SequencingSample.get_quant_factor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate quantification factor for the sample.
+Add <code class="docutils literal"><span class="pre">quant_factor</span></code> and <code class="docutils literal"><span class="pre">quant_factor_max_dist</span></code> attributes to the instance</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>max_dist</strong> (<em>int</em>) – maximum edit distance for a sequence to be pike-in</li>
+<li><strong>spike_in_amount</strong> (<em>float</em>) – amount of actual spike-in added in experiment</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.quant_factor">
+<code class="descname">quant_factor</code><a class="headerlink" href="#k_seq.data.SequencingSample.quant_factor" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – defined as <span class="math">\(\frac{\text{spike-in amount}}{\text{total counts}\times\text{spike-in counts[: max_dist + 1]}}\)</span></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.quant_factor_max_dist">
+<code class="descname">quant_factor_max_dist</code><a class="headerlink" href="#k_seq.data.SequencingSample.quant_factor_max_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – maximum edit distance for a sequence to be spike-in</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.SequencingSample.survey_spike_in">
+<code class="descname">survey_spike_in</code><span class="sig-paren">(</span><em>spike_in</em>, <em>max_dist_to_survey=10</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.SequencingSample.survey_spike_in" title="Permalink to this definition">¶</a></dt>
+<dd><p>Survey spike-in counts in the sample.
+Count number of sequences at different edit distance to spike-in sequences (external standard for quantification)</p>
+<blockquote>
+<div>in the sample. Add attribute <code class="docutils literal"><span class="pre">spike_in</span></code> to the instance.</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>spike_in</strong> (<em>str</em>) – the sequence of spike-in, as the center sequence</li>
+<li><strong>max_dist_to_survey</strong> (<em>int</em>) – the maximum distance to survey</li>
+<li><strong>silent</strong> (<em>bool</em>) – don’t print progress if True</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="k_seq.data.SequencingSample.spike_in">
+<code class="descname">spike_in</code><a class="headerlink" href="#k_seq.data.SequencingSample.spike_in" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> –</p>
+<ul class="simple">
+<li>spike_in_counts (list): length max_dist_to_survey + 1, number of total counts with different edit
+distance to spike-in sequence</li>
+<li>spike_in (str): center spike_in sequence</li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.pre_processing">
+<span id="k-seq-data-pre-processing"></span><h2>k_seq.data.pre_processing<a class="headerlink" href="#module-k_seq.data.pre_processing" title="Permalink to this headline">¶</a></h2>
+<p>This module contains methods for data preprocessing from count files to <code class="docutils literal"><span class="pre">SequenceSet</span></code> for fitting</p>
 <dl class="function">
 <dt id="k_seq.data.pre_processing.load_count_files">
 <code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">load_count_files</code><span class="sig-paren">(</span><em>file_root</em>, <em>x_values</em>, <em>sample_list=None</em>, <em>pattern=None</em>, <em>name_pattern=None</em>, <em>sort_fn=None</em>, <em>black_list=[]</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.load_count_files" title="Permalink to this definition">¶</a></dt>
@@ -432,12 +479,112 @@ will return SequencingSample.metadata = {</p>
 </table>
 </dd></dl>
 
+<dl class="function">
+<dt id="k_seq.data.pre_processing.get_quant_factors">
+<code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">get_quant_factors</code><span class="sig-paren">(</span><em>sample_set</em>, <em>spike_in='AAAAACAAAAACAAAAACAAA'</em>, <em>max_dist=2</em>, <em>max_dist_to_survey=10</em>, <em>spike_in_amounts=None</em>, <em>manual_quant_factor=None</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.get_quant_factors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign/calculate quant_factor for SequencingSet instances in sample_set
+:param sample_set:
+:param spike_in:
+:param max_dist:
+:param max_dist_to_survey:
+:param spike_in_amounts:
+:param manual_quant_factor:
+:param silent:
+:return:</p>
+</dd></dl>
+
 </div>
-<div class="section" id="k-seq-data-simu-module">
-<h2>k_seq.data.simu module<a class="headerlink" href="#k-seq-data-simu-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-k_seq.data.analysis">
+<span id="k-seq-data-analysis"></span><h2>k_seq.data.analysis<a class="headerlink" href="#module-k_seq.data.analysis" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the methods used for k-seq dataset analysis</p>
+<dl class="function">
+<dt id="k_seq.data.analysis.sequencing_sample_info_table">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">sequencing_sample_info_table</code><span class="sig-paren">(</span><em>sample_set</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.sequencing_sample_info_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print out HTML table of basic infos for sequencing samples, including spike-in info if applicable
+return a pd.DataFrame including same info</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sample_set</strong> – list of SequencingSample objects</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">table: pd.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.sequencing_sample_info_plot">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">sequencing_sample_info_plot</code><span class="sig-paren">(</span><em>sample_set</em>, <em>save_dirc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.sequencing_sample_info_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>An overview plot of unique sequences, total counts and spike-in ratios
+:param sample_set: list of SequencingSample objects
+:param save_dirc: string, directory to save the plot
+:return:</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.plot_std_peak_dist">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">plot_std_peak_dist</code><span class="sig-paren">(</span><em>sampleSet</em>, <em>norm=True</em>, <em>maxDist=15</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.plot_std_peak_dist" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.survey_seqs_info">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">survey_seqs_info</code><span class="sig-paren">(</span><em>sequence_set</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.survey_seqs_info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.survey_seq_occurrence">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">survey_seq_occurrence</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>sample_range='reacted'</em>, <em>display=True</em>, <em>save_dirc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.survey_seq_occurrence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.get_replicates">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">get_replicates</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>key_domain</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.get_replicates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.analyze_rep_variability">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">analyze_rep_variability</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>key_domain</em>, <em>subsample_size=1000</em>, <em>variability='MAD'</em>, <em>percentage=True</em>, <em>display=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.analyze_rep_variability" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.analysis.fitting_check">
+<code class="descclassname">k_seq.data.analysis.</code><code class="descname">fitting_check</code><span class="sig-paren">(</span><em>k</em>, <em>A</em>, <em>xTrue</em>, <em>y</em>, <em>size=100</em>, <em>average=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.analysis.fitting_check" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
-<div class="section" id="module-k_seq.data">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-k_seq.data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-k_seq.data.io">
+<span id="k-seq-data-io"></span><h2>k_seq.data.io<a class="headerlink" href="#module-k_seq.data.io" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the methods for input and output</p>
+<dl class="function">
+<dt id="k_seq.data.io.read_count_file">
+<code class="descclassname">k_seq.data.io.</code><code class="descname">read_count_file</code><span class="sig-paren">(</span><em>file_dirc</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.io.read_count_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read single count file generated from Galaxy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_dirc</strong> (<em>str</em>) – full directory to the count file</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">number of unique sequences in the count file
+total_counts (int): number of total reads in the count file
+sequences (dict): {sequence: count}</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#k_seq.data.SequencingSample.unique_seqs" title="k_seq.data.SequencingSample.unique_seqs">unique_seqs</a> (int)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.io.export_to_csv">
+<code class="descclassname">k_seq.data.io.</code><code class="descname">export_to_csv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.io.export_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="k-seq-data-simu">
+<h2>k_seq.data.simu<a class="headerlink" href="#k-seq-data-simu" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -446,6 +593,15 @@ will return SequencingSample.metadata = {</p>
            
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="k_seq.fitting.html" class="btn btn-neutral float-right" title="k_seq.fitting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="k-seq: kinetic sequencing data analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k_seq.fitting package &mdash; k-seq 0.1 documentation</title>
+  <title>k_seq.fitting &mdash; k-seq 0.1 documentation</title>
   
 
   
@@ -44,7 +44,9 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="k_seq.utility" href="k_seq.utility.html" />
+    <link rel="prev" title="k_seq.data" href="k_seq.data.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -92,17 +94,17 @@
               
             
             
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">k_seq.fitting package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-k_seq.fitting.analysis">k_seq.fitting.analysis module</a></li>
-<li><a class="reference internal" href="#module-k_seq.fitting.fitting">k_seq.fitting.fitting module</a></li>
-<li><a class="reference internal" href="#module-k_seq.fitting">Module contents</a></li>
+              <p class="caption"><span class="caption-text">Package Content</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="k_seq.data.html">k_seq.data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">k_seq.fitting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-k_seq.fitting.fitting">k_seq.fitting.fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-k_seq.fitting.analysis">k_seq.fitting.analysis</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="k_seq.utility.html">k_seq.utility</a></li>
 </ul>
-</div>
+
             
           
         </div>
@@ -146,7 +148,7 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>k_seq.fitting package</li>
+      <li>k_seq.fitting</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -163,51 +165,45 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="k-seq-fitting-package">
-<h1>k_seq.fitting package<a class="headerlink" href="#k-seq-fitting-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-k_seq.fitting.analysis">
-<span id="k-seq-fitting-analysis-module"></span><h2>k_seq.fitting.analysis module<a class="headerlink" href="#module-k_seq.fitting.analysis" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="k_seq.fitting.analysis.convergence_test">
-<code class="descclassname">k_seq.fitting.analysis.</code><code class="descname">convergence_test</code><span class="sig-paren">(</span><em>x, y, func=&lt;function func_default&gt;, weights=None, param_bounds=([0, 0], [1.0, inf]), test_size=100, return_verbose=True, key_value='loss', statistics=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.analysis.convergence_test" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.fitting.analysis.func_default">
-<code class="descclassname">k_seq.fitting.analysis.</code><code class="descname">func_default</code><span class="sig-paren">(</span><em>x</em>, <em>A</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.analysis.func_default" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.fitting.analysis.get_loss">
-<code class="descclassname">k_seq.fitting.analysis.</code><code class="descname">get_loss</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>params</em>, <em>func=&lt;function func_default&gt;</em>, <em>weights=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.analysis.get_loss" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</div>
+  <div class="section" id="k-seq-fitting">
+<h1>k_seq.fitting<a class="headerlink" href="#k-seq-fitting" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="module-k_seq.fitting.fitting">
-<span id="k-seq-fitting-fitting-module"></span><h2>k_seq.fitting.fitting module<a class="headerlink" href="#module-k_seq.fitting.fitting" title="Permalink to this headline">¶</a></h2>
+<span id="k-seq-fitting-fitting"></span><h2>k_seq.fitting.fitting<a class="headerlink" href="#module-k_seq.fitting.fitting" title="Permalink to this headline">¶</a></h2>
 <p>Methods needed for fitting</p>
 <dl class="function">
-<dt id="k_seq.fitting.fitting.fitting_master">
-<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">fitting_master</code><span class="sig-paren">(</span><em>seq</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.fitting_master" title="Permalink to this definition">¶</a></dt>
-<dd><p>Master fitting function to convert a iteration from pd.DataFrame.iterrows() to input type for fitting_single
-:param seq: one item from pd.DataFrame.iterrows()
-:param kwargs: all other keyword arguments need to pass to fitting_single()
-:return: return pd.Series object containing the fitting results</p>
+<dt id="k_seq.fitting.fitting.func_default">
+<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">func_default</code><span class="sig-paren">(</span><em>x</em>, <em>A</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.func_default" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Default kinetic model used in BYO k-seq fitting:</dt>
+<dd>A * (1 - np.exp(- 0.479 * 90 * k * x))</dd>
+</dl>
+<p>90: t, reaction time (min)
+0.479: alpha, degradation adjustment parameter for BYO in 90 min</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> – predictor for the regression model, here is initial concentration of BYO</li>
+<li><strong>A</strong> – parameter represents the maximal conversion of reactants</li>
+<li><strong>k</strong> – parameter represents the apparent kinetic coefficient</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">reacted fraction given the independent variable x and parameter (A, k)</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
-<dt id="k_seq.fitting.fitting.fitting_sequence_set">
-<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">fitting_sequence_set</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>bs_return_verbose=True</em>, <em>parallel_threads=None</em>, <em>inplace=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.fitting_sequence_set" title="Permalink to this definition">¶</a></dt>
-<dd><p>Method to apply fitting on all sequences in sequence_set
-:param sequence_set:
-:param bs_return_verbose:
-:param parallel_threads:
-:param inplace:
-:param kwargs:
-:return:</p>
+<dt id="k_seq.fitting.fitting.get_args_num">
+<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">get_args_num</code><span class="sig-paren">(</span><em>func</em>, <em>exclude_x=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.get_args_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to get the number of arguments for a callable
+:param func: callable, the function
+:param exclude_x: boolean, return the number of arguments minus 1 if true
+:return: number of arguments of the function func</p>
 </dd></dl>
 
 <dl class="function">
@@ -249,44 +245,44 @@ param_list: a list of parameters from each bootstrap samples. None if bs_return_
 </dd></dl>
 
 <dl class="function">
-<dt id="k_seq.fitting.fitting.func_default">
-<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">func_default</code><span class="sig-paren">(</span><em>x</em>, <em>A</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.func_default" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="docutils">
-<dt>Default kinetic model used in BYO k-seq fitting:</dt>
-<dd>A * (1 - np.exp(- 0.479 * 90 * k * x))</dd>
-</dl>
-<p>90: t, reaction time (min)
-0.479: alpha, degradation adjustment parameter for BYO in 90 min</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>x</strong> – predictor for the regression model, here is initial concentration of BYO</li>
-<li><strong>A</strong> – parameter represents the maximal conversion of reactants</li>
-<li><strong>k</strong> – parameter represents the apparent kinetic coefficient</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">reacted fraction given the independent variable x and parameter (A, k)</p>
-</td>
-</tr>
-</tbody>
-</table>
+<dt id="k_seq.fitting.fitting.fitting_master">
+<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">fitting_master</code><span class="sig-paren">(</span><em>seq</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.fitting_master" title="Permalink to this definition">¶</a></dt>
+<dd><p>Master fitting function to convert a iteration from pd.DataFrame.iterrows() to input type for fitting_single
+:param seq: one item from pd.DataFrame.iterrows()
+:param kwargs: all other keyword arguments need to pass to fitting_single()
+:return: return pd.Series object containing the fitting results</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="k_seq.fitting.fitting.get_args_num">
-<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">get_args_num</code><span class="sig-paren">(</span><em>func</em>, <em>exclude_x=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.get_args_num" title="Permalink to this definition">¶</a></dt>
-<dd><p>Utility function to get the number of arguments for a callable
-:param func: callable, the function
-:param exclude_x: boolean, return the number of arguments minus 1 if true
-:return: number of arguments of the function func</p>
+<dt id="k_seq.fitting.fitting.fitting_sequence_set">
+<code class="descclassname">k_seq.fitting.fitting.</code><code class="descname">fitting_sequence_set</code><span class="sig-paren">(</span><em>sequence_set</em>, <em>bs_return_verbose=True</em>, <em>parallel_threads=None</em>, <em>inplace=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.fitting.fitting_sequence_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to apply fitting on all sequences in sequence_set
+:param sequence_set:
+:param bs_return_verbose:
+:param parallel_threads:
+:param inplace:
+:param kwargs:
+:return:</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-k_seq.fitting">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-k_seq.fitting" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-k_seq.fitting.analysis">
+<span id="k-seq-fitting-analysis"></span><h2>k_seq.fitting.analysis<a class="headerlink" href="#module-k_seq.fitting.analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="k_seq.fitting.analysis.func_default">
+<code class="descclassname">k_seq.fitting.analysis.</code><code class="descname">func_default</code><span class="sig-paren">(</span><em>x</em>, <em>A</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.analysis.func_default" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.fitting.analysis.get_loss">
+<code class="descclassname">k_seq.fitting.analysis.</code><code class="descname">get_loss</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>params</em>, <em>func=&lt;function func_default&gt;</em>, <em>weights=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.analysis.get_loss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.fitting.analysis.convergence_test">
+<code class="descclassname">k_seq.fitting.analysis.</code><code class="descname">convergence_test</code><span class="sig-paren">(</span><em>x, y, func=&lt;function func_default&gt;, weights=None, param_bounds=([0, 0], [1.0, inf]), test_size=100, return_verbose=True, key_value='loss', statistics=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.fitting.analysis.convergence_test" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
 </div>
 
@@ -295,6 +291,15 @@ param_list: a list of parameters from each bootstrap samples. None if bs_return_
            
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="k_seq.utility.html" class="btn btn-neutral float-right" title="k_seq.utility" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="k_seq.data.html" class="btn btn-neutral float-left" title="k_seq.data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

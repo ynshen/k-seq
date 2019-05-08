@@ -1,18 +1,7 @@
-k\_seq\.fitting package
+k\_seq\.fitting
 =======================
 
-Submodules
-----------
-
-k\_seq\.fitting\.analysis module
---------------------------------
-
-.. automodule:: k_seq.fitting.analysis
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-k\_seq\.fitting\.fitting module
+k\_seq\.fitting\.fitting
 -------------------------------
 
 .. automodule:: k_seq.fitting.fitting
@@ -21,10 +10,11 @@ k\_seq\.fitting\.fitting module
     :show-inheritance:
 
 
-Module contents
----------------
+k\_seq\.fitting\.analysis
+--------------------------------
 
-.. automodule:: k_seq.fitting
+.. automodule:: k_seq.fitting.analysis
     :members:
     :undoc-members:
     :show-inheritance:
+
