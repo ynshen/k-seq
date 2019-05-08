@@ -24,9 +24,10 @@ class SequencingSample:
 
             silent (bool): optional. Print progress to std.out if True
 
-            name_pattern (str): optional. pattern to extract metadata. Use ``[...]`` to include the region of sample_name,
-                use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata,
-                including ``[,int/float]`` will convert the domain value to float in applicable, otherwise, string
+            name_pattern (str): optional. pattern to extract metadata using :func:`~k_seq.utility.extract_metadata`.
+              Use ``[...]`` to include the region of sample_name,
+              use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata,
+              including ``[,int/float]`` will convert the domain value to float in applicable, otherwise, string.
 
         Example:
 
