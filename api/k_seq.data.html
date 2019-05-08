@@ -286,7 +286,7 @@ inspect the domain with the name</li>
 <li><strong>name_pattern</strong> (<em>str</em>) – optional. pattern to extract metadata using <a class="reference internal" href="k_seq.utility.html#k_seq.utility.extract_metadata" title="k_seq.utility.extract_metadata"><code class="xref py py-func docutils literal"><span class="pre">extract_metadata()</span></code></a>.
 Use <code class="docutils literal"><span class="pre">[...]</span></code> to include the region of sample_name,
 use <code class="docutils literal"><span class="pre">{domain_name[,</span> <span class="pre">int/float]}</span></code> to indicate region of domain to extract as metadata,
-including <code class="docutils literal"><span class="pre">[,int/float]</span></code> will convert the domain value to float in applicable, otherwise, string</li>
+including <code class="docutils literal"><span class="pre">[,int/float]</span></code> will convert the domain value to float in applicable, otherwise, string.</li>
 </ul>
 </td>
 </tr>
@@ -435,45 +435,28 @@ distance to spike-in sequence</li>
 <dl class="function">
 <dt id="k_seq.data.pre_processing.load_count_files">
 <code class="descclassname">k_seq.data.pre_processing.</code><code class="descname">load_count_files</code><span class="sig-paren">(</span><em>file_root</em>, <em>x_values</em>, <em>sample_list=None</em>, <em>pattern=None</em>, <em>name_pattern=None</em>, <em>sort_fn=None</em>, <em>black_list=[]</em>, <em>silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.pre_processing.load_count_files" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="docutils">
-<dt>load all count files under file_root if comply with pattern. A list of SequencingSample will return, each includes</dt>
-<dd>self.file_dirc: full directory to the count file
-self.name: sample_name or indicated by name_pattern
-self.unqiue_seqs: number of unique sequences reported in count file
-self.total_counts: number of total counts reported in count file
-self.sequences: a dictionary of {seq: count} reported in count file
-self.sample_type: type of sample, either be ‘input’ or ‘reacted’</dd>
-</dl>
+<dd><p>load count files under a root folder into <code class="xref py py-func docutils literal"><span class="pre">SequencingSample()</span></code> objects</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>file_root</strong> – root directory</li>
-<li><strong>x_values</strong> – string or a list of floats. if string, will use it as domain name to extract x_value for each sample
-if a list of floats, it should have same length and order as the sample list</li>
-<li><strong>pattern</strong> – optional, file name pattern to identify count files</li>
-<li><strong>name_pattern</strong> – <p>optional. pattern to extract metadata. pattern rules: […] to include the region of
-sample_name, {domain_name[, digit]} to indicate region of domain to extract as metadata, including
-[,digit] will convert the domain value to number, otherwise, string
-e.g. R4B-1250A_S16_counts.txt with pattern = “R4[{exp_rep}-{concentration, digit}{seq_rep}_S{id, digit}_counts.txt”
-will return SequencingSample.metadata = {</p>
-<blockquote>
-<div><blockquote>
-<div>’exp_rep’: ‘B’,
-‘concentration’: 1250.0,
-‘seq_rep’: ‘A’,
-‘id’: 16.0</div></blockquote>
-<p>}</p>
-</div></blockquote>
-</li>
-<li><strong>sort_fn</strong> – optional, callable to sort sample order</li>
-<li><strong>black_list</strong> – name of sample files that will be excluded in loading</li>
-<li><strong>slient</strong> – boolean, false: print calculation progress to the screen</li>
+<li><strong>file_root</strong> (<em>str</em>) – directory to the root folder</li>
+<li><strong>x_values</strong> (<em>str</em><em> or </em><em>list of float</em>) – string or a list of floats. The time points or concentration points value for
+each sample. If string, the function will use it as domain name to extract x_value from file name; if a list
+of floats, it should have same length and order as sample file under file_root
+(Use :func:<a href="#id2"><span class="problematic" id="id3">`</span></a>~k_seq.utility.get_file_list’ to examine the files automatically extracted)</li>
+<li><strong>pattern</strong> (<em>str</em>) – optional, file name pattern to identify count files. Only file with name strictly contains the pattern
+will be collected.</li>
+<li><strong>name_pattern</strong> (<em>str</em>) – optional. Pattern to extract metadata, see :func:<a href="#id4"><span class="problematic" id="id5">`</span></a>~k_seq.utility.extract_metadata’</li>
+<li><strong>sort_fn</strong> (<em>callable</em>) – optional. A callable to customize sample order</li>
+<li><strong>sample_list</strong> (<em>list of str</em>) – optional, if there is a given list of file name</li>
+<li><strong>black_list</strong> (<em>list of str</em>) – name of sample files that will be excluded in loading</li>
+<li><strong>silent</strong> (<em>boolean</em>) – don’t print process if True</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">sample_set: a list of SequencingSample class</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">list of <code class="xref py py-func docutils literal"><span class="pre">SequencingSample()</span></code></p>
 </td>
 </tr>
 </tbody>
