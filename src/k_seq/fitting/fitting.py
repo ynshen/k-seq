@@ -6,6 +6,7 @@ from scipy.optimize import curve_fit
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
+from ..data import pre_processing
 
 
 def func_default(x, A, k):
@@ -40,7 +41,7 @@ def get_args_num(func, exclude_x=True):
 
 
 def fitting_single(x_data, y_data, func=func_default, weights=None, bounds=None,
-                   bootstrap=True, bs_depth=1000, bs_return_verbose=True, bs_residue=False,
+                   bootstrap=True, bs_depth=1000, bs_return_verbose=100, bs_residue=False,
                    missing_data_as_zero=False, y_max=None, **kwargs):
 
     """
@@ -123,7 +124,7 @@ def fitting_single(x_data, y_data, func=func_default, weights=None, bounds=None,
             results['p97.5'] = np.percentile(param_list, 97.5, axis=0)
         else:
             results['sd'] = np.nan
-    if bs_return_verbose:
+    if bs_return_verbose > 0:
         return results, param_list
     else:
         return results, None
@@ -141,7 +142,7 @@ def fitting_master(seq, **kwargs):
     return pd.Series(single_res[0], name=seq[0]), (seq[0], single_res[1])
 
 
-def fitting_sequence_set(sequence_set, bs_return_verbose=True, parallel_threads=None, inplace=True, **kwargs):
+def fitting_sequence_set(sequence_set, bs_return_verbose=100, parallel_threads=None, inplace=True, **kwargs):
     """
     Method to apply fitting on all sequences in sequence_set
     :param sequence_set:
@@ -158,11 +159,16 @@ def fitting_sequence_set(sequence_set, bs_return_verbose=True, parallel_threads=
                            bs_return_verbose=bs_return_verbose,
                            **kwargs)
 
+    if isinstance(sequence_set, pd.DataFrame):
+        reacted_frac_table = sequence_set
+    else:
+        reacted_frac_table = sequence_set.reacted_frac_table
+
     if parallel_threads:
         pool = mp.Pool(processes=int(parallel_threads))
         results = pool.map(partial_func, sequence_set.reacted_frac_table.iterrows())
     else:
-        results = [partial_fun(seq) for seq in sequence_set.reacted_frac_table.iterrows()]
+        results = [partial_func(seq) for seq in reacted_frac_table.iterrows()]
 
     if inplace:
         sequence_set.fitting_results = pd.DataFrame([res[0] for res in results])
@@ -173,6 +179,9 @@ def fitting_sequence_set(sequence_set, bs_return_verbose=True, parallel_threads=
             return pd.DataFrame([res[0] for res in results]), {res[1][0]:res[1][1] for res in results}
         else:
             return pd.DataFrame([res[0] for res in results])
+
+
+
 
 
 # TODO: make a full script to run the whole

@@ -3,6 +3,22 @@ This module contains project level utility functions
 """
 
 
+class EnvVar(object):
+
+    def __init__(self):
+        pass
+
+    def add_env(self, name, value):
+        self.__dict__.update({name: value})
+
+    @classmethod
+    def from_dict(cls, env_dict):
+        env = EnvVar()
+        for key,value in env_dict.items():
+            env.__dict__.update({key: value})
+        return env
+
+
 def get_file_list(file_root, pattern=None, full_directory=False):
     """list all files under the given file root, folders are not included
 
@@ -61,6 +77,7 @@ def extract_metadata(target, pattern):
             }
 
     """
+    import numpy as np
 
     def extract_info_from_braces(target, pattern):
         """
@@ -146,7 +163,12 @@ def extract_metadata(target, pattern):
                 info[len(domains) - 1] = ''.join(info[len(domains) - 1:])
         else:
             info = [info]
-        info_list = {domain[0]: domain[1](info[ix]) for ix, domain in enumerate(domains)}
+        info_list = dict()
+        for ix, domain in enumerate(domains):
+            try:
+                info_list[domain[0]] = domain[1](info[ix])
+            except:
+                info_list[domain[0]] = str(info[ix])
         # iteratively calculate the leftover substring
         if postfix != '':
             info_list.update(extract_info_from_braces(target=target[target.find(postfix, len(prefix)):],
