@@ -1,149 +1,170 @@
-"""This module contains methods for data preprocessing from count files to ``SequenceSet`` for fitting
+"""This module contains methods for data preprocessing from count files to ``CountFile`` for fitting
 TODOs:
   - write output function for each class as JSON file
 """
 
 import numpy as np
 import pandas as pd
-from . import io
-from .. import utility
 
 
-class SequencingSample(object):
+class CountFile:
     """This class describes experimental samples sequenced in k-seq
     """
 
-    def __init__(self, file_dirc, x_value, silent=True, name_pattern=None):
-        """``SequencingSample`` instance store the data of each sequencing sample in k-seq experiment
-        Initialize a ``SequencingSample`` instance by reading a count file
-
+    def __init__(self, file_path, x_value, name_pattern=None, load_data=False, silent=True):
+        """`CountFile` instance store the count file data for each sequencing sample in k-seq experiments
+        Initialize a `CountFile` instance by linking to a count file
         Args:
-            file_dirc (str): directory to the count file of sample
+            file_path (`str`): directory to the count file of sample
 
-            x_value (float or str): corresponding x_value for the sample. If string, it will extract value from
-                corresponding domain with the name
+            x_value (`float` or `str`): x-axis value for the sample (e.g. time point or substrate concentration) in the fitting.
+                If `str`, it will extract value from the domain indicated by ``name_pattern``
 
-            silent (bool): optional. Print progress to std.out if True
+            name_pattern (`str`): optional. Pattern to automatically extract metadata using
+                :func:`~k_seq.utility.extract_metadata` (click to see details). Briefly,
 
-            name_pattern (str): optional. Pattern to extract metadata using :func:`~k_seq.utility.extract_metadata`.
-                Use ``[...]`` to include the region of sample_name,
-                use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata,
-                including ``[,int/float]`` will convert the domain value to float in applicable, otherwise, string.
+                - Use ``[...]`` to include the region of sample_name (required),
+
+                - Use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata,
+
+                including ``[,int/float]`` will convert the domain value to int/float if applicable, otherwise, string.
+
+            load_data (`bool`): if load data from the count file when initializing the object. Recommend to set as False
+                for large files. Default False.
+
+            silent (bool): Print progress to std.out if False.
 
         Example:
 
-            Example on metadata extraction from pattern:
+                .. code-block:: python
+
+                   sample = CountFile{
+                       file_path = "path/to/count/file/R4B-1250A_S16_counts.txt",
+                       x_value = 'concentration',
+                       name_pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}]_S{id, int}_counts.txt"
+                       load_data = False,
+                       silent = False
+                    }
+
+            will return a ``CountFile`` instance ``sample`` that
 
                 .. code-block:: python
 
-                   SequencingSample{
-                       sample_name = "R4B-1250A_S16_counts.txt"
-                       pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}_S{id, int}_counts.txt"
-                       ...
+                    > sample.name
+                    'B-1250A'
+                    > sample.metadata
+                    {
+                        'exp_rep': 'B',
+                        'concentration': 1250.0,
+                        'seq_rep': 'A',
+                        'id': 16
                     }
-
-            will return
-
-                .. code-block:: python
-
-                   SequencingSample.metadata = {
-                       'exp_rep': 'B',
-                       'concentration': 1250.0,
-                       'seq_rep': 'A',
-                       'id': 16
-                    }
+                    > sample.sequences
+                    Error
 
         Attributes:
 
-            name (str): name of sample, extracted from file name
+            name (`str`): name of the sample, extracted from the file name
 
-            unique_seqs (int): number of unique sequences in the sample
+            unique_seqs (``int``): number of unique sequences in the sample
 
-            total_counts (int): number of total reads in the sample
+            total_counts (``int``): number of total reads in the sample
 
-            sequences (dict): a dictionary of counts for each unique sequences
+            sequences (``dict``): a dictionary of counts for each unique sequences
                 {seq: counts}
 
-            sample_type ('input' or 'reacted'): 'input' if sample is initial pool; 'reacted' if sample is reacted pool
+            sample_type (``str``, 'input' or 'reacted'): 'input' if sample is from initial pool;
+                'reacted' if sample is reacted pool
 
             x_value (float): the value of time point or concentration point for the sample
 
             metadata (dict): a dictionary contains metadata of the sample:
 
-                - file_dirc (str):
+                - file_path (`str`): path to the count file
 
                 - time_stamp (time): time the instance created
 
-                - Other metadata extracted from file name
+                - Other metadata extracted from the file name
         """
 
         import datetime
-        from .. import utility
+        from k_seq import utility
+        from k_seq.data import io
+        from pathlib import Path
 
         self.metadata = {}
-        sample_name = file_dirc[file_dirc.rfind('/') + 1:]
-        self.metadata['file_dirc'] = file_dirc
-        self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_dirc'])
+        file_path = Path(file_path)
+        self.metadata['file_path'] = str(file_path)
 
         if name_pattern:
-            metadata = utility.extract_metadata(target=sample_name, pattern=name_pattern)
+            metadata = utility.extract_metadata(target=file_path.name, pattern=name_pattern)
             self.name = metadata.pop('name', None)
             self.metadata.update(metadata)
         else:
-            self.name = sample_name
+            self.name = file_path.name
 
         if 'input' in self.name or 'Input' in self.name:
             self.sample_type = 'input'
-        else:
-            self.sample_type = 'reacted'
-
-        if self.sample_type == 'input':
             self.x_value = np.nan
         else:
-            if type(x_value) == str:
+            self.sample_type = 'reacted'
+            if isinstance(x_value, str):
                 self.x_value = self.metadata[x_value]
             else:
                 self.x_value = x_value
-
         self.metadata['timestamp'] = str(datetime.datetime.now())
-        if not silent:
-            print("Sample {} imported from {}".format(self.name, self.metadata['file_dirc']))
 
-    def survey_spike_in(self, spike_in, max_dist_to_survey=10, silent=True, inplace=True):
+        if load_data:
+            if not silent:
+                print("Load count data from file...")
+            self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
+
+        if not silent:
+            print("Sample {} imported from {}".format(self.name, self.metadata['file_path']))
+
+    def load_data(self, silent=False):
+        """Function to load data from file with path in ``self.matadata['file_path']``"""
+
+        if not silent:
+            print("Load count data from file...")
+        self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
+
+    def survey_spike_in(self, spike_in_seq, max_dist_to_survey=10, silent=True, inplace=True):
         """Survey spike-in counts in the sample.
-        Count number of sequences at different edit distance to spike-in sequences (external standard for quantification)
-          in the sample. Add attribute ``spike_in`` to the instance if inplace is True.
+        Calculate the total counts of sequences that is *i* (*i* from 0 to `max_dist_to_survey`) edit distance from
+            exact spike-in sequences (external standard for quantification) in the sample.
+            Add attribute ``spike_in`` to the instance if `inplace` is True.
 
         Args:
-            spike_in (str): the sequence of spike-in, as the center sequence
+            spike_in_seq (`str`): the exact sequence of spike-in
 
-            max_dist_to_survey (int): the maximum distance to survey
+            max_dist_to_survey (`int`): the maximum distance to survey
 
-            silent (bool): don't print progress if True
+            silent (`bool`): don't print progress if True
 
-            inplace (bool): Add attribute ``spike_in`` if inplace is True, else return a dict object
+            inplace (`bool`): Add attribute ``spike_in`` if True, else return a dict object
                 {
                     'spike_in_seq': str, spike in sequence,
-                    'spike_in_counts': list of int, number of sequences that is i edit distance away
+                    'spike_in_counts': list of `int`, number of sequences that is *i* edit distance away
                 }
 
         Attributes:
 
-            spike_in (dict):
+            spike_in (`dict`):
 
-                - spike_in_counts (list): length max_dist_to_survey + 1, number of total counts with different edit
-                  distance to spike-in sequence
+                - spike_in_counts (`list` of `int`): length `max_dist_to_survey + 1` list, number of total counts with
+                    different edit distance to exact spike-in sequence
 
-                - spike_in (str): center spike_in sequence
-
+                - spike_in (`str`): exact spike in sequence
         """
+
         import Levenshtein
 
         results = dict()
         results['spike_in_counts'] = np.zeros(max_dist_to_survey + 1, dtype=np.int)
-        results['spike_in_seq'] = spike_in
+        results['spike_in_seq'] = spike_in_seq
         for seq,counts in self.sequences.items():
-            dist = Levenshtein.distance(spike_in, seq)
+            dist = Levenshtein.distance(spike_in_seq, seq)
             if dist <= max_dist_to_survey:
                 results['spike_in_counts'][dist] += counts
         if not silent:
@@ -153,159 +174,230 @@ class SequencingSample(object):
         else:
             return results
 
-    def get_quant_factor(self, spike_in_amount, max_dist=0, silent=True):
-        """Calculate quantification factor for the sample.
-        Add ``quant_factor`` and ``quant_factor_max_dist`` attributes to the instance
+    def get_quant_factor(self, from_spike_in_amount=None, max_dist=0, spike_in_seq=None, from_total_amount=None,
+                         silent=True):
+        """Calculate quantification factor for the sample, either from spike in or total amount
+        If `from_spike_in_amount` is not `None`, will priory use spike in to quantify the amount of each sequence, and
+            attributes ``quant_factor`` and ``quant_factor_max_dist`` will be add to the instance,
+        If `from_spike_in_amount` is `None`, we expect `from_total_amount` to be not `None`
 
         Args:
-            max_dist (int): maximum edit distance for a sequence to be pike-in
 
-            spike_in_amount (float): amount of actual spike-in added in experiment
+            from_spike_in_amount (`float`): Optional. Amount of actual spike-in added in this sample
+
+            max_dist (`int`): maximum edit distance to count a sequence as spike-in, `from_spike_in_amount` has to be not `None`.
+                Default 0.
+
+            spike_in_seq (`str`): Optional. Exact spike in sequence, pass to `survey_spike_in` if not performed yet
+
+            from_total_amount (`float`): Optional. Total amount of DNA measured for ths sample
+
+            silent (`bool`): don't print process info if False
 
         Attributes:
-            quant_factor (float): defined as :math:`\\frac{\\text{spike-in amount}}{\\text{total counts}\\times\\text{spike-in counts[: max_dist + 1]}}`
 
-            quant_factor_max_dist (int): maximum edit distance for a sequence to be spike-in
+            quant_factor (`float`): defined as
+                :math:`\\frac{\\text{spike-in amount}}{\\text{total counts}\\times\\text{spike-in counts[: max_dist + 1]}}`
+                if `from_spike_in_amount` is not None
+
+            quant_factor_max_dist (`int`): maximum edit distance for a sequence to be spike-in
 
         """
 
-        self.quant_factor = spike_in_amount * self.total_counts / np.sum(self.spike_in['spike_in_counts'][:max_dist + 1])
-        self.spike_in['quant_factor_max_dist'] = max_dist
-        self.spike_in['spike_in_amount'] = spike_in_amount
+        if from_spike_in_amount:
+            if not hasattr(self, 'spike_in'):
+                self.survey_spike_in(spike_in_seq, max_dist_to_survey=max_dist, silent=silent, inplace=True)
+            self.quant_factor = from_spike_in_amount * self.total_counts / np.sum(self.spike_in['spike_in_counts'][:max_dist + 1])
+            self.spike_in['quant_factor_max_dist'] = max_dist
+            self.spike_in['spike_in_amount'] = from_spike_in_amount
+        elif from_total_amount:
+            self.quant_factor = from_total_amount
+            self.spike_in = False
 
         if not silent:
             print("Calculate quant-factor for sample {}. Done.".format(self.name))
 
 
-class SequencingSampleSet(object):
-    """Object to load and store batch of samples
+class CountFileSet:
+    """Object to load and store a set of samples
     """
 
-    def __init__(self, file_root, x_values, sample_list=None, pattern=None, name_pattern=None,
-                 sort_fn=None, black_list=[], silent=True):
-        """load count files under a root folder into :func:`~SequencingSample` objects
+    def __init__(self, file_root, x_values, count_file_pattern=None, name_pattern=None,
+                 sort_by=None, file_list=None, black_list=None, load_data=False, silent=True):
+        """Initialize by linking count files under a root folder into :func:`~CountFile` objects
 
         Args:
-            file_root (str): directory to the root folder
+            file_root (`str`): directory to the root folder for count files
 
-            x_values (str or list of float): string or a list of floats. The time points or concentration points value for
-              each sample. If string, the function will use it as domain name to extract x_value from file name; if a list
-              of floats, it should have same length and order as sample file under file_root
+            x_values (`str` or list of `float`): Time points or concentration points values for samples. If `str`, the
+              function will use it as the domain name to extract value from file name; if a list
+              of `float`, it should have same length and order as sample file under `file_root`
               (Use :func:`~k_seq.utility.get_file_list' to examine the files automatically extracted)
 
-            sample_list (list of str): optional, only import the file in sample_list if not None
+            count_file_pattern (`str`): optional, name pattern to identify count files. Only file name contains
+              the pattern will be included
 
-            pattern (str): optional, file name pattern to identify count files. Only file with name strictly contains
-              the pattern will be collected.
+            name_pattern (`str`): optional. Pattern to extract metadata, see :func:`~k_seq.utility.extract_metadata'
+              for details
 
-            name_pattern (str): optional. Pattern to extract metadata, see :func:`~k_seq.utility.extract_metadata'
+            sort_by (`str` or `callable`): optional. If `str`, it should be the domain name to order the sample in the
+              ascending order. If `callable`, the input is `CountFile` instance and the sample will ordered by the
+              return value
 
-            sort_fn (callable): optional. A callable to customize sample order
+            file_list (list of `str`): optional, only import the file in sample_list if not `None`
 
-            black_list (list of str): name of sample files that will be excluded in loading
+            black_list (list of `str`): optional, name of sample files that are excluded
+
+            load_sample (`bool`): if read and load count file during initialization. Recommand to be False for large
+              count files, default False.
 
             silent (boolean): don't print process if True
 
         """
-        if sample_list is None:
-            sample_list = utility.get_file_list(file_root=file_root, pattern=pattern)
-            if not silent:
-                print("NOTICE: no sample_list is given, samples will extract automatically from file_root.")
-            if type(x_values) != str:
-                raise Exception("No sample_list is given, "
-                                "please indicate domain name instead of list of real values to extract x_values")
-        self.sample_set = []
-        if file_root[-1] != '/':
-            file_root += '/'
-        if type(x_values) == str:
-            x_values = [x_values for _ in sample_list]
-        for sample_ix, sample_name in enumerate(sample_list):
-            if sample_name not in black_list:
-                sample = SequencingSample(file_dirc=file_root + sample_name,
-                                          x_value=x_values[sample_ix],
-                                          name_pattern=name_pattern,
-                                          silent=silent)
-                self.sample_set.append(sample)
-        if sort_fn:
-            self.sample_set.sort(key=sort_fn)
+        from pathlib import Path
 
-        self.sample_num = len(self.sample_set)
-        self.sample_names = [sample.name for sample in self.sample_set]
+        if file_list is None:
+            file_list = [file.name for file in Path(file_root).glob('*{}*'.format(count_file_pattern))]
+            if not silent:
+                print("NOTICE: no sample list is given, samples are collected from root folder:" +
+                      '\n'.join(file_list))
+
+        if isinstance(x_values, list):
+            if len(x_values) != len(file_list):
+                raise Exception("Errors: sample_list is given as a list, but the length does not match with "
+                                "sample files")
+        else:
+            x_values = [x_values for _ in file_list]
+
+        if black_list is None:
+            black_list = []
+
+        self.sample_set = []
+        for file_name, x_value in zip(file_list, x_values):
+            if file_name not in black_list:
+                sample = CountFile(file_path = str(Path.joinpath(Path(file_root), file_name)),
+                                   x_value = x_value,
+                                   name_pattern=name_pattern,
+                                   load_data=load_data,
+                                   silent=silent)
+                self.sample_set.append(sample)
+
+        if sort_by:
+            if isinstance(sort_by, str):
+                sort_fn = lambda count_file: count_file.metadata[sort_by]
+            elif callable(sort_by):
+                sort_fn = sort_by
+            self.sample_set = sorted(self.sample_set, key=sort_fn)
 
         if not silent:
             print("Samples imported from {}".format(file_root))
 
-    def get_quant_factors(self, spike_in_amounts, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, max_dist_to_survey=None,
-                          quant_factor=None, survey_only=False, silent=True):
-        """Calculate quantification factors for each sample in SequencingSampleSet.
+    def load_data(self, silent=False):
+        for sample in self.sample_set:
+            sample.load_data(silent=silent)
+
+    def get_quant_factors(self, from_spike_in_amounts=None, spike_in_seq=None, max_dist=2,
+                          max_dist_to_survey=None, from_total_amounts = None, quant_factors=None,
+                          survey_only=False, silent=True):
+        """Calculate quantification factors for each sample in `CountFileSet`.
         This method will first survey the spike-in sequence, then calculate the quantification factor for each sample if
         applies.
 
         Args:
-            spike_in_amounts (list/dict of float): a list/dict of absolute amount of spike-in sequence for each sample
-              if dict, the key must match the name of sample.
+            from_spike_in_amounts (list/dict of `float`): optional. Use if using spike in for quantification.
+              A list/dict of absolute amount of spike-in sequence in each sample
+              If `dict`, the key must match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            spike_in (str): optional, spike in sequence. Default: AAAAACAAAAACAAAAACAAA
+            spike_in_seq (`str`): optional. Spike in sequence if using spike in for quantification.
 
-            max_dist (int): optional, maximum edit distance to center spike-in sequence to be counted as spike-in.
+            max_dist (`int`): optional, maximum edit distance to exact spike-in sequence to be counted as spike-in.
               Default: 2
 
-            max_dist_to_survey (int): optional, survey the spike-in counts with maximum edit distance if not None
+            max_dist_to_survey (`int`): optional, survey the spike-in counts with maximum edit distance. If `None`,
+              `max_dist` will be used
 
-            quant_factor (list/dict of float): optional, accept a list/dict of manually applied quant_factor
+            from_total_amounts (list/dict of 'float'): optional. Use if using total DNA amount for quantification. Same
+              as `from_spike_in_amount`, a list/dict of total amount of DNA in each sample. If `dict`, the key must
+              match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            survey_only (bool): optional. If True, only survey the spike-in counts within maximum edit distance
+            quant_factors (list/dict of `float`): optional, accept a list/dict of manually curated quant_factor. If `dict`,
+              the key must match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            silent (bool): don't print process if True
+            survey_only (`bool`): optional. If True, only survey the spike-in counts within maximum edit distance
+
+            silent (`bool`): don't print process if True
 
         """
 
-        for sample in self.sample_set:
-            sample.survey_spike_in(spike_in=spike_in, max_dist_to_survey=max_dist_to_survey,
-                                   silent=silent, inplace=True)
-        if not survey_only:
-            if quant_factor:
-                for sample_ix, sample in enumerate(self.sample_set):
-                    if isinstance(quant_factor, dict):
-                        if sample.name in quant_factor.keys():
-                            sample.quant_factor = quant_fasctor[sample.name]
-                    elif isinstance(quant_factor, list):
-                        sample.quant_factor = quant_factor[sample_ix]
+        if quant_factors:
+            # curated quant factors has highest priority
+            if len(quant_factors) == len(self.sample_set):
+                if isinstance(quant_factors, dict):
+                    for sample in self.sample_set:
+                        if sample.name in quant_factors.keys():
+                            sample.quant_factor = quant_factors[sample.name]
+                elif isinstance(quant_factors, list):
+                    for sample, quant_factor in zip(self.sample_set, quant_factors):
+                        sample.quant_factor = quant_factor
+        elif from_spike_in_amounts:
+            if spike_in_seq:
+                if max_dist_to_survey is None:
+                    max_dist_to_survey = max_dist
+                for sample in self.sample_set:
+                    sample.survey_spike_in(spike_in_seq=spike_in_seq,
+                                           max_dist_to_survey=max_dist_to_survey,
+                                           silent=silent,
+                                           inplace=True)
             else:
-                for sample_ix, sample in enumerate(self.sample_set):
-                    if isinstance(spike_in_amounts, dict):
-                        if sample.name in spike_in_amounts.keys():
-                            sample.get_quant_factor(spike_in_amount=spike_in_amounts[sample.name],
-                                                    max_dist=max_dist)
-                    elif isinstance(spike_in_amounts, list):
-                        sample.get_quant_factor(spike_in_amount=spike_in_amounts[sample_ix],
-                                                max_dist=max_dist)
+                raise Exception('Please indicate spike in sequence')
+            if not survey_only:
+                if isinstance(from_spike_in_amounts, dict):
+                    for sample in self.sample_set:
+                        if sample.name in from_spike_in_amounts.keys():
+                            sample.get_quant_factor(from_spike_in_amount=from_spike_in_amounts[sample.name],
+                                                    max_dist=max_dist, silent=silent)
+                elif isinstance(from_spike_in_amounts, list):
+                    for sample, spike_in_amount in zip(self.sample_set, from_spike_in_amounts):
+                        sample.get_quant_factor(from_spike_in_amount=spike_in_amount,
+                                                max_dist=max_dist, silent=silent)
+        elif from_total_amounts:
+            if isinstance(from_total_amounts, dict):
+                for sample in self.sample_set:
+                    if sample.name in from_total_amounts.keys():
+                        sample.get_quant_factor(from_total_amount=from_total_amounts[sample.name], silent=silent)
+            elif isinstance(from_total_amounts, list):
+                for sample, total_amount in zip(self.sample_set, from_total_amounts):
+                    sample.get_quant_factor(from_total_amount=total_amount, silent=silent)
+
+    @property
+    def sample_num(self):
+        return len(self.sample_set)
+
+    @property
+    def sample_names(self):
+        return [sample.name for sample in self.sample_set]
 
     def filter_sample(self, sample_to_keep, inplace=True):
         """filter samples in sample set
 
         Args:
-            sample_to_keep (list of str): name of samples to keep
-            inplace (bool): return a new SequencingSampleSet if False
+            sample_to_keep (list of `str`): name of samples to keep
+            inplace (`bool`): return a new SequencingSampleSet if False
 
-        Returns: None if inplace is True, SequencingSampleSet if inplace is False
+        Returns: None if inplace is True, `CountFileSet` if inplace is False
 
         """
 
         if inplace:
             self.sample_set = [sample for sample in self.sample_set if sample.name in sample_to_keep]
-            self.sample_num = len(self.sample_set)
-            self.sample_names = sample_to_keep
         else:
             import copy
             new_set = copy.deepcopy(self)
             new_set.sample_set = [sample for sample in new_set.sample_set if sample.name in sample_to_keep]
-            new_set.sample_num = len(new_set.sample_set)
-            new_set.sample_names = sample_to_keep
             return new_set
 
 
-class SequenceSet(object):
+class SequenceSet:
     """This class contains the dataset of valid sequences extracted and aligned from a list of ``SequencingSample``
     """
 
@@ -517,6 +609,3 @@ class SequenceSet(object):
                 sequence_set_copy.reacted_frac_table.input_avg_type = input_avg_type
                 sequence_set_copy.reacted_frac_table.col_x_values = col_x_values
             return sequence_set_copy
-
-
-
