@@ -73,8 +73,18 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
     """Generate overview plot(s) of unique seqs, total counts and spike-in fractions in the samples
 
     Args:
+
         sample_set (`CountFileSet`): sample set to survey
-        save_dirc (str): save figure to the directory if not None
+
+        plot_unique_seq (`bool`): plot bar plot for unique sequences if True
+
+        plot_total_counts (`bool`): plot bar plot for total counts if True
+
+        plot_spike_in_frac (`bool`): plot scatter plot for spike in fraction if True
+
+        black_list (list of `str`): list of sample name to exlude from the plots
+
+        save_dirc (`str`): save figure to the directory if not None
 
     """
     if black_list is None:
@@ -176,116 +186,82 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
     plt.show()
 
 
+def spike_in_peak_plot(sample_set, black_list=None, max_dist=15,
+                       norm_on_center=True, log_y=True, accumulate=False,
+                       marker_list=None, color_list=None, guild_lines=None,
+                       legend_off=False, ax=None, fig_save_to=None):
 
+    from k_seq.utility import PlotPreset
+    import numpy as np
 
-def spike_in_peak_plot(sample_set, norm=True, max_dist=15):
+    if black_list is None:
+        black_list = []
+    samples_to_plot = [sample for sample in sample_set.sample_set if sample.name not in black_list]
+    if marker_list is None:
+        marker_list = PlotPreset.markers(num=len(samples_to_plot), with_line=True)
+    elif len(marker_list) != len(samples_to_plot):
+        raise Exception('Error: length of marker_list does not align with the number of valid samples to plot')
 
-    marker_list = ['-o', '->', '-+', '-s']  # different marker for different replicates
-    color_list = ['#FC820D', '#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080', '#AEAEAE']  # different color for different type of samples
-    symbol_list = []
-    for marker in marker_list:
-        symbol_list += [marker for i in range(7)]
+    if color_list is None:
+        color_list = PlotPreset.colors(num=len(samples_to_plot))
+    elif len(color_list) != len(samples_to_plot):
+        raise Exception('Error: length of color_list does not align with the number of valid samples to plot')
 
-    plt.figure()
-    fig, ax = plt.subplots(1, 2, figsize=[24, 8])
+    if ax is None:
+        if legend_off:
+            fig = plt.figure(figsize=[10, 8])
+        else:
+            fig = plt.figure(figsize=[16, 8])
+        ax = fig.add_subplot(111)
 
-    for sampleIx, sample in enumerate(sampleSet):
-        counts = sample.stdCounts[:maxDist+1]
-        countsNormed = counts/counts[0]
-        ax[0].plot([i for i in range(maxDist + 1)], countsNormed,
-                   symbolList[sampleIx], color=colorList[sampleIx % 7],
-                   label=sample.id, alpha=0.5)
+    for sample, color, marker in zip(samples_to_plot, color_list, marker_list):
+        if not hasattr(sample, 'spike_in'):
+            raise Exception('Error: please survey the spike in counts before plot')
+        elif len(sample.spike_in['spike_in_counts'] < max_dist + 1):
+            sample.survey_spike_in(spike_in_seq=sample.spike_in['spike_in_seq'],
+                                   max_dist_to_survey=max_dist,
+                                   silent=True, inplace=True)
+        if accumulate:
+            counts = np.array([np.sum(sample.spike_in['spike_in_counts'][:i + 1]) for i in range(max_dist + 1)])
+        else:
+            counts = np.array(sample.spike_in['spike_in_counts'][:max_dist + 1])
+        if norm_on_center:
+            counts = counts/counts[0]
+        ax.plot([i for i in range(max_dist + 1)], counts, marker, color=color,
+                label=sample.name, alpha=0.5)
+    if guild_lines:
+        from scipy.stats import binom
+        for ix, p in enumerate(guild_lines):
+            rv = binom(len(sample.spike_in['spike_in_seq']), p)
+            pmfs = np.array([rv.pmf(x) for x in range(max_dist)])
+            pmfs_normed = pmfs / pmfs[0]
+            ax.plot([i for i in range(max_dist)], pmfs_normed,
+                    color='k', ls='--', alpha=(ix + 1)/len(guild_lines), label='p={}'.format(p))
 
-    # add binomial distribution guide line
-    pList = [0.1, 0.01, 0.001, 0.0005, 0.0001]
-    from scipy.stats import binom
-    for p in pList:
-        rv = binom(21, p)
-        pmfs = np.array([rv.pmf(x) for x in range(7)])
-        pmfsNormed = pmfs/pmfs[0]
-        ax[0].plot([i for i in range(7)], pmfsNormed, color='k', ls = '--', alpha=0.3)
-    ax[0].text(s='p=0.1', x=6, y=1e-1, ha='left', va='center', fontsize=12)
-    ax[0].text(s='p=0.01', x=6, y=1e-6, ha='left', va='center', fontsize=12)
-    ax[0].text(s='p=0.001', x=3.8, y=5e-7, ha='left', va='center', fontsize=12)
-    ax[0].text(s='p=0.0001', x=0.8, y=3e-7, ha='left', va='center', fontsize=12)
+    if log_y:
+        ax.set_yscale('log')
+    y_label = ''
+    if norm_on_center:
+        y_label += ' normed'
 
-    ax[0].set_xlabel('Edit distance to spike-in sequence', fontsize=16)
-    ax[0].set_yscale('log')
-    ax[0].set_ylim([1e-7, 5])
-    ax[0].tick_params(labelsize=12)
-    ax[0].set_ylabel('Sequence counts\n(normalized on exact spike-in sequence)', fontsize=16)
+    if accumulate:
+        y_label += ' accumulated'
 
-    for sampleIx, sample in enumerate(sampleSet):
-        counts = sample.stdCounts[:maxDist+1]
-        countsAccumulated = np.array([np.sum(counts[:i+1]) for i in range(maxDist + 1)])
-        countsAccumulatedNormed = countsAccumulated/countsAccumulated[0]
-        ax[1].plot([i for i in range(maxDist + 1)], countsAccumulatedNormed,
-                   symbolList[sampleIx], color=colorList[sampleIx % 7],
-                   label=sample.id, alpha=0.5)
-    ax[1].set_xlabel('Edit distance to spike-in sequence', fontsize=16)
-    ax[1].tick_params(labelsize=12)
-    ax[1].set_ylim([0.8, 1.5])
-    ax[1].set_ylabel('Accumulated sequence counts\n(normalized on exact spike-in sequence)', fontsize=16)
-    ax[1].legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
+    y_label += ' counts'
+    ax.set_ylabel(y_label.title(), fontsize=14)
+    ax.set_xlabel('Edit Distance to Spike-in Center', fontsize=14)
+    if not legend_off:
+        ax.legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
     plt.tight_layout()
-    # fig.savefig('/home/yuning/Work/rib
+
+    if fig_save_to:
+        plt.savefig(fig_save_to, bbox_inches='tight', dpi=300)
+    plt.show()
 
 
 ############### TODO
 
 
-def spike_in_peak_plot(sample_set, norm=True, max_dist=15):
-
-    marker_list = ['-o', '->', '-+', '-s']  # different marker for different replicates
-    color_list = ['#FC820D', '#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080', '#AEAEAE']  # different color for different type of samples
-    symbol_list = []
-    for marker in marker_list:
-        symbol_list += [marker for i in range(7)]
-
-    plt.figure()
-    fig, ax = plt.subplots(1, 2, figsize=[24, 8])
-
-    for sampleIx, sample in enumerate(sampleSet):
-        counts = sample.stdCounts[:maxDist+1]
-        countsNormed = counts/counts[0]
-        ax[0].plot([i for i in range(maxDist + 1)], countsNormed,
-                   symbolList[sampleIx], color=colorList[sampleIx % 7],
-                   label=sample.id, alpha=0.5)
-
-    # add binomial distribution guide line
-    pList = [0.1, 0.01, 0.001, 0.0005, 0.0001]
-    from scipy.stats import binom
-    for p in pList:
-        rv = binom(21, p)
-        pmfs = np.array([rv.pmf(x) for x in range(7)])
-        pmfsNormed = pmfs/pmfs[0]
-        ax[0].plot([i for i in range(7)], pmfsNormed, color='k', ls = '--', alpha=0.3)
-    ax[0].text(s='p=0.1', x=6, y=1e-1, ha='left', va='center', fontsize=12)
-    ax[0].text(s='p=0.01', x=6, y=1e-6, ha='left', va='center', fontsize=12)
-    ax[0].text(s='p=0.001', x=3.8, y=5e-7, ha='left', va='center', fontsize=12)
-    ax[0].text(s='p=0.0001', x=0.8, y=3e-7, ha='left', va='center', fontsize=12)
-
-    ax[0].set_xlabel('Edit distance to spike-in sequence', fontsize=16)
-    ax[0].set_yscale('log')
-    ax[0].set_ylim([1e-7, 5])
-    ax[0].tick_params(labelsize=12)
-    ax[0].set_ylabel('Sequence counts\n(normalized on exact spike-in sequence)', fontsize=16)
-
-    for sampleIx, sample in enumerate(sampleSet):
-        counts = sample.stdCounts[:maxDist+1]
-        countsAccumulated = np.array([np.sum(counts[:i+1]) for i in range(maxDist + 1)])
-        countsAccumulatedNormed = countsAccumulated/countsAccumulated[0]
-        ax[1].plot([i for i in range(maxDist + 1)], countsAccumulatedNormed,
-                   symbolList[sampleIx], color=colorList[sampleIx % 7],
-                   label=sample.id, alpha=0.5)
-    ax[1].set_xlabel('Edit distance to spike-in sequence', fontsize=16)
-    ax[1].tick_params(labelsize=12)
-    ax[1].set_ylim([0.8, 1.5])
-    ax[1].set_ylabel('Accumulated sequence counts\n(normalized on exact spike-in sequence)', fontsize=16)
-    ax[1].legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
-    plt.tight_layout()
-    # fig.savefig('/home/yuning/Work/ribozyme_pred/fig/extStdErr.jpeg', dpi=300)
-    plt.show()
 
 
 
