@@ -2,6 +2,8 @@
 This module contains project level utility functions
 """
 
+
+
 class color:
     PURPLE = '\033[95m'
     CYAN = '\033[96m'

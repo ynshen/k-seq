@@ -125,8 +125,10 @@ class CountFile:
     def load_data(self, silent=False):
         """Function to load data from file with path in ``self.matadata['file_path']``"""
 
+        from k_seq.data import io
+
         if not silent:
-            print("Load count data from file...")
+            print("Load count data from file {}".format(self.metadata['file_path']))
         self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
 
     def survey_spike_in(self, spike_in_seq, max_dist_to_survey=10, silent=True, inplace=True):
@@ -163,10 +165,10 @@ class CountFile:
         results = dict()
         results['spike_in_counts'] = np.zeros(max_dist_to_survey + 1, dtype=np.int)
         results['spike_in_seq'] = spike_in_seq
-        for seq,counts in self.sequences.items():
+        for seq in self.sequences.index:
             dist = Levenshtein.distance(spike_in_seq, seq)
             if dist <= max_dist_to_survey:
-                results['spike_in_counts'][dist] += counts
+                results['spike_in_counts'][dist] += self.sequences.loc[seq]['counts']
         if not silent:
             print("Survey spike-in counts for sample {}. Done.".format(self.name))
         if inplace:
@@ -343,6 +345,8 @@ class CountFileSet:
             if spike_in_seq:
                 if max_dist_to_survey is None:
                     max_dist_to_survey = max_dist
+                    if not silent:
+                        print('Use max_dist ({}) as max_dist_to_survey as it is not provided'.fromat(max_dist))
                 for sample in self.sample_set:
                     sample.survey_spike_in(spike_in_seq=spike_in_seq,
                                            max_dist_to_survey=max_dist_to_survey,
@@ -376,6 +380,11 @@ class CountFileSet:
     @property
     def sample_names(self):
         return [sample.name for sample in self.sample_set]
+
+    @property
+    def sample_overview(self):
+        from . import visualizer
+        return visualizer.count_file_info_table(self, return_table=True)
 
     def filter_sample(self, sample_to_keep, inplace=True):
         """filter samples in sample set

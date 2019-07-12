@@ -16,15 +16,15 @@ color_list = ['#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080',
 
 
 ######################### Sequencing sample analysis ###############################
-def sequencing_sample_info_table(sample_set, return_table=False):
+def count_file_info_table(sample_set, return_table=False):
     """Generate an overview info table for all samples in sample_set
     Print out HTML table for sequencing samples, including spike-in info if applicable
 
     Args:
-        sample_set (SequencingSampleSet): sample set to survey
-        return_table (bool): return a ``pd.DataFrame`` equivalence if True
+        sample_set (`CountFileSet`): sample set to survey
+        return_table (`bool`): return a `pd.DataFrame` if True
 
-    Returns: a ``pd.DataFrame`` equivalence if return_table is True
+    Returns: a `pd.DataFrame` equivalence if `return_table` is True
 
     """
 
@@ -62,57 +62,115 @@ def sequencing_sample_info_table(sample_set, return_table=False):
                 'unique sequences': lambda x: '{:,}'.format(x)
             }
         )
-    display(HTML(table_html))
     if return_table:
         return table
+    else:
+        display(HTML(table_html))
 
 
-def sequencing_sample_info_plot(sample_set, save_dirc=None):
-    """Generate an overview plot unique sequences, total counts and spike-in ratios if applicable
+def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=True, plot_spike_in_frac=True,
+                         black_list=None, sep_plot=False, save_dirc=None):
+    """Generate overview plot(s) of unique seqs, total counts and spike-in fractions in the samples
 
     Args:
-        sample_set (SequencingSampleSet): sample set to survey
+        sample_set (`CountFileSet`): sample set to survey
         save_dirc (str): save figure to the directory if not None
 
     """
-
-    sample_set = sample_set.sample_set
+    if black_list is None:
+        black_list = []
+    sample_set = [sample for sample in sample_set.sample_set if sample.name not in black_list]
     sample_num = len(sample_set)
-    fig = plt.figure(figsize=[sample_num * 0.5, 6])
-    # Plot bar for total seqs
-    ax = fig.add_subplot(111)
-    ax.bar(x=[i - 0.2 for i in range(sample_num)], height=[sample.total_counts for sample in sample_set],
-           align='center',width=0.4, color='#2C73B4')
-    # plot bar for unique seqs
-    ax2 = ax.twinx()
-    ax2.bar(x=[i + 0.2 for i in range(sample_num)], height=[sample.unique_seqs for sample in sample_set],
-            align='center', width=0.4, color='#FC820D')
-    lgd = [mpatch.Patch(color='#2C73B4', label='Total counts'),
-           mpatch.Patch(color='#FC820D', label='Unique sequences')]
-    if hasattr(sample_set[0], 'spike_in'):
-        # plot scatter for spike-in percentage
-        ax3 = ax.twinx()
-        ax3.scatter([i for i in range(sample_num)],
-                    [np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
-                     for sample in sample_set],
-                    color='#B2112A', marker='x')
-        ax3.plot([-0.5, sample_num - 0.5], [0.2, 0.2], '#B2112A', ls='--', alpha=0.3)
-        ax3.text(s='20%', x=-0.55, y=0.2, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
-        ax3.plot([-0.5, sample_num - 0.5], [0.4, 0.4], '#B2112A', ls='--', alpha=0.3)
-        ax3.text(s='40%', x=-0.55, y=0.4, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
-        ax3.plot([-0.5, sample_num - 0.5], [0.6, 0.6], '#B2112A', ls='--', alpha=0.3)
-        ax3.text(s='60%', x=-0.55, y=0.6, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
-        ax3.plot([-0.5, sample_num - 0.5], [0.8, 0.8], '#B2112A', ls='--', alpha=0.3)
-        ax3.text(s='80%', x=-0.55, y=0.8, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
-        ax3.set_ylim([0, 1])
-        ax3.set_yticks([])
-        lgd = lgd + [plt.plot([], [], lw=0, marker='x', color='#B2112A', label='Percent of spike-in')[0]]
-    # Aesthetic adjustment
-    ax.set_ylabel('Number of total reads in the sample', fontsize=14)
-    ax2.set_ylabel('Number of unique sequences in the sample', fontsize=14)
-    ax.set_xticks([i for i in range(sample_num)])
-    ax.set_xticklabels([sample.name for sample in sample_set], rotation=90)
-    plt.legend(handles=lgd, frameon=False)
+    plot_num = np.sum(np.array([plot_unique_seq, plot_total_counts, plot_spike_in_frac]))
+    if sep_plot and plot_num > 1:
+        fig, axes = plt.subplots(plot_num, 1, figsize=[sample_num * 0.5, 3 * plot_num],
+                                 sharex=True)
+        plt.subplots_adjust(wspace=0, hspace=0)
+        ax_ix = 0
+        if plot_unique_seq:
+            ax = axes[ax_ix]
+            ax.bar(x=[i for i in range(sample_num)],
+                   height=[sample.unique_seqs for sample in sample_set],
+                   align='center', width=0.6, color='#2C73B4')
+            ax.set_ylabel('Number of unique seqs', fontsize=12)
+            ax_ix += 1
+        if plot_total_counts:
+            ax = axes[ax_ix]
+            ax.bar(x=[i for i in range(sample_num)],
+                   height=[sample.total_counts for sample in sample_set],
+                   align='center', width=0.6, color='#FC820D')
+            ax.set_ylabel('Number of total counts', fontsize=12)
+            ax_ix += 1
+        if plot_spike_in_frac and hasattr(sample_set[0], 'spike_in'):
+            ax = axes[ax_ix]
+            ax.scatter([i for i in range(sample_num)],
+                       [np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1]) / sample.total_counts
+                         for sample in sample_set],
+                        color='#B2112A', marker='x')
+            ax.set_ylabel('Fraction of spike-in', fontsize=12)
+            ax.plot([-0.5, sample_num - 0.5], [0.2, 0.2], '#B2112A', ls='--', alpha=0.3)
+            ax.text(s='20%', x=-0.55, y=0.2, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax.plot([-0.5, sample_num - 0.5], [0.4, 0.4], '#B2112A', ls='--', alpha=0.3)
+            ax.text(s='40%', x=-0.55, y=0.4, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax.plot([-0.5, sample_num - 0.5], [0.6, 0.6], '#B2112A', ls='--', alpha=0.3)
+            ax.text(s='60%', x=-0.55, y=0.6, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax.plot([-0.5, sample_num - 0.5], [0.8, 0.8], '#B2112A', ls='--', alpha=0.3)
+            ax.text(s='80%', x=-0.55, y=0.8, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax.set_ylim([0, 1])
+        ax.set_xticks([i for i in range(sample_num)])
+        ax.set_xticklabels([sample.name for sample in sample_set], rotation=90)
+        fig.align_ylabels(axes)
+    else:
+        fig = plt.figure(figsize=[sample_num * 0.5, 6])
+        ax = fig.add_subplot(111)
+        lgd = []
+        if plot_unique_seq:
+            if plot_total_counts:
+                shift = 0.2
+            else:
+                shift = 0.0
+            ax.bar(x=[i - shift for i in range(sample_num)],
+                   height=[sample.unique_seqs for sample in sample_set],
+                   align='center',width=0.4, color='#2C73B4')
+            lgd.append(mpatch.Patch(color='#2C73B4', label='Unique seqs'))
+            ax.set_ylabel('Number of total reads in the sample', fontsize=14)
+
+        if plot_total_counts:
+            if plot_unique_seq:
+                shift = 0.2
+                ax2 = ax.twinx()
+            else:
+                shift = 0.0
+                ax2 = ax
+            ax2.bar(x=[i + shift for i in range(sample_num)],
+                    height=[sample.total_counts for sample in sample_set],
+                    align='center', width=0.4, color='#FC820D')
+            lgd.append(mpatch.Patch(color='#FC820D', label='Total counts'))
+            ax2.set_ylabel('Number of unique sequences in the sample', fontsize=14)
+
+        if plot_spike_in_frac and hasattr(sample_set[0], 'spike_in'):
+            ax3 = ax.twinx()
+            ax3.scatter([i for i in range(sample_num)],
+                        [np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
+                         for sample in sample_set],
+                        color='#B2112A', marker='x')
+            ax3.plot([-0.5, sample_num - 0.5], [0.2, 0.2], '#B2112A', ls='--', alpha=0.3)
+            ax3.text(s='20%', x=-0.55, y=0.2, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax3.plot([-0.5, sample_num - 0.5], [0.4, 0.4], '#B2112A', ls='--', alpha=0.3)
+            ax3.text(s='40%', x=-0.55, y=0.4, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax3.plot([-0.5, sample_num - 0.5], [0.6, 0.6], '#B2112A', ls='--', alpha=0.3)
+            ax3.text(s='60%', x=-0.55, y=0.6, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax3.plot([-0.5, sample_num - 0.5], [0.8, 0.8], '#B2112A', ls='--', alpha=0.3)
+            ax3.text(s='80%', x=-0.55, y=0.8, ha='right', va='center', color='#B2112A', fontsize=10, alpha=0.5)
+            ax3.set_ylim([0, 1])
+            ax3.set_yticks([])
+            lgd = lgd + [plt.plot([], [], lw=0, marker='x', color='#B2112A',
+                                  label='Percent of spike-in')[0]]
+
+        ax.set_xticks([i for i in range(sample_num)])
+        ax.set_xticklabels([sample.name for sample in sample_set], rotation=90)
+        plt.legend(handles=lgd, frameon=True)
+
     if save_dirc:
         fig.savefig(save_dirc, dpi=300)
     plt.show()
@@ -329,6 +387,7 @@ def get_replicates(sequence_set, key_domain):
         groups[key] = [x[0] for x in group]
     return groups
 
+
 def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability='MAD', percentage=True, display=True):
     np.random.seed(23)
 
@@ -372,56 +431,4 @@ def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, varia
     return variability_res
 
 
-def fitting_check(k, A, xTrue, y, size=100, average=True):
-    np.random.seed(23)
 
-    fittingRes = {
-        'y_': None,
-        'x_': None,
-        'k': [],
-        'kerr': [],
-        'A': [],
-        'Aerr': [],
-        'kA': [],
-        'kAerr': [],
-        'mse': [],
-        'mseTrue': [],
-        'r2': []
-    }
-
-    if average:
-        y_ = np.mean(y, axis=0)
-        x_ = np.mean(xTrue, axis=0)
-    else:
-        y_ = np.reshape(y, y.shape[0] * y.shape[1])
-        x_ = np.reshape(xTrue, xTrue.shape[0] * xTrue.shape[1])
-
-    for epochs in range(size):
-        # initGuess= (np.random.random(), np.random.random()*k*100)
-        initGuess = (np.random.random(), np.random.random())
-
-        try:
-            popt, pcov = curve_fit(func, x_, y_, method='trf', bounds=([0, 0], [1., np.inf]), p0=initGuess)
-        except RuntimeError:
-            popt = [np.nan, np.nan]
-
-        if fittingRes['y_'] is None:
-            fittingRes['y_'] = y_
-        if fittingRes['x_'] is None:
-            fittingRes['x_'] = x_
-        fittingRes['k'].append(popt[1])
-        fittingRes['kerr'].append((popt[1] - k) / k)
-        fittingRes['A'].append(popt[0])
-        fittingRes['Aerr'].append((popt[0] - A) / A)
-        fittingRes['kA'].append(popt[0] * popt[1])
-        fittingRes['kAerr'].append((popt[0] * popt[1] - k * A) / (k * A))
-
-        fittingRes['mse'].append(mse(x_, y_, A=popt[0], k=popt[1]))
-        fittingRes['mseTrue'].append(mse(x_, y_, A=A, k=k))
-
-        res = y_ - (1 - np.exp(-0.479 * 90 * popt[1] * x_)) * popt[0]
-        ss_res = np.sum(res ** 2)
-        ss_tot = np.sum((y_ - np.mean(y_)) ** 2)
-        fittingRes['r2'].append(1 - ss_res / ss_tot)
-
-    return fittingRes
