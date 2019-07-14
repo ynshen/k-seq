@@ -11,8 +11,8 @@ from . import pre_processing
 from IPython.display import HTML
 
 
+# CountFile, CountFileSet analysis
 
-######################### Sequencing sample analysis ###############################
 def count_file_info_table(sample_set, return_table=False):
     """Generate an overview info table for all samples in sample_set
     Print out HTML table for sequencing samples, including spike-in info if applicable
@@ -205,8 +205,6 @@ def spike_in_peak_plot(sample_set, black_list=None, max_dist=15,
         ax (`matplotlib.Axis`): if use external ax object to plot. Create a new figure if `None`
         fig_save_to (`str`): save the figure as ``.jpeg`` file if not `None`
 
-    Returns:
-
     """
 
     from k_seq.utility import PlotPreset
@@ -261,7 +259,6 @@ def spike_in_peak_plot(sample_set, black_list=None, max_dist=15,
             pmfs_normed = pmfs / pmfs[0]
             ax.plot([i for i in range(max_dist)], pmfs_normed,
                     color='k', ls='--', alpha=(ix + 1)/len(guild_lines), label='p={}'.format(p))
-
     if log_y:
         ax.set_yscale('log')
     y_label = ''
@@ -388,6 +385,7 @@ def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=Fals
                             ax=None, save_fig_to=None):
     """
     To plot a histogram of sequence length for a single sample
+
     Args:
         sample (`CountFile`): the sample to plot
         y_log (`bool`): set y scale as log if True
@@ -396,7 +394,6 @@ def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=Fals
         labels_off (`bool`): do not show x label if True
         ax (`matplotlib.Axes`): plot in a given axis if not None
         save_fig_to (`str`): if save file to a given directory
-
     """
 
     if ax is None:
@@ -458,20 +455,136 @@ def length_dist_plot_all(sample_set, black_list=None, fig_layout=None, y_log=Tru
     plt.show()
 
 
+def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, include_spike_in=False,
+                                     x_log=False, y_log=True, legend_off=False, labels_off=False,
+                                     ax=None, save_fig_to=None):
+    """Plot cutoff test on sequences on single file
+    Args:
+        sample (`CountFile`): sample to plot
+        thresholds (list of `float`): optional, manual input of thresholds for cutoff
+        on_counts (`bool`): cutoff is calculated on absolute counts if True, on relative abundance if False
+        include_spike_in (`bool`): if remove spike in sequences before calculation
+        x_log (`bool`): if set x axis as log
+        y_log (`bool`): if set y axis as log
+        legend_off:
+        labels_off:
+        ax:
+        save_fig_to:
+
+    Returns:
+
+    """
+
+    import numpy as np
+
+    if not include_spike_in:
+        sequences = sample.remove_spike_in(inplace=False, silent=True)
+    else:
+        sequences = sample.sequences
+
+    if not on_counts:
+        series_to_use = sequences['counts']/np.sum(sequences['counts'])
+    else:
+        series_to_use = sequences['counts']
+
+    if thresholds is None:
+        if on_counts:
+            thresholds = np.logspace(0, np.log10(sample.sequences['counts'].max()), 10)
+        else:
+            thresholds = np.logspace(np.log10(1/sample.total_counts),
+                                     np.log10(sample.sequences['counts'].max()/sample.total_counts),
+                                     10)
+
+    filtered_uniques = [np.sum(series_to_use >= threshold) for threshold in thresholds]
+    filtered_total = [np.sum(series_to_use[series_to_use >= threshold]) for threshold in thresholds]
+
+    if ax is None:
+        fig = plt.figure(figsize=[8, 6])
+        ax = fig.add_subplot(111)
+        fig_show = True
+    else:
+        fig_show = False
+
+    ax.plot(thresholds, filtered_uniques, 'o-', color='#2C73B4', label='Unique seqs')
+    ax2 = ax.twinx()
+    if on_counts:
+        label = 'Total counts'
+    else:
+        label = 'Total rel abun'
+    ax2.plot(thresholds, filtered_total, 'o-', color='#F39730', label=label)
+    if x_log:
+        ax.set_xscale('log')
+    if y_log:
+        ax.set_yscale('log')
+
+    if on_counts:
+        ax2.set_ylim([1, np.sum(filtered_total[0] * 1.2)])
+    else:
+        ax2.set_ylim([1/(sample.total_counts * 1.2), 1.2])
+
+    if not legend_off:
+        handles = [plt.Line2D([], [], marker='o', linestyle='-', color='#2C73B4'),
+                   plt.Line2D([], [], marker='o', linestyle='-', color='#F39730')]
+        labels = ['Unique seqs', label]
+        plt.legend(handles=handles, labels=labels, frameon=False)
+
+    if not labels_off:
+        ax.set_xlabel('Cut off threshold', fontsize=14)
+        ax.set_ylabel('Unique Sequences', fontsize=14)
+        ax2.set_ylabel(label, fontsize=14)
+
+    if save_fig_to:
+        plt.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+    if fig_show:
+        plt.show()
 
 
+def sample_count_cut_off_plot_all(sample_set, black_list=None, thresholds=None, on_counts=False, include_spike_in=False,
+                                  fig_layout=None, y_log=True, x_log=True, save_fig_to=None):
+    """Plot cutoff tests on a sample set
 
+    Args:
+        sample_set (`CountFileSet`): sample set to work
+        black_list (list of `str`): optional. List of sample names to exclude
+        thresholds (list of `float`): optional. manual list of thresholds to apply
+        on_counts (`bool`): cutoff is calculated on absolute counts if True, on relative abundance if False
+        include_spike_in (`bool`): if remove spike in sequences before calculation
+        x_log (`bool`): if set x axis as log
+        y_log (`bool`): if set y axis as log
+        fig_layout ((`int`, `int`)): a tuple of (ncol, nrow) to indicate the layout of plot
+        save_fig_to:
 
-
-
-
-
-
-
-
-
-
-
+    """
+    if black_list is None:
+        black_list = []
+    samples_to_plot = [sample for sample in sample_set.sample_set if sample.name not in black_list]
+    if fig_layout is None:
+        from math import ceil
+        fig_layout = [ceil(len(samples_to_plot) / 4), 4]
+    fig, axes = plt.subplots(fig_layout[0], fig_layout[1], figsize=[fig_layout[1] * 3, fig_layout[0] * 2])
+    if thresholds is None:
+        thresholds = None
+    for ix, sample in enumerate(samples_to_plot):
+        ax = axes[int(ix/fig_layout[1]), ix % fig_layout[1]]
+        sample_count_cut_off_plot_single(sample, thresholds=thresholds, on_counts=on_counts,
+                                         include_spike_in=include_spike_in,
+                                         x_log=x_log, y_log=y_log, legend_off=True, labels_off=True,
+                                         ax=ax)
+        ax.set_title(sample.name, fontsize=10)
+    if on_counts:
+        label = 'Total counts'
+    else:
+        label = 'Total rel abun'
+    handle = [plt.Line2D([], [], marker='o', linestyle='-', color='#2C73B4', label='Unique Seqs'),
+              plt.Line2D([], [], marker='o', linestyle='-', color='#F39730', label=label)]
+    fig.legend(handles=handle, loc=(0.7, 0), frameon=False, ncol=2)
+    fig.text(s='Cut-off Threshold', x=0.5, y=0, ha='center', va='top', fontsize=16)
+    fig.text(s='Unique Sequences', x=0, y=0.5, ha='right', va='top', fontsize=16, rotation=90)
+    fig.text(s=label, x=1, y=0.5, ha='left', va='top', fontsize=16, rotation=90)
+    plt.tight_layout()
+    if save_fig_to:
+        fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+    plt.show()
 
 
 

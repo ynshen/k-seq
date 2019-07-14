@@ -11,7 +11,7 @@ class CountFile:
     """This class describes experimental samples sequenced in k-seq
     """
 
-    def __init__(self, file_path, x_value, name_pattern=None, load_data=False, silent=True):
+    def __init__(self, file_path, x_value, name_pattern=None, load_data=False, silent=False):
         """`CountFile` instance store the count file data for each sequencing sample in k-seq experiments
         Initialize a `CountFile` instance by linking to a count file
         Args:
@@ -84,6 +84,8 @@ class CountFile:
 
                 - time_stamp (time): time the instance created
 
+                - log (`str`): logging of all modification applied on the data
+
                 - Other metadata extracted from the file name
         """
 
@@ -131,7 +133,7 @@ class CountFile:
             print("Load count data from file {}".format(self.metadata['file_path']))
         self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
 
-    def survey_spike_in(self, spike_in_seq, max_dist_to_survey=10, silent=True, inplace=True):
+    def survey_spike_in(self, spike_in_seq, max_dist_to_survey=10, silent=False, inplace=True):
         """Survey spike-in counts in the sample.
         Calculate the total counts of sequences that is *i* (*i* from 0 to `max_dist_to_survey`) edit distance from
             exact spike-in sequences (external standard for quantification) in the sample.
@@ -177,7 +179,7 @@ class CountFile:
             return results
 
     def get_quant_factor(self, from_spike_in_amount=None, max_dist=0, spike_in_seq=None, from_total_amount=None,
-                         silent=True):
+                         silent=False):
         """Calculate quantification factor for the sample, either from spike in or total amount
         If `from_spike_in_amount` is not `None`, will priory use spike in to quantify the amount of each sequence, and
             attributes ``quant_factor`` and ``quant_factor_max_dist`` will be add to the instance,
@@ -218,6 +220,50 @@ class CountFile:
 
         if not silent:
             print("Calculate quant-factor for sample {}. Done.".format(self.name))
+
+    def remove_spike_in(self, spike_in_seq=None, max_dist=None, inplace=False, silent=False):
+        """Remove sequences that are considered as spike in
+
+        Args:
+            spike_in_seq (`str`): optional, need to be extracted from ``self.spike_in['spike_in_seq']`` if None
+            max_dist (`int`): optional, need to be extracted from ``self.spike_in['quant_factor_max_dist']`` if None
+            inplace (`bool`): if apply in place, if False, return the new `pandas.DataFrame
+            silent (`bool`): if print the process
+
+        Returns: a `pandas.DataFrame` containing filtered sequences if `inplace` is False
+
+        """
+
+        if spike_in_seq is None:
+            try:
+                spike_in_seq = self.spike_in['spike_in_seq']
+            except:
+                raise Exception('Error: please input spike-in sequence')
+
+        if max_dist is None:
+            try:
+                max_dist = self.spike_in['quant_factor_max_dist']
+            except:
+                raise Exception('Error: please input max edit distance to count as spike-in')
+
+        import Levenshtein
+
+        filtered_seqs = self.sequences[self.sequences.index.map(lambda seq: Levenshtein.distance(spike_in_seq, seq) > max_dist)]
+        if not silent:
+            print('Spike-in sequence (max_dist = {}) in sample {} is removed: {} --> {}'.format(
+                max_dist, self.name, self.sequences.shape[0], filtered_seqs.shape[0]
+            ))
+        if inplace:
+            self.sequences = filtered_seqs
+        else:
+            return filtered_seqs
+
+
+
+
+
+
+
 
 
 class CountFileSet:
