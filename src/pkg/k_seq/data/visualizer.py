@@ -11,14 +11,14 @@ from . import pre_processing
 from IPython.display import HTML
 
 
-# CountFile, CountFileSet analysis
+# SeqSample, SeqSampleSet analysis
 
 def count_file_info_table(sample_set, return_table=False):
     """Generate an overview info table for all samples in sample_set
     Print out HTML table for sequencing samples, including spike-in info if applicable
 
     Args:
-        sample_set (`CountFileSet`): sample set to survey
+        sample_set (`SeqSampleSet`): sample set to survey
         return_table (`bool`): return a `pd.DataFrame` if True
 
     Returns: a `pd.DataFrame` equivalence if `return_table` is True
@@ -71,7 +71,7 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
 
     Args:
 
-        sample_set (`CountFileSet`): sample set to survey
+        sample_set (`SeqSampleSet`): sample set to survey
 
         plot_unique_seq (`bool`): plot bar plot for unique sequences if True
 
@@ -191,7 +191,7 @@ def spike_in_peak_plot(sample_set, black_list=None, max_dist=15,
     Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
 
     Args:
-        sample_set (`CountFileSet`): dataset to plot
+        sample_set (`SeqSampleSet`): dataset to plot
         black_list (list of `str`): to exclude some samples if not `None`
         max_dist (`int`): maximal edit distance to survey. Default 15
         norm_on_center (`bool`): if the counts/abundance are normalized to then center (exact spike in)
@@ -288,7 +288,7 @@ def rep_spike_in_plot(sample_set, group_by, plot_spike_in_frac=True, plot_entrop
         - entropy efficiency of the pool
 
     Args:
-        sample_set (`CountFileSet`): sample_set to plot
+        sample_set (`SeqSampleSet`): sample_set to plot
         group_by (`list` of `list`, `dict` of `list`, or `str`): indicate the grouping of samples. `list` of `list` to
           to contain sample names in each group as a nested `list`, or named group as a `dict`, or group on attribute
           using `str`, e.g. 'byo'
@@ -387,7 +387,7 @@ def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=Fals
     To plot a histogram of sequence length for a single sample
 
     Args:
-        sample (`CountFile`): the sample to plot
+        sample (`SeqSample`): the sample to plot
         y_log (`bool`): set y scale as log if True
         legend_off (`bool`): do not show legend if True
         title_off (`bool`): do not show title if True; use `sample.name` as title if False
@@ -426,7 +426,7 @@ def length_dist_plot_all(sample_set, black_list=None, fig_layout=None, y_log=Tru
     """
     Wrapper of `length_dist_plot_single` to plot histogram for all given samples
     Args:
-        sample_set (`CountFileSet`): sample set to use
+        sample_set (`SeqSampleSet`): sample set to use
         black_list (list of `str`): optional, exclude samples with given names if not None
         fig_layout (``(nrow, ncol)``): optional, indicate layout of a figure. 4 figs in a row if None.
         y_log (`bool`): set y scale as log if True
@@ -460,7 +460,7 @@ def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, i
                                      ax=None, save_fig_to=None):
     """Plot cutoff test on sequences on single file
     Args:
-        sample (`CountFile`): sample to plot
+        sample (`SeqSample`): sample to plot
         thresholds (list of `float`): optional, manual input of thresholds for cutoff
         on_counts (`bool`): cutoff is calculated on absolute counts if True, on relative abundance if False
         include_spike_in (`bool`): if remove spike in sequences before calculation
@@ -544,7 +544,7 @@ def sample_count_cut_off_plot_all(sample_set, black_list=None, thresholds=None, 
     """Plot cutoff tests on a sample set
 
     Args:
-        sample_set (`CountFileSet`): sample set to work
+        sample_set (`SeqSampleSet`): sample set to work
         black_list (list of `str`): optional. List of sample names to exclude
         thresholds (list of `float`): optional. manual list of thresholds to apply
         on_counts (`bool`): cutoff is calculated on absolute counts if True, on relative abundance if False

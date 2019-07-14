@@ -7,13 +7,13 @@ import numpy as np
 import pandas as pd
 
 
-class CountFile:
+class SeqSample:
     """This class describes experimental samples sequenced in k-seq
     """
 
     def __init__(self, file_path, x_value, name_pattern=None, load_data=False, silent=False):
-        """`CountFile` instance store the count file data for each sequencing sample in k-seq experiments
-        Initialize a `CountFile` instance by linking to a count file
+        """`SeqSample` instance store the count file data for each sequencing sample in k-seq experiments
+        Initialize a `SeqSample` instance by linking to a count file
         Args:
             file_path (`str`): directory to the count file of sample
 
@@ -38,7 +38,7 @@ class CountFile:
 
                 .. code-block:: python
 
-                   sample = CountFile{
+                   sample = SeqSample{
                        file_path = "path/to/count/file/R4B-1250A_S16_counts.txt",
                        x_value = 'concentration',
                        name_pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}]_S{id, int}_counts.txt"
@@ -46,7 +46,7 @@ class CountFile:
                        silent = False
                     }
 
-            will return a ``CountFile`` instance ``sample`` that
+            will return a ``SeqSample`` instance ``sample`` that
 
                 .. code-block:: python
 
@@ -82,8 +82,6 @@ class CountFile:
 
                 - file_path (`str`): path to the count file
 
-                - time_stamp (time): time the instance created
-
                 - log (`str`): logging of all modification applied on the data
 
                 - Other metadata extracted from the file name
@@ -114,7 +112,7 @@ class CountFile:
                 self.x_value = self.metadata[x_value]
             else:
                 self.x_value = x_value
-        self.metadata['timestamp'] = str(datetime.datetime.now())
+        self.metadata['log'] = ['Sample instance created at {}'.format(str(datetime.datetime.now()))]
 
         if load_data:
             if not silent:
@@ -122,16 +120,18 @@ class CountFile:
             self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
 
         if not silent:
-            print("Sample {} imported from {}".format(self.name, self.metadata['file_path']))
+            print("Sample {} created from {}".format(self.name, self.metadata['file_path']))
 
     def load_data(self, silent=False):
         """Function to load data from file with path in ``self.matadata['file_path']``"""
 
         from k_seq.data import io
+        import datetime
 
         if not silent:
             print("Load count data from file {}".format(self.metadata['file_path']))
         self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
+        self.metadata['log'].append('Data imported at {}'.format(str(datetime.datetime.now())))
 
     def survey_spike_in(self, spike_in_seq, max_dist_to_survey=10, silent=False, inplace=True):
         """Survey spike-in counts in the sample.
@@ -163,6 +163,7 @@ class CountFile:
         """
 
         import Levenshtein
+        from datetime import datetime
 
         results = dict()
         results['spike_in_counts'] = np.zeros(max_dist_to_survey + 1, dtype=np.int)
@@ -175,6 +176,10 @@ class CountFile:
             print("Survey spike-in counts for sample {}. Done.".format(self.name))
         if inplace:
             self.spike_in = results
+            self.metadata['log'].append('Spike-in sequences surveyed on {} with maximal distance {}'.format(
+                datetime.now(),
+                max_dist_to_survey
+            ))
         else:
             return results
 
@@ -207,6 +212,7 @@ class CountFile:
             quant_factor_max_dist (`int`): maximum edit distance for a sequence to be spike-in
 
         """
+        from datetime import datetime
 
         if from_spike_in_amount:
             if not hasattr(self, 'spike_in'):
@@ -214,9 +220,12 @@ class CountFile:
             self.quant_factor = from_spike_in_amount * self.total_counts / np.sum(self.spike_in['spike_in_counts'][:max_dist + 1])
             self.spike_in['quant_factor_max_dist'] = max_dist
             self.spike_in['spike_in_amount'] = from_spike_in_amount
+            self.metadata['log'].append(
+                'quantification factor estimated from spike seq within distance {} at {}'.format(max_dist, datetime.now())
+            )
         elif from_total_amount:
             self.quant_factor = from_total_amount
-            self.spike_in = False
+            self.total_dna_amount = from_total_amount
 
         if not silent:
             print("Calculate quant-factor for sample {}. Done.".format(self.name))
@@ -258,21 +267,19 @@ class CountFile:
         else:
             return filtered_seqs
 
+    @property
+    def log(self):
+        print('-' + '-\n'.join(self.metadata['log']))
+        return None
 
 
-
-
-
-
-
-
-class CountFileSet:
+class SeqSampleSet:
     """Object to load and store a set of samples
     """
 
     def __init__(self, file_root, x_values, count_file_pattern=None, name_pattern=None,
                  sort_by=None, file_list=None, black_list=None, load_data=False, silent=True):
-        """Initialize by linking count files under a root folder into :func:`~CountFile` objects
+        """Initialize by linking count files under a root folder into :func:`~SeqSample` objects
 
         Args:
             file_root (`str`): directory to the root folder for count files
@@ -289,7 +296,7 @@ class CountFileSet:
               for details
 
             sort_by (`str` or `callable`): optional. If `str`, it should be the domain name to order the sample in the
-              ascending order. If `callable`, the input is `CountFile` instance and the sample will ordered by the
+              ascending order. If `callable`, the input is `SeqSample` instance and the sample will ordered by the
               return value
 
             file_list (list of `str`): optional, only import the file in sample_list if not `None`
@@ -323,7 +330,7 @@ class CountFileSet:
         self.sample_set = []
         for file_name, x_value in zip(file_list, x_values):
             if file_name not in black_list:
-                sample = CountFile(file_path = str(Path.joinpath(Path(file_root), file_name)),
+                sample = SeqSample(file_path = str(Path.joinpath(Path(file_root), file_name)),
                                    x_value = x_value,
                                    name_pattern=name_pattern,
                                    load_data=load_data,
@@ -347,7 +354,7 @@ class CountFileSet:
     def get_quant_factors(self, from_spike_in_amounts=None, spike_in_seq=None, max_dist=2,
                           max_dist_to_survey=None, from_total_amounts = None, quant_factors=None,
                           survey_only=False, silent=True):
-        """Calculate quantification factors for each sample in `CountFileSet`.
+        """Calculate quantification factors for each sample in `SeqSampleSet`.
         This method will first survey the spike-in sequence, then calculate the quantification factor for each sample if
         applies.
 
@@ -420,10 +427,6 @@ class CountFileSet:
                     sample.get_quant_factor(from_total_amount=total_amount, silent=silent)
 
     @property
-    def sample_num(self):
-        return len(self.sample_set)
-
-    @property
     def sample_names(self):
         return [sample.name for sample in self.sample_set]
 
@@ -432,6 +435,36 @@ class CountFileSet:
         from . import visualizer
         return visualizer.count_file_info_table(self, return_table=True)
 
+    def get_sample(self, sample_id, return_SeqSample=False):
+        """Return (count) info of sample(s)
+
+        Args:
+            sample_id (`str`, list of `str`, or `callable`): indicate what sample to select
+            return_SeqSample (`bool`): return a list of `SeqSample` if True; return a `pd.DataFrame` of counts if False
+
+        Returns: list of `SeqSample` or `pd.DataFrame`
+
+        """
+
+        if isinstance(sample_id, str):
+            sample_to_return = [sample for sample in self.sample_set if sample.name == sample_id]
+        elif isinstance(sample_id, list):
+            sample_to_return = [sample for sample in self.sample_set if sample.name in sample_id]
+        elif callable(sample_id):
+            sample_to_return = [sample for sample in self.sample_set if sample_id(sample)]
+        else:
+            raise Exception('Error: please pass sample id, a list of sample id, or a callable on SeqSample')
+
+        if return_SeqSample:
+            return sample_to_return
+        else:
+            return_df = pd.DataFrame()
+            for sample in sample_to_return:
+                return_df = pd.concat([return_df, sample.sequences[['counts']].rename({'counts': sample.name}, axis=1)],
+                                      axis=1, sort=False)
+            return return_df
+
+
     def filter_sample(self, sample_to_keep, inplace=True):
         """filter samples in sample set
 
@@ -439,7 +472,7 @@ class CountFileSet:
             sample_to_keep (list of `str`): name of samples to keep
             inplace (`bool`): return a new SequencingSampleSet if False
 
-        Returns: None if inplace is True, `CountFileSet` if inplace is False
+        Returns: None if inplace is True, `SeqSampleSet` if inplace is False
 
         """
 
@@ -452,27 +485,27 @@ class CountFileSet:
             return new_set
 
 
-class SequenceSet:
-    """This class contains the dataset of valid sequences extracted and aligned from a list of ``SequencingSample``
+class SeqTable:
+    """This class contains the dataset of valid sequences extracted and aligned from a list of ``SeqSampleSet``
     """
 
     def __init__(self, sample_set, remove_spike_in=True, note=None):
-        """Initialize from a list of ``SequencingSample`` to a SequenceSet object.
+        """Initialize from a ``SeqSampleSet`` instance
         Find all valid sequences that occur at least once in any 'input' sample and once in any 'reacted' sample
 
         Args:
 
-            sample_set (``SequencingSampleSet``): valid samples to convert to ``SequenceSet``
+            sample_set (`SeqSampleSet`): valid samples to convert to ``SequenceSet``
 
-            remove_spike_in (bool): sequences considered as spike-in will be removed, all number are calculated after
-              removal
+            remove_spike_in (`bool`): sequences considered as spike-in will be removed, all number are calculated after
+              removal of spike-in
 
-            note (str): optional. Additional note to add to the dataset
+            note (`str`): optional. Additional note to add to the dataset
 
 
         Attributes:
 `
-            dataset_info (dict): dictionary of basic info of dataset:
+            metadata (`dict`): dictionary of basic info of dataset:
 
                 - input_seq_num (int): number of unique sequences in all "input" samples
 
@@ -496,7 +529,7 @@ class SequenceSet:
 
             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples
         """
-        import Levenshtein
+
         import datetime
 
         # find valid sequence set
