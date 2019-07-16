@@ -49,6 +49,24 @@ def blue_header(header):
     print(color.BOLD + color.BLUE + header + color.END)
 
 
+def get_args_params(func, exclude_x=True):
+    """
+    Utility function to get the number of arguments for a function (callable)
+    Args:
+        func (`callable`): the function
+        exclude_x (`bool`): if exclude the first argument (usually `x`)
+
+    Returns: a tuple of arguments name in order
+
+    """
+    from inspect import signature
+    arg_tuple = tuple(signature(func).keys())
+    if exclude_x:
+        return arg_tuple[1:]
+    else:
+        return arg_tuple
+
+
 class EnvVar(object):
 
     def __init__(self):

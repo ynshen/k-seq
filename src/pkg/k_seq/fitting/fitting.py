@@ -7,41 +7,183 @@ import numpy as np
 import pandas as pd
 import multiprocessing as mp
 from ..data import pre_processing
+from ..utility import get_args_params
 
 
-def func_default(x, A, k):
+def byo_model(x, A, k):
     """
     Default kinetic model used in BYO k-seq fitting:
                     A * (1 - np.exp(- 0.479 * 90 * k * x))
-    90: t, reaction time (min)
-    0.479: alpha, degradation adjustment parameter for BYO in 90 min
+    - 90: t, reaction time (min)
+    - 0.479: alpha, degradation adjustment parameter for BYO in 90 min
+    - k: kinetic coefficient
+    - A: maximal conversion the self-aminoacylation ribozyme
 
-    :param x: predictor for the regression model, here is initial concentration of BYO
-    :param A: parameter represents the maximal conversion of reactants
-    :param k: parameter represents the apparent kinetic coefficient
-    :return: reacted fraction given the independent variable x and parameter (A, k)
+    Args:
+        x (`float`): predictor, concentration of BYO for each sample, needs have unit mol
+        A (`float`)
+        k (`float`)
+
+    Returns:
+        reacted fraction given the predictor x and parameter (A, k)
     """
     return A * (1 - np.exp(- 0.479 * 90 * k * x))  # BYO degradation adjustment and 90 minutes
 
 
-def get_args_num(func, exclude_x=True):
-    """
-    Utility function to get the number of arguments for a callable
-    :param func: callable, the function
-    :param exclude_x: boolean, return the number of arguments minus 1 if true
-    :return: number of arguments of the function func
-    """
-    from inspect import signature
-    sig = signature(func)
-    if exclude_x:
-        param_num = len(sig.parameters) - 1
-    else:
-        param_num = len(sig.parameters)
-    return param_num
+class _PointEstimation:
+
+    def __init__(self, single_fitting):
+        from scipy.optimize import curve_fit
+
+        try:
+            if single_fitting.config['random_init']:
+                init_guess = [np.random.random() for _ in single_fitting.config['parameters']]
+                params, pcov = curve_fit(single_fitting.model,
+                                         xdata=single_fitting.x_data, ydata=single_fitting.y_data,
+                                         sigma=single_fitting.weights, method='trf',
+                                         bounds=single_fitting.config['bounds'], p0=init_guess)
+            else:
+                params, pcov = curve_fit(single_fitting.model,
+                                         xdata=single_fitting.x_data, ydata=single_fitting.y_data,
+                                         sigma=single_fitting.weights, method='trf',
+                                         bounds=single_fitting.config['bounds'])
+            self.params = pd.Series(data=params, index=get_args_params(single_fitting.model))
+            self.pcov = pcov
+
+        except RuntimeError:
+            self.params = np.nan
+            self.pcov = np.nan
+
+        if single_fitting.metrics is not None:
+            for name, fn in single_fitting.metrics.items():
+                self.params[name] = self.params.apply(fn, axis=1)
 
 
-def fitting_single(x_data, y_data, func=func_default, weights=None, bounds=None,
-                   bootstrap=True, bs_depth=1000, bs_return_verbose=100, bs_residue=False,
+class _Bootstrap:
+
+    @staticmethod
+    def bs_sample_generator(single_fitting):
+        import numpy as np
+
+        if single_fitting.config['bs_method'] == 'Resample percent residue':
+            y_hat = single_fitting.model(single_fitting.x_data, *single_fitting.point_est.params.values())
+            pct_res = (single_fitting.y_data - y_hat) / y_hat
+            for _ in range(single_fitting.config['bs_depth']):
+                pct_res_resampled = np.random.choice(pct_res, replace=True, size=len(pct_res))
+                yield single_fitting.x_data, y_hat * (1 + pct_res_resampled)
+        else:
+            indices = np.linspace(0, len(single_fitting.x_data) - 1, len(single_fitting.x_data), dtype=np.int)
+            for _ in range(single_fitting.config['bs_depth']):
+                bs_indeces = np.random.choice(a=indices, size=len(single_fitting.x_data), replace=True)
+                yield single_fitting.x_data[bs_indeces], single_fitting.y_data[bs_indeces]
+
+    def __init__(self, single_fitting):
+        from scipy.optimize import curve_fit
+
+        param_list = pd.DataFrame(index=np.linspace(0, len(single_fitting.config['bs_depth']),
+                                                    len(single_fitting.config['bs_depth']) + 1, dtype=np.int),
+                                  columns=single_fitting.config['parameters'])
+
+        for ix, (x_data, y_data) in enumerate(bs_sample_generator(single_fitting)):
+            try:
+                if single_fitting.config['random_init']:
+                    init_guess = [np.random.random() for _ in single_fitting.config['parameters']]
+                    params, _ = curve_fit(single_fitting.model,
+                                             xdata=x_data, ydata=y_data,
+                                             method='trf', bounds=single_fitting.config['bounds'], p0=init_guess)
+                else:
+                    params, _ = curve_fit(single_fitting.model,
+                                             xdata=x_data, ydata=y_data,
+                                             method='trf', bounds=single_fitting.config['bounds'])
+            except:
+                params = np.repeat(np.nan, len(config['parameters']))
+            param_list.loc[ix] = params
+
+        if single_fitting.metrics is not None:
+            for name, fn in single_fitting.metrics.items():
+                param_list[name] = param_list.apply(fn, axis=1)
+
+
+
+                results['mean'] = np.nanmean(param_list, axis=0)
+                results['sd'] = np.nanstd(param_list, axis=0, ddof=1)
+                results['p2.5'] = np.nanpercentile(param_list, 2.5, axis=0)
+                results['p50'] = np.nanpercentile(param_list, 50, axis=0)
+                results['p97.5'] = np.nanpercentile(param_list, 97.5, axis=0)
+            else:
+                results['sd'] = np.nan
+
+
+        if bs_return_verbose > 0:
+            return results, param_list
+        else:
+            return results, None
+
+
+
+class SingleFitting:
+
+    def __init__(self, x_data, y_data, func, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
+                 resample_pct_res=False, missing_data_as_zero=False, random_init=True, **kwargs):
+
+        if missing_data_as_zero:
+            y_data[np.isnan(y_data)] = 0
+        parameters = get_args_params(func)
+        if bounds is None:
+            bounds = [[-np.inf for _ in func], [np.inf for _ in func]]
+        if weights is None:
+            weights = np.ones(len(y_data))
+        # only include non np.nan data
+        valid = ~np.isnan(y_data)
+        self.model = func
+        self.x_data = x_data[valid]
+        self.y_data = y_data[valid]
+        self.weights = weights[valid]
+        self.config = {
+            'parameters': get_args_params(func, exclude_x=True),
+            'bounds': bounds,
+            'missing_data_as_zero': missing_data_as_zero,
+            'random_init': random_init
+        }
+        if bootstrap_depth > 0 and len(self.x_data) > 1:
+            self.config['bootstrap'] = True
+            self.config['bs_depth'] = bootstrap_depth
+            if bs_return_size is None:
+                self.config['bs_return_size'] = bootstrap_depth
+            else:
+                self.config['bs_return_size'] = bs_return_size
+            if resample_pct_res:
+                self.config['bs_method'] = 'Resample percent residues'
+            else:
+                self.config['bs_method'] = 'Resample data points'
+        else:
+            self.config['bootstrap'] = False
+
+    def fitting(self):
+        self.point_est = _PointEstimation(self)
+        if self.config['bootstrap']:
+            if np.isnan(self.point_est.params):
+                self.config['bs_method'] = 'Resample data points'  # if the point estimation is not valid, can only resample data points
+            self.bootstrap = _Bootstrap(self)
+        else:
+            self.bootstrap = np.nan
+
+    @classmethod
+    def from_raw_data(cls, x_data, y_data, func, weights=None, bounds=None, bootstrap_depth=0):
+        pass
+
+
+    @classmethod
+    def from_SeqTable(cls,):
+        pass
+
+
+
+
+
+
+def fitting_single(x_data, y_data, func=byo_model, weights=None, bounds=None,
+                   bootstrap=True, bs_depth=1000, bs_res_return_size=None, bs_residue=False,
                    missing_data_as_zero=False, y_max=None, random_init=True, **kwargs):
 
     """
@@ -64,79 +206,8 @@ def fitting_single(x_data, y_data, func=func_default, weights=None, bounds=None,
     :return: results: a dictionary of fitting results,
              param_list: a list of parameters from each bootstrap samples. None if bs_return_verbose = False
     """
-    param_num = get_args_num(func)
-    # regularize data format
-    x_data = np.array(list(x_data))
-    y_data = np.array(list(y_data))
-    if y_max is not None:
-        y_data = np.array([min(yi, y_max) for yi in y_data])
-    if missing_data_as_zero:
-        y_data[np.isnan(y_data)] = 0
-    if bounds is None:
-        bounds = [[-np.inf for _ in range(param_num)], [np.inf for _ in range(param_num)]]
-    if not weights:
-        weights = np.ones(len(y_data))
-    # only include non np.nan data
-    valid = ~np.isnan(y_data)
-    x_data = x_data[valid]
-    y_data = y_data[valid]
-    weights = weights[valid]
-    results = {
-        'x_data': x_data,
-        'y_data': y_data,
-        'fitting_weights': weights
-    }
-    try:
-        if random_init:
-            init_guess = [np.random.random() for _ in range(param_num)]
-            results['params'], results['pcov'] = curve_fit(func, xdata=x_data, ydata=y_data, sigma=weights,
-                                                           method='trf', bounds=bounds, p0=init_guess)
-        else:
-            results['params'], results['pcov'] = curve_fit(func, xdata=x_data, ydata=y_data, sigma=weights,
-                                                           method='trf', bounds=bounds)
 
-        y_hat = func(x_data, *results['params'])
-        res = y_data - y_hat
-        results['pct_res'] = res / y_hat
-    except RuntimeError:
-        results['params'] = [np.nan for _ in range(param_num)]
 
-    if bootstrap:
-        param_list = []
-        if (len(x_data) > 1)and(~np.isnan(results['params'][0])):
-            for _ in range(bs_depth):
-                if bs_residue:
-                    pct_res_resampled = np.random.choice(results['pct_res'], replace=True, size=len(results['pct_res']))
-                    y_data_bs = y_hat * (1 + pct_res_resampled)
-                    x_data_bs = x_data
-                else:
-                    indices = np.linspace(0, len(x_data) - 1, len(x_data))
-                    bs_indeces = np.random.choice(a=indices, size=len(x_data), replace=True)
-                    x_data_bs = np.array([x_data[int(i)] for i in bs_indeces])
-                    y_data_bs = np.array([y_data[int(i)] for i in bs_indeces])
-                try:
-                    if random_init:
-                        init_guess = [np.random.random() for _ in range(param_num)]
-                        params, pcov = curve_fit(func, xdata=x_data_bs, ydata=y_data_bs,
-                                                 method='trf', bounds=bounds, p0=init_guess)
-                    else:
-                        params, pcov = curve_fit(func, xdata=x_data_bs, ydata=y_data_bs,
-                                                 method='trf', bounds=bounds)
-                except:
-                    params = [np.nan for _ in range(param_num)]
-                param_list.append(params)
-
-            results['mean'] = np.nanmean(param_list, axis=0)
-            results['sd'] = np.nanstd(param_list, axis=0, ddof=1)
-            results['p2.5'] = np.percentile(param_list, 2.5, axis=0)
-            results['p50'] = np.percentile(param_list, 50, axis=0)
-            results['p97.5'] = np.percentile(param_list, 97.5, axis=0)
-        else:
-            results['sd'] = np.nan
-    if bs_return_verbose > 0:
-        return results, param_list
-    else:
-        return results, None
 
 
 def fitting_master(seq, **kwargs):

@@ -242,6 +242,7 @@ class SeqSample:
         Returns: a `pandas.DataFrame` containing filtered sequences if `inplace` is False
 
         """
+        from datetime import datetime
 
         if spike_in_seq is None:
             try:
@@ -264,6 +265,9 @@ class SeqSample:
             ))
         if inplace:
             self.sequences = filtered_seqs
+            self.metadata['log'].append('Spike-in seqs within distance {} of {} is removed at {}'.format(
+                max_dist, spike_in_seq, datetime.now()
+            ))
         else:
             return filtered_seqs
 
@@ -278,7 +282,7 @@ class SeqSampleSet:
     """
 
     def __init__(self, file_root, x_values, count_file_pattern=None, name_pattern=None,
-                 sort_by=None, file_list=None, black_list=None, load_data=False, silent=True):
+                 sort_by=None, file_list=None, black_list=None, load_data=False, silent=True, note=None):
         """Initialize by linking count files under a root folder into :func:`~SeqSample` objects
 
         Args:
@@ -310,12 +314,11 @@ class SeqSampleSet:
 
         """
         from pathlib import Path
+        from datetime import datetime
 
         if file_list is None:
             file_list = [file.name for file in Path(file_root).glob('*{}*'.format(count_file_pattern))]
-            if not silent:
-                print("NOTICE: no sample list is given, samples are collected from root folder:" +
-                      '\n'.join(file_list))
+            print("NOTICE: no sample list is given, samples are collected from root folder:\n\t" + '\n\t'.join(file_list))
 
         if isinstance(x_values, list):
             if len(x_values) != len(file_list):
@@ -327,11 +330,25 @@ class SeqSampleSet:
         if black_list is None:
             black_list = []
 
+        self.metadata = {
+            'file_root': file_root,
+            'log': ['Dataset created on {}, from {}'.format(datetime.now(), file_root)],
+            'note': None
+        }
+        if file_list:
+            self.metadata['file_list'] = file_list
+        if black_list:
+            self.metadata['black_list'] = black_list
+        if note is not None:
+            self.metadata['note'] = note
+        if load_data:
+            self.metadata['log'].append('Data loaded as dataset created')
+
         self.sample_set = []
         for file_name, x_value in zip(file_list, x_values):
             if file_name not in black_list:
-                sample = SeqSample(file_path = str(Path.joinpath(Path(file_root), file_name)),
-                                   x_value = x_value,
+                sample = SeqSample(file_path=str(Path.joinpath(Path(file_root), file_name)),
+                                   x_value=x_value,
                                    name_pattern=name_pattern,
                                    load_data=load_data,
                                    silent=silent)
@@ -344,12 +361,14 @@ class SeqSampleSet:
                 sort_fn = sort_by
             self.sample_set = sorted(self.sample_set, key=sort_fn)
 
-        if not silent:
-            print("Samples imported from {}".format(file_root))
+        print("Samples imported from {}".format(file_root))
 
-    def load_data(self, silent=False):
+    def load_data(self, silent=True):
+        from datetime import datetime
+
         for sample in self.sample_set:
             sample.load_data(silent=silent)
+        self.metadata['log'].append('Data loaded at {}, from {}'.format(datetime.now(), self.metadata['file_root']))
 
     def get_quant_factors(self, from_spike_in_amounts=None, spike_in_seq=None, max_dist=2,
                           max_dist_to_survey=None, from_total_amounts = None, quant_factors=None,
@@ -426,15 +445,6 @@ class SeqSampleSet:
                 for sample, total_amount in zip(self.sample_set, from_total_amounts):
                     sample.get_quant_factor(from_total_amount=total_amount, silent=silent)
 
-    @property
-    def sample_names(self):
-        return [sample.name for sample in self.sample_set]
-
-    @property
-    def sample_overview(self):
-        from . import visualizer
-        return visualizer.count_file_info_table(self, return_table=True)
-
     def get_sample(self, sample_id, return_SeqSample=False):
         """Return (count) info of sample(s)
 
@@ -458,12 +468,13 @@ class SeqSampleSet:
         if return_SeqSample:
             return sample_to_return
         else:
-            return_df = pd.DataFrame()
+            seq_list = set()
             for sample in sample_to_return:
-                return_df = pd.concat([return_df, sample.sequences[['counts']].rename({'counts': sample.name}, axis=1)],
-                                      axis=1, sort=False)
+                seq_list.update(list(sample.sequences.index))
+            return_df = pd.DataFrame(index=seq_list)
+            for sample in sample_to_return:
+                return_df[sample.name] = sample.sequences['counts']
             return return_df
-
 
     def filter_sample(self, sample_to_keep, inplace=True):
         """filter samples in sample set
@@ -483,6 +494,26 @@ class SeqSampleSet:
             new_set = copy.deepcopy(self)
             new_set.sample_set = [sample for sample in new_set.sample_set if sample.name in sample_to_keep]
             return new_set
+
+    def remove_spike_in(self, spike_in_seq=None, max_dist=None, silent=True):
+        from datetime import datetime
+
+        if spike_in_seq is None:
+            spike_in_seq = None
+        if max_dist is None:
+            max_dist = None
+        for sample in self.sample_set:
+            sample.remove_spike_in(spike_in_seq=spike_in_seq, max_dist=max_dist, inplace=True, silent=silent)
+        self.metadata['log'].append('Spike in sequence removed inplace for all samples at {}'.format(datetime.now()))
+
+    @property
+    def sample_names(self):
+        return [sample.name for sample in self.sample_set]
+
+    @property
+    def sample_overview(self):
+        from . import visualizer
+        return visualizer.count_file_info_table(self, return_table=True)
 
 
 class SeqTable:
@@ -529,63 +560,39 @@ class SeqTable:
 
             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples
         """
-
-        import datetime
+        from datetime import datetime
 
         # find valid sequence set
-        input_seq_set = set()
-        reacted_seq_set = set()
 
-        sample_set = sample_set.sample_set
-
-        if remove_spike_in:
-            for sample in sample_set:
-                if sample.sample_type == 'input':
-                    input_seq_set.update([
-                        seq for seq in sample.sequences.keys()
-                        if Levenshtein.distance(seq, sample.spike_in['spike_in_seq']) > sample.spike_in['quant_factor_max_dist']
-                    ])
-                elif sample.sample_type == 'reacted':
-                    reacted_seq_set.update([
-                        seq for seq in sample.sequences.keys()
-                        if Levenshtein.distance(seq, sample.spike_in['spike_in_seq']) > sample.spike_in['quant_factor_max_dist']
-                    ])
-        else:
-            for sample in sample_set:
-                if sample.sample_type == 'input':
-                    input_seq_set.update(list(sample.sequences.keys()))
-                elif sample.sample_type == 'reacted':
-                    reacted_seq_set.update(list(sample.sequences.keys()))
-
-        valid_set = input_seq_set & reacted_seq_set
-        self.dataset_info = {
-            'input_seq_num': len(input_seq_set),
-            'reacted_seq_num': len(reacted_seq_set),
-            'valid_seq_num': len(valid_set),
-            'remove_spike_in': remove_spike_in
-        }
+        self.metadata = {'log': ['Dataset created on {}'.format(datetime.now())]}
         if note:
-            self.dataset_info['note'] = note
+            self.metadata['note'] = note
+        if remove_spike_in:
+            import copy
+            sample_set = copy.deepcopy(sample_set)
+            sample_set.remove_spike_in()
+            self.metadata['remove_spike_in'] = True
+        input_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'input')
+        reacted_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'reacted')
+        valid_set = set(input_set.index) & set(reacted_set.index)
+        self.metadata['seq_nums'] = {
+            'input_seq_num': input_set.shape[0],
+            'reacted_seq_num': reacted_set.shape[0],
+            'valid_seq_num': len(valid_set)
+        }
+        self.count_table_reacted = reacted_set.loc[valid_set]
+        self.count_table_input = input_set.loc[valid_set]
 
         # preserve sample info
         self.sample_info = {}
-        for sample in sample_set:
+        for sample in sample_set.sample_set:
             sample_info_dict = sample.__dict__.copy()
             sequences = sample_info_dict.pop('sequences', None)
             self.sample_info[sample.name] = {
-                'valid_seqs_num': np.sum([1 for seq in sequences.keys() if seq in valid_set]),
-                'valid_seqs_counts': np.sum([seq[1] for seq in sequences.items() if seq[0] in valid_set])
+                'valid_seqs_num': len(set(sequences.index) & valid_set),
+                'valid_seqs_counts': len(set(sequences.index) & valid_set)
             }
             self.sample_info[sample.name].update(sample_info_dict)
-
-        # create valid sequence table
-        self.count_table = pd.DataFrame(index=list(valid_set), columns=[sample.name for sample in sample_set])
-        for seq in valid_set:
-            for sample in sample_set:
-                if seq in sample.sequences.keys():
-                    self.count_table.loc[seq, sample.name] = sample.sequences[seq]
-
-        self.dataset_info['timestamp'] = str(datetime.datetime.now())
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
         """Calculate reacted fraction for sequences
@@ -594,7 +601,7 @@ class SeqTable:
 
             input_average ('median' or 'mean'): method to calculate the average amount of input for a sequence
 
-            black_list (list of str): optional, list of names of samples to be excluded in calculation
+            black_list (list of `str`): optional, list of names of samples to be excluded in calculation
 
             inplace (bool): add ``reacted_frac_table`` to the attribute of instance if True; return
                 ``reacted_frac_table`` if False
@@ -617,56 +624,48 @@ class SeqTable:
 
         if not black_list:
             black_list = []
-        input_samples = [sample[0] for sample in self.sample_info.items()
-                         if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
-        reacted_samples = [sample[0] for sample in self.sample_info.items()
-                           if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
-        reacted_frac_table = pd.DataFrame(index=self.count_table.index, columns=reacted_samples)
-        reacted_frac_table.input_avg_type = input_average
-        reacted_frac_table.col_x_values = [float(self.sample_info[sample]['x_value']) for sample in reacted_frac_table.columns]
-
+        col_to_use = [col_name for col_name in self.count_table_reacted.columns if col_name not in black_list]
+        reacted_frac_table = self.count_table_reacted[col_to_use]
+        reacted_frac_table = reacted_frac_table.apply(
+            lambda sample: sample/self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
+            axis=0
+        )
+        self.metadata['input_avg_type'] = input_average
+        input_amount = self.count_table_input.loc[self.reacted_frac_table.index]
+        input_amount = input_amount.apply(
+            lambda sample: sample / self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
+            axis=0
+        )
         if input_average == 'median':
-            input_amount_avg = np.nanmedian(np.array([
-                list(self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                     self.sample_info[sample]['quant_factor'])
-                for sample in input_samples
-            ]), axis=0)
+            input_amount_avg = input_amount.median(axis=1)
         elif input_average == 'mean':
-            input_amount_avg = np.nanmean(np.array([
-                list(self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                     self.sample_info[sample]['quant_factor'])
-                for sample in input_samples
-            ]), axis=0)
+            input_amount_avg = input_amount.median(axis=1)
         else:
             raise Exception("Error: input_average should be 'median' or 'mean'")
-
-        reacted_frac_table.input_avg = input_amount_avg
-        for sample in reacted_samples:
-            reacted_frac_table[sample] = (
-                                                 self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                                                 self.sample_info[sample]['quant_factor']
-                                         )/reacted_frac_table.input_avg
-
+        reacted_frac_table = reacted_frac_table.divide(input_amount_avg, axis=0)
         if inplace:
             self.reacted_frac_table = reacted_frac_table
         else:
             return reacted_frac_table
 
-    def get_x_values(self, with_col_name=True):
-        """Return x values corresponding to each column
+    def x_values(self, with_col_name=True):
+        """Return x values corresponding to each column in `reacted_frac_table` (or `count_table_reacted`)
         Args:
-
-            with_col_name (bool): return a dict instead of a list if True
+            with_col_name (`bool`): return a dict instead of a list if True
 
         """
+        if hasattr(self, 'reacted_frac_table'):
+            table = self.reacted_frac_table
+        else:
+            table = self.count_table_reacted
         if with_col_name:
             return {
-                sample: float(self.sample_info[sample]['x_value']) for sample in self.reacted_frac_table.columns
+                sample: float(self.sample_info[sample]['x_value']) for sample in table.columns
             }
         else:
-            return [float(self.sample_info[sample]['x_value']) for sample in self.reacted_frac_table.columns]
+            return [float(self.sample_info[sample]['x_value']) for sample in table.columns]
 
-    def filter_seq(self, seq_to_keep, inplace=True):
+    def filter_seq(self, seq_to_keep=None, filter_fn=None, inplace=True):
         """Filter sequence in dataset
         In current version, only ``count_table`` and ``reacted_frac_table`` will change if applicable
         Other meta info will keep the same
@@ -697,3 +696,8 @@ class SeqTable:
                 sequence_set_copy.reacted_frac_table.input_avg_type = input_avg_type
                 sequence_set_copy.reacted_frac_table.col_x_values = col_x_values
             return sequence_set_copy
+
+class SeqFilter:
+
+    def __init__(self):
+        pass
