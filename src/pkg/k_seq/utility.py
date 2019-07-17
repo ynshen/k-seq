@@ -60,7 +60,7 @@ def get_args_params(func, exclude_x=True):
 
     """
     from inspect import signature
-    arg_tuple = tuple(signature(func).keys())
+    arg_tuple = tuple(signature(func).parameters.keys())
     if exclude_x:
         return arg_tuple[1:]
     else:

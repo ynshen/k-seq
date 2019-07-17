@@ -66,7 +66,7 @@ def count_file_info_table(sample_set, return_table=False):
 
 
 def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=True, plot_spike_in_frac=True,
-                         black_list=None, sep_plot=False, save_dirc=None):
+                         black_list=None, sep_plot=False, fig_save_to=None):
     """Generate overview plot(s) of unique seqs, total counts and spike-in fractions in the samples
 
     Args:
@@ -81,7 +81,7 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
 
         black_list (list of `str`): list of sample name to exlude from the plots
 
-        save_dirc (`str`): save figure to the directory if not None
+        fig_save_to (`str`): save figure to the directory if not None
 
     """
     if black_list is None:
@@ -178,8 +178,8 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
         ax.set_xticklabels([sample.name for sample in sample_set], rotation=90)
         plt.legend(handles=lgd, frameon=True)
 
-    if save_dirc:
-        fig.savefig(save_dirc, dpi=300)
+    if fig_save_to:
+        fig.savefig(fig_save_to, dpi=300)
     plt.show()
 
 
@@ -611,7 +611,8 @@ def survey_seqs_info(sequence_set):
     )
     return sequence_set
 
-def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, save_dirc=None):
+
+def survey_seq_occurrence(seq_table, sample_range='reacted', display=True, fig_save_to=None):
     if sample_range == 'reacted':
         samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
         occurrence = sequence_set.seq_info['occur_in_reacteds'][1:]
@@ -654,8 +655,8 @@ def survey_seq_occurrence(sequence_set, sample_range='reacted', display=True, sa
         ax22.text(s='Number of occurrence', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
                   ha='center', va='top', fontsize=14)
         plt.tight_layout()
-        if save_dirc is not None:
-            fig.savefig(dirc=save_dirc, dpi=300, bbox_inches='tight')
+        if fig_save_to is not None:
+            fig.savefig(dirc=fig_save_to, dpi=300, bbox_inches='tight')
         plt.show()
 
     return count_bins, count_bins_weighted

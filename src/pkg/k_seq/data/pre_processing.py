@@ -273,8 +273,12 @@ class SeqSample:
 
     @property
     def log(self):
-        print('-' + '-\n'.join(self.metadata['log']))
+        print('-' + '\n-'.join(self.metadata['log']))
         return None
+
+    class vis:
+
+        def
 
 
 class SeqSampleSet:
@@ -631,7 +635,7 @@ class SeqTable:
             axis=0
         )
         self.metadata['input_avg_type'] = input_average
-        input_amount = self.count_table_input.loc[self.reacted_frac_table.index]
+        input_amount = self.count_table_input.loc[reacted_frac_table.index]
         input_amount = input_amount.apply(
             lambda sample: sample / self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
             axis=0
@@ -698,6 +702,7 @@ class SeqTable:
             return sequence_set_copy
 
 class SeqFilter:
+    # Todo: add some filters for sequences
 
     def __init__(self):
         pass
