@@ -67,6 +67,26 @@ def get_args_params(func, exclude_x=True):
         return arg_tuple
 
 
+class FunctionWrapper:
+
+    @staticmethod
+    def _wrap_function(func, data):
+        from functools import partial, update_wrapper
+        wrapped = partial(func, data)
+        update_wrapper(wrapped, func)
+        return wrapped
+
+    def __init__(self, data, functions):
+        if callable(functions):
+            functions = [functions]
+
+        from functools import partial, update_wrapper
+
+        self.__dict__.update({
+            func.__name__: self._wrap_function(func, data) for func in functions
+        })
+
+
 class EnvVar(object):
 
     def __init__(self):

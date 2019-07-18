@@ -3,9 +3,6 @@ TODOs:
   - write output function for each class as JSON file
 """
 
-import numpy as np
-import pandas as pd
-
 
 class SeqSample:
     """This class describes experimental samples sequenced in k-seq
@@ -91,6 +88,8 @@ class SeqSample:
         from k_seq import utility
         from k_seq.data import io
         from pathlib import Path
+        import numpy as np
+        import pandas as pd
 
         self.metadata = {}
         file_path = Path(file_path)
@@ -121,6 +120,12 @@ class SeqSample:
 
         if not silent:
             print("Sample {} created from {}".format(self.name, self.metadata['file_path']))
+
+        from ..utility import FunctionWrapper
+        from .visualizer import length_dist_plot_single, sample_count_cut_off_plot_single
+        self.visualizer = FunctionWrapper(data=self, functions=[length_dist_plot_single,
+                                                                sample_count_cut_off_plot_single])
+
 
     def load_data(self, silent=False):
         """Function to load data from file with path in ``self.matadata['file_path']``"""
@@ -164,6 +169,7 @@ class SeqSample:
 
         import Levenshtein
         from datetime import datetime
+        import numpy as np
 
         results = dict()
         results['spike_in_counts'] = np.zeros(max_dist_to_survey + 1, dtype=np.int)
@@ -213,6 +219,7 @@ class SeqSample:
 
         """
         from datetime import datetime
+        import numpy as np
 
         if from_spike_in_amount:
             if not hasattr(self, 'spike_in'):
@@ -276,10 +283,6 @@ class SeqSample:
         print('-' + '\n-'.join(self.metadata['log']))
         return None
 
-    class vis:
-
-        def
-
 
 class SeqSampleSet:
     """Object to load and store a set of samples
@@ -319,6 +322,8 @@ class SeqSampleSet:
         """
         from pathlib import Path
         from datetime import datetime
+        import numpy as np
+        import pandas as pd
 
         if file_list is None:
             file_list = [file.name for file in Path(file_root).glob('*{}*'.format(count_file_pattern))]
@@ -366,6 +371,18 @@ class SeqSampleSet:
             self.sample_set = sorted(self.sample_set, key=sort_fn)
 
         print("Samples imported from {}".format(file_root))
+
+        from .visualizer import count_file_info_table, count_file_info_plot, spike_in_peak_plot, rep_spike_in_plot, length_dist_plot_all, sample_count_cut_off_plot_all
+        from ..utility import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              count_file_info_table,
+                                              count_file_info_plot,
+                                              spike_in_peak_plot,
+                                              rep_spike_in_plot,
+                                              length_dist_plot_all,
+                                              sample_count_cut_off_plot_all
+                                          ])
 
     def load_data(self, silent=True):
         from datetime import datetime
@@ -459,6 +476,7 @@ class SeqSampleSet:
         Returns: list of `SeqSample` or `pd.DataFrame`
 
         """
+        import pandas as pd
 
         if isinstance(sample_id, str):
             sample_to_return = [sample for sample in self.sample_set if sample.name == sample_id]
@@ -518,6 +536,19 @@ class SeqSampleSet:
     def sample_overview(self):
         from . import visualizer
         return visualizer.count_file_info_table(self, return_table=True)
+
+    def to_SeqTable(self, remove_spike_in=True, note=None):
+        """Convert to a `SeqTable` object
+
+        Args:
+            remove_spike_in (`bool`): remove spike in if True. Default True.
+            note (`str`): optional. Note about the sample set
+
+        Returns: `SeqTable` instance
+        """
+        if note is None:
+            note = None
+        return SeqTable(self, remove_spike_in=remove_spike_in, note=note)
 
 
 class SeqTable:
@@ -598,6 +629,15 @@ class SeqTable:
             }
             self.sample_info[sample.name].update(sample_info_dict)
 
+        from .visualizer import seq_occurrence_plot, rep_variability_plot
+        from ..utility import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              seq_occurrence_plot,
+                                              rep_variability_plot
+                                          ])
+
+
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
         """Calculate reacted fraction for sequences
 
@@ -669,7 +709,25 @@ class SeqTable:
         else:
             return [float(self.sample_info[sample]['x_value']) for sample in table.columns]
 
-    def filter_seq(self, seq_to_keep=None, filter_fn=None, inplace=True):
+    @property
+    def seq_info(self):
+        import pandas as pd
+        import numpy as np
+
+        seq_info = pd.DataFrame(index=self.count_table_input.index)
+        seq_info['occurred_in_inputs'] = pd.Series(np.sum(self.count_table_input > 0, axis=1))
+        seq_info['occurred_in_reacted'] = pd.Series(np.sum(self.count_table_reacted > 0, axis=1))
+        get_rel_abun = lambda series: series/series.sum()
+        seq_info['avg_rel_abun_in_inputs'] = pd.Series(
+            self.count_table_input.apply(get_rel_abun, axis=0).mean(axis=1)
+        )
+        seq_info['avg_rel_abun_in_reacted'] = pd.Series(
+            self.count_table_reacted.apply(get_rel_abun, axis=0).mean(axis=1)
+        )
+        return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
+
+
+    def filter_seq(self, seq_to_keep=None, filter_fn=None, update_all=True, inplace=True):
         """Filter sequence in dataset
         In current version, only ``count_table`` and ``reacted_frac_table`` will change if applicable
         Other meta info will keep the same
@@ -682,24 +740,19 @@ class SeqTable:
 
         """
         if inplace:
-            self.count_table = self.count_table.loc[seq_to_keep]
-            if hasattr(self, 'reacted_frac_table'):
-                col_x_values = self.reacted_frac_table.col_x_values
-                input_avg_type = self.reacted_frac_table.input_avg_type
-                self.reacted_frac_table = self.reacted_frac_table.loc[seq_to_keep]
-                self.reacted_frac_table.input_avg_type = input_avg_type
-                self.reacted_frac_table.col_x_values = col_x_values
+            table_to_use = self
         else:
             import copy
-            sequence_set_copy = copy.deepcopy(self)
-            sequence_set_copy.count_table = self.count_table.loc[seq_to_keep]
-            if hasattr(self, 'reacted_frac_table'):
-                col_x_values = self.reacted_frac_table.col_x_values
-                input_avg_type = self.reacted_frac_table.input_avg_type
-                sequence_set_copy.reacted_frac_table = self.reacted_frac_table.loc[seq_to_keep]
-                sequence_set_copy.reacted_frac_table.input_avg_type = input_avg_type
-                sequence_set_copy.reacted_frac_table.col_x_values = col_x_values
-            return sequence_set_copy
+            table_to_use = copy.deepcopy(self)
+
+        if update_all:
+            table_to_use.count_table_input = table_to_use.count_table_input.loc[seq_to_keep]
+            table_to_use.count_table_reacted = table_to_use.count_table_reacted.loc[seq_to_keep]
+
+        if hasattr(table_to_use, 'reacted_frac_table'):
+            table_to_use.reacted_frac_table = table_to_use.reacted_frac_table.loc[seq_to_keep]
+        if not inplace:
+            return table_to_use
 
 class SeqFilter:
     # Todo: add some filters for sequences

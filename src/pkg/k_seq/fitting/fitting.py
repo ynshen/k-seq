@@ -301,12 +301,11 @@ class BatchFitting:
         if parallel_cores > 1:
             import multiprocessing as mp
             pool = mp.Pool(processes=int(parallel_cores))
-            work_fn = lambda seq_fitting: seq_fitting.fitting()
-            pool.map(work_fn, self.seq_list)
+            self.seq_list = pool.map(_work_fn, self.seq_list)
         else:
             for seq_fitting in self.seq_list:
                 seq_fitting.fitting()
-
+        self.seq_list = {seq_fitting.name: seq_fitting for seq_fitting in self.seq_list}
 
     @classmethod
     def from_SeqTable(cls, seq_table, model, seq_to_fit=None, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
@@ -328,48 +327,13 @@ class BatchFitting:
                    resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
                    random_init=random_init, metrics=metrics, **kwargs)
 
+    @property
+    def summary(self):
+        import pandas as pd
+        series = [fitter.summary for fitter in self.seq_list.values()]
+        return pd.concat(series, axis=1).transpose()
 
 
-def fitting_sequence_set(sequence_set, bs_return_verbose=100, parallel_threads=None, inplace=True, **kwargs):
-    """
-    Method to apply fitting on all sequences in sequence_set
-    :param sequence_set:
-    :param bs_return_verbose:
-    :param parallel_threads:
-    :param inplace:
-    :param kwargs:
-    :return:
-    """
-    from functools import partial
-
-    partial_func = partial(fitting_master,
-                           x_data=sequence_set.reacted_frac_table.col_x_values,
-                           bs_return_verbose=bs_return_verbose,
-                           **kwargs)
-
-    if isinstance(sequence_set, pd.DataFrame):
-        reacted_frac_table = sequence_set
-    else:
-        reacted_frac_table = sequence_set.reacted_frac_table
-
-    if parallel_threads:
-        pool = mp.Pool(processes=int(parallel_threads))
-        results = pool.map(partial_func, sequence_set.reacted_frac_table.iterrows())
-    else:
-        results = [partial_func(seq) for seq in reacted_frac_table.iterrows()]
-
-    if inplace:
-        sequence_set.fitting_results = pd.DataFrame([res[0] for res in results])
-        if bs_return_verbose:
-            sequence_set.bs_log = {res[1][0]:res[1][1] for res in results}
-    else:
-        if bs_return_verbose:
-            return pd.DataFrame([res[0] for res in results]), {res[1][0]:res[1][1] for res in results}
-        else:
-            return pd.DataFrame([res[0] for res in results])
-
-
-
-
-
-# TODO: make a full script to run the whole
+def _work_fn(fitter):
+    fitter.fitting()
+    return fitter

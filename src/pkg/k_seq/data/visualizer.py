@@ -11,7 +11,134 @@ from . import pre_processing
 from IPython.display import HTML
 
 
-# SeqSample, SeqSampleSet analysis
+# -------------- Belows are SeqSample Visualizer ---------------
+
+def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=False, labels_off=False,
+                            ax=None, save_fig_to=None):
+    """
+    To plot a histogram of sequence length for a single sample
+
+    Args:
+        sample (`SeqSample`): the sample to plot
+        y_log (`bool`): set y scale as log if True
+        legend_off (`bool`): do not show legend if True
+        title_off (`bool`): do not show title if True; use `sample.name` as title if False
+        labels_off (`bool`): do not show x label if True
+        ax (`matplotlib.Axes`): plot in a given axis if not None
+        save_fig_to (`str`): if save file to a given directory
+    """
+
+    if ax is None:
+        fig = plt.figure(figsize=[6, 4])
+        ax = fig.add_subplot(111)
+        show_fig = True
+    else:
+        show_fig = False
+
+    sample.sequences['length'] = sample.sequences.index.map(mapper=len)
+    bins = np.linspace(min(sample.sequences['length']), max(sample.sequences['length']), 50)
+    ax.hist(sample.sequences['length'], bins=bins, weights=sample.sequences['counts'], color='#AEAEAE',
+            zorder=1, label='counts')
+    ax.hist(sample.sequences['length'], bins=bins, color='#2C73B4', zorder=2, label='unique seqs')
+    if y_log:
+        ax.set_yscale('log')
+    if not labels_off:
+        ax.set_xlabel('Sequence Length (nt)', fontsize=14)
+    if not title_off:
+        ax.set_title(sample.name, fontsize=14)
+    if not legend_off:
+        ax.legend(frameon=False)
+    if save_fig_to:
+        plt.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+    if show_fig:
+        plt.show()
+
+
+def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, include_spike_in=False,
+                                     x_log=False, y_log=True, legend_off=False, labels_off=False,
+                                     ax=None, save_fig_to=None):
+    """Plot cutoff test on sequences on single file
+    Args:
+        sample (`SeqSample`): sample to plot
+        thresholds (list of `float`): optional, manual input of thresholds for cutoff
+        on_counts (`bool`): cutoff is calculated on absolute counts if True, on relative abundance if False
+        include_spike_in (`bool`): if remove spike in sequences before calculation
+        x_log (`bool`): if set x axis as log
+        y_log (`bool`): if set y axis as log
+        legend_off:
+        labels_off:
+        ax:
+        save_fig_to:
+
+    Returns:
+
+    """
+
+    import numpy as np
+
+    if not include_spike_in:
+        sequences = sample.remove_spike_in(inplace=False, silent=True)
+    else:
+        sequences = sample.sequences
+
+    if not on_counts:
+        series_to_use = sequences['counts']/np.sum(sequences['counts'])
+    else:
+        series_to_use = sequences['counts']
+
+    if thresholds is None:
+        if on_counts:
+            thresholds = np.logspace(0, np.log10(sample.sequences['counts'].max()), 10)
+        else:
+            thresholds = np.logspace(np.log10(1/sample.total_counts),
+                                     np.log10(sample.sequences['counts'].max()/sample.total_counts),
+                                     10)
+
+    filtered_uniques = [np.sum(series_to_use >= threshold) for threshold in thresholds]
+    filtered_total = [np.sum(series_to_use[series_to_use >= threshold]) for threshold in thresholds]
+
+    if ax is None:
+        fig = plt.figure(figsize=[8, 6])
+        ax = fig.add_subplot(111)
+        fig_show = True
+    else:
+        fig_show = False
+
+    ax.plot(thresholds, filtered_uniques, 'o-', color='#2C73B4', label='Unique seqs')
+    ax2 = ax.twinx()
+    if on_counts:
+        label = 'Total counts'
+    else:
+        label = 'Total rel abun'
+    ax2.plot(thresholds, filtered_total, 'o-', color='#F39730', label=label)
+    if x_log:
+        ax.set_xscale('log')
+    if y_log:
+        ax.set_yscale('log')
+
+    if on_counts:
+        ax2.set_ylim([1, np.sum(filtered_total[0] * 1.2)])
+    else:
+        ax2.set_ylim([1/(sample.total_counts * 1.2), 1.2])
+
+    if not legend_off:
+        handles = [plt.Line2D([], [], marker='o', linestyle='-', color='#2C73B4'),
+                   plt.Line2D([], [], marker='o', linestyle='-', color='#F39730')]
+        labels = ['Unique seqs', label]
+        plt.legend(handles=handles, labels=labels, frameon=False)
+
+    if not labels_off:
+        ax.set_xlabel('Cut off threshold', fontsize=14)
+        ax.set_ylabel('Unique Sequences', fontsize=14)
+        ax2.set_ylabel(label, fontsize=14)
+
+    if save_fig_to:
+        plt.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+    if fig_show:
+        plt.show()
+
+
+# --------------------- Belows are SeqSampleSet visualizers ----------------------
 
 def count_file_info_table(sample_set, return_table=False):
     """Generate an overview info table for all samples in sample_set
@@ -80,6 +207,8 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
         plot_spike_in_frac (`bool`): plot scatter plot for spike in fraction if True
 
         black_list (list of `str`): list of sample name to exlude from the plots
+
+        sep_plot (`bool`): plot separate plots for unique sequences, total counts and spike_in fractions if True
 
         fig_save_to (`str`): save figure to the directory if not None
 
@@ -381,45 +510,7 @@ def rep_spike_in_plot(sample_set, group_by, plot_spike_in_frac=True, plot_entrop
         plt.show()
 
 
-def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=False, labels_off=False,
-                            ax=None, save_fig_to=None):
-    """
-    To plot a histogram of sequence length for a single sample
 
-    Args:
-        sample (`SeqSample`): the sample to plot
-        y_log (`bool`): set y scale as log if True
-        legend_off (`bool`): do not show legend if True
-        title_off (`bool`): do not show title if True; use `sample.name` as title if False
-        labels_off (`bool`): do not show x label if True
-        ax (`matplotlib.Axes`): plot in a given axis if not None
-        save_fig_to (`str`): if save file to a given directory
-    """
-
-    if ax is None:
-        fig = plt.figure(figsize=[6, 4])
-        ax = fig.add_subplot(111)
-        show_fig = True
-    else:
-        show_fig = False
-
-    sample.sequences['length'] = sample.sequences.index.map(mapper=len)
-    bins = np.linspace(min(sample.sequences['length']), max(sample.sequences['length']), 50)
-    ax.hist(sample.sequences['length'], bins=bins, weights=sample.sequences['counts'], color='#AEAEAE',
-            zorder=1, label='counts')
-    ax.hist(sample.sequences['length'], bins=bins, color='#2C73B4', zorder=2, label='unique seqs')
-    if y_log:
-        ax.set_yscale('log')
-    if not labels_off:
-        ax.set_xlabel('Sequence Length (nt)', fontsize=14)
-    if not title_off:
-        ax.set_title(sample.name, fontsize=14)
-    if not legend_off:
-        ax.legend(frameon=False)
-    if save_fig_to:
-        fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
-    if show_fig:
-        plt.show()
 
 
 def length_dist_plot_all(sample_set, black_list=None, fig_layout=None, y_log=True, save_fig_to=None):
@@ -455,88 +546,6 @@ def length_dist_plot_all(sample_set, black_list=None, fig_layout=None, y_log=Tru
     plt.show()
 
 
-def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, include_spike_in=False,
-                                     x_log=False, y_log=True, legend_off=False, labels_off=False,
-                                     ax=None, save_fig_to=None):
-    """Plot cutoff test on sequences on single file
-    Args:
-        sample (`SeqSample`): sample to plot
-        thresholds (list of `float`): optional, manual input of thresholds for cutoff
-        on_counts (`bool`): cutoff is calculated on absolute counts if True, on relative abundance if False
-        include_spike_in (`bool`): if remove spike in sequences before calculation
-        x_log (`bool`): if set x axis as log
-        y_log (`bool`): if set y axis as log
-        legend_off:
-        labels_off:
-        ax:
-        save_fig_to:
-
-    Returns:
-
-    """
-
-    import numpy as np
-
-    if not include_spike_in:
-        sequences = sample.remove_spike_in(inplace=False, silent=True)
-    else:
-        sequences = sample.sequences
-
-    if not on_counts:
-        series_to_use = sequences['counts']/np.sum(sequences['counts'])
-    else:
-        series_to_use = sequences['counts']
-
-    if thresholds is None:
-        if on_counts:
-            thresholds = np.logspace(0, np.log10(sample.sequences['counts'].max()), 10)
-        else:
-            thresholds = np.logspace(np.log10(1/sample.total_counts),
-                                     np.log10(sample.sequences['counts'].max()/sample.total_counts),
-                                     10)
-
-    filtered_uniques = [np.sum(series_to_use >= threshold) for threshold in thresholds]
-    filtered_total = [np.sum(series_to_use[series_to_use >= threshold]) for threshold in thresholds]
-
-    if ax is None:
-        fig = plt.figure(figsize=[8, 6])
-        ax = fig.add_subplot(111)
-        fig_show = True
-    else:
-        fig_show = False
-
-    ax.plot(thresholds, filtered_uniques, 'o-', color='#2C73B4', label='Unique seqs')
-    ax2 = ax.twinx()
-    if on_counts:
-        label = 'Total counts'
-    else:
-        label = 'Total rel abun'
-    ax2.plot(thresholds, filtered_total, 'o-', color='#F39730', label=label)
-    if x_log:
-        ax.set_xscale('log')
-    if y_log:
-        ax.set_yscale('log')
-
-    if on_counts:
-        ax2.set_ylim([1, np.sum(filtered_total[0] * 1.2)])
-    else:
-        ax2.set_ylim([1/(sample.total_counts * 1.2), 1.2])
-
-    if not legend_off:
-        handles = [plt.Line2D([], [], marker='o', linestyle='-', color='#2C73B4'),
-                   plt.Line2D([], [], marker='o', linestyle='-', color='#F39730')]
-        labels = ['Unique seqs', label]
-        plt.legend(handles=handles, labels=labels, frameon=False)
-
-    if not labels_off:
-        ax.set_xlabel('Cut off threshold', fontsize=14)
-        ax.set_ylabel('Unique Sequences', fontsize=14)
-        ax2.set_ylabel(label, fontsize=14)
-
-    if save_fig_to:
-        plt.savefig(save_fit_to, bbox_inches='tight', dpi=300)
-    if fig_show:
-        plt.show()
 
 
 def sample_count_cut_off_plot_all(sample_set, black_list=None, thresholds=None, on_counts=False, include_spike_in=False,
@@ -587,133 +596,159 @@ def sample_count_cut_off_plot_all(sample_set, black_list=None, thresholds=None, 
     plt.show()
 
 
+# ---------------------- Belows are SeqTable Visualizers --------------------
 
-######################### Valid sequence analysis ###############################
-def survey_seqs_info(sequence_set):
-    sequence_set.seq_info = pd.DataFrame(index = sequence_set.count_table.index)
-    input_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'input']
-    reacted_samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
-    sequence_set.seq_info['occur_in_inputs'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, input_samples] > 0, axis=1),
-        index=sequence_set.count_table.index
-    )
-    sequence_set.seq_info['occur_in_reacteds'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, reacted_samples] > 0, axis=1),
-        index=sequence_set.count_table.index
-    )
-    sequence_set.seq_info['total_counts_in_inputs'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, input_samples], axis=1),
-        index=sequence_set.count_table.index
-    )
-    sequence_set.seq_info['total_counts_in_reacteds'] = pd.Series(
-        np.sum(sequence_set.count_table.loc[:, reacted_samples], axis=1),
-        index=sequence_set.count_table.index
-    )
-    return sequence_set
+def seq_occurrence_plot(seq_table, sample_range='reacted', fig_save_to=None):
+    import numpy as np
 
-
-def survey_seq_occurrence(seq_table, sample_range='reacted', display=True, fig_save_to=None):
     if sample_range == 'reacted':
-        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'reacted']
-        occurrence = sequence_set.seq_info['occur_in_reacteds'][1:]
-        total_counts = sequence_set.seq_info['total_counts_in_reacteds'][1:]
+        sample_num = seq_table.count_table_reacted.shape[1]
+        occurrence = seq_table.seq_info['occurred_in_reacted']
+        rel_abun = seq_table.seq_info['avg_rel_abun_in_reacted']
     elif sample_range == 'inputs':
-        samples = [sample[0] for sample in sequence_set.sample_info.items() if sample[1]['sample_type'] == 'input']
-        occurrence = sequence_set.seq_info['occur_in_inputs'][1:]
-        total_counts = sequence_set.seq_info['total_counts_in_inputs'][1:]
+        sample_num = seq_table.count_table_inputs.shape[1]
+        occurrence = seq_table.seq_info['occurred_in_inputs']
+        rel_abun = seq_table.seq_info['avg_rel_abun_in_inputs']
     else:
-        samples = [sample[0] for sample in sequence_set.sample_info.items()]
-        occurrence = sequence_set.seq_info['occur_in_inputs'][1:] + sequence_set.seq_info['occur_in_reacteds'][1:]
-        total_counts = sequence_set.seq_info['total_counts_in_inputs'][1:] + sequence_set.seq_info['total_counts_in_reacteds'][1:]
-    count_bins = np.bincount(occurrence, minlength=len(samples) + 1)[1:]
-    count_bins_weighted = np.bincount(occurrence, minlength=len(samples) + 1, weights=total_counts)[1:]
+        sample_num = seq_table.count_table_inputs.shape[1]
+        occurrence = seq_table.seq_info['occurred_in_inputs']
+        rel_abun = seq_table.seq_info['avg_rel_abun_in_inputs']
+        sample_num += seq_table.count_table_reacted.shape[1]
+        occurrence += seq_table.seq_info['occurred_in_reacted']
+        rel_abun += seq_table.seq_info['avg_rel_abun_in_reacted']
 
-    if display:
-        fig = plt.figure(figsize=[16, 8])
-        gs = gridspec.GridSpec(2, 3, figure=fig)
+    count_bins = np.bincount(occurrence, minlength=sample_num + 1)[1:]
+    count_bins_weighted = np.bincount(occurrence, minlength=sample_num + 1, weights=rel_abun)[1:]
 
-        ax11 = fig.add_subplot(gs[0, 0])
-        ax11.pie(x=count_bins, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={'fontsize':12})
-        ax12 = fig.add_subplot(gs[0, 1:])
-        ax12.bar(height=count_bins, x=[i+1 for i in range(len(samples))])
-        ax12.set_xticks([i+1 for i in range(len(samples))])
-        ax21 = fig.add_subplot(gs[1, 0])
-        ax21.pie(x=count_bins_weighted, labels=[i+1 for i in range(len(samples))], radius=1.2, textprops={'fontsize':12})
-        ax22 = fig.add_subplot(gs[1, 1:])
-        ax22.bar(height=count_bins_weighted, x=[i+1 for i in range(len(samples))])
-        ax22.set_xticks([i + 1 for i in range(len(samples))])
-        y_lim = ax11.get_ylim()
-        x_lim = ax11.get_xlim()
-        ax11.text(s='Unique sequences', x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1])/2, ha='left', va='center', rotation=90, fontsize=14)
-        y_lim = ax21.get_ylim()
-        x_lim = ax21.get_xlim()
-        ax21.text(s='Total counts', x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1]) / 2, ha='left', va='center', rotation=90, fontsize=14)
-        ax21.text(s='Percentage', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.1,
-                  ha='center', va='top', fontsize=14)
-        y_lim = ax22.get_ylim()
-        x_lim = ax22.get_xlim()
-        ax22.text(s='Number of occurrence', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
-                  ha='center', va='top', fontsize=14)
-        plt.tight_layout()
-        if fig_save_to is not None:
-            fig.savefig(dirc=fig_save_to, dpi=300, bbox_inches='tight')
-        plt.show()
+    fig = plt.figure(figsize=[16, 8])
+    gs = gridspec.GridSpec(2, 3, figure=fig)
 
-    return count_bins, count_bins_weighted
+    occur_num = [i+1 for i in range(sample_num)]
+    ax11 = fig.add_subplot(gs[0, 0])
+    ax11.pie(x=count_bins, labels=occur_num, radius=1.2, textprops={'fontsize':12})
+    ax12 = fig.add_subplot(gs[0, 1:])
+    ax12.bar(height=count_bins, x=occur_num)
+    ax12.set_xticks(occur_num)
+    ax21 = fig.add_subplot(gs[1, 0])
+    ax21.pie(x=count_bins_weighted, labels=occur_num, radius=1.2, textprops={'fontsize':12})
+    ax22 = fig.add_subplot(gs[1, 1:])
+    ax22.bar(height=count_bins_weighted, x=occur_num)
+    ax22.set_xticks([i + 1 for i in range(sample_num)])
+    y_lim = ax11.get_ylim()
+    x_lim = ax11.get_xlim()
+    ax11.text(s='Unique sequences', x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1])/2,
+              ha='left', va='center', rotation=90, fontsize=14)
+    y_lim = ax21.get_ylim()
+    x_lim = ax21.get_xlim()
+    ax21.text(s='Average Relative Abundance', x=x_lim[0]*1.5, y=(y_lim[0] + y_lim[1]) / 2,
+              ha='left', va='center', rotation=90, fontsize=14)
+    ax21.text(s='Percentage', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.1,
+              ha='center', va='top', fontsize=14)
+    y_lim = ax22.get_ylim()
+    x_lim = ax22.get_xlim()
+    ax22.text(s='Number of occurrence', x=(x_lim[0] + x_lim[1]) / 2, y=y_lim[0] - (y_lim[1] - y_lim[0]) * 0.12,
+              ha='center', va='top', fontsize=14)
+    plt.tight_layout()
+    if fig_save_to is not None:
+        fig.savefig(dirc=fig_save_to, dpi=300, bbox_inches='tight')
+    plt.show()
 
 
-def get_replicates(sequence_set, key_domain):
-    from itertools import groupby
+def _get_groups(seq_table, group_by):
+    """Return a dictionary of indicate groups of samples
 
-    sample_type = [(sample[0], sample[1]['metadata'][key_domain]) for sample in sequence_set.sample_info.items()]
-    sample_type.sort(key=lambda x: x[1])
+    Args:
+        seq_table:
+        group_by:
+
+    Returns:
+
+    """
     groups = {}
-    for key, group in groupby(sample_type, key=lambda x: x[1]):
-        groups[key] = [x[0] for x in group]
+    if isinstance(group_by, list):
+        for ix, group in enumerate(group_by):
+            if not isinstance(group, list):
+                raise Exception('Error: if use list, group by should be a 2-D list of sample names')
+            else:
+                groups['Set_{}'.format(ix)] = group
+    elif isinstance(group_by, dict):
+        for group in group_by.values():
+            if not isinstance(group, list):
+                raise Exception('Error: if use dict, all values should be a 1-D list of sample names')
+        groups = group_by
+    elif isinstance(group_by, str):
+        groups = {}
+        for sample,content in seq_table.sample_info.items():
+            if group_by not in content['metadata'].keys():
+                raise Exception('Error: sample {} does not have attribute {}'.format(sample.name, group_by))
+            else:
+                if content['metadata'][group_by] in groups:
+                    groups[content['metadata'][group_by]].append(sample)
+                else:
+                    groups[content['metadata'][group_by]] = [sample]
+
     return groups
 
 
-def analyze_rep_variability(sequence_set, key_domain, subsample_size=1000, variability='MAD', percentage=True, display=True):
-    np.random.seed(23)
+def rep_variability_plot(seq_table, group_by, subsample_size=1000, var_method='MAD', percentage=True):
+    import pandas as pd
+    import numpy as np
 
-    def get_variability(seq_subset, num_rep):
-        seq_subset_subset = seq_subset[np.sum(~seq_subset.isnull(), axis=1) == num_rep]
-        if variability == 'MAD':
-            variability_list = abs(seq_subset_subset.subtract(seq_subset_subset.median(axis=1), axis='index')).median(axis=1)
+    def get_sub_table(master_table, col_names, rep_num):
+        return master_table[col_names][np.sum(master_table[col_names] > 0, axis=1) == rep_num]
+
+    def get_variability(sub_table):
+        if var_method.upper() == 'MAD':
+            variability_list = abs(sub_table.subtract(sub_table.median(axis=1), axis='index')).median(axis=1)
             if percentage:
-                variability_list = variability_list.divide(seq_subset_subset.median(axis=1), axis='index')
-        elif variability == 'SD':
-            variability_list = seq_subset_subset.std(axis=1, ddof=1)
+                variability_list = variability_list.divide(sub_table.median(axis=1), axis='index')
+        elif var_method.upper() == 'SD':
+            variability_list = sub_table.std(axis=1, ddof=1)
             if percentage:
-                variability_list = variability_list.divide(seq_subset_subset.mean(axis=1), axis='index')
+                variability_list = variability_list.divide(sub_table.mean(axis=1), axis='index')
+        else:
+            raise Exception('Error: indicate var_method as MAD or SD')
         if len(variability_list) > subsample_size:
-            variability_list = np.random.choice(variability_list, size=subsample_size)
-
+            variability_list = np.random.choice(variability_list.values, size=subsample_size)
         return variability_list
 
-    variability_res = {}
-    groups = get_replicates(sequence_set, key_domain)
-    for (group_name, group_elems) in groups.items():
-        variability_list = []
-        for i in range(len(group_elems) - 1):
-            num_rep = i + 2
-            variability_list.append(
-                get_variability(seq_subset=sequence_set.reacted_frac_table.loc[:,group_elems], num_rep=num_rep)
-            )
-        variability_res[group_name] = variability_list
+    results = {}
+    groups = _get_groups(seq_table, group_by=group_by)
 
-    if display:
-        fig, axes = plt.subplots(1, len(groups), figsize=[3*len(groups), 3], sharey=True)
-        plt.subplots_adjust(hspace=0, wspace=0)
-        for (ix, (group_name, variability_list)) in enumerate(variability_res.items()):
-            axes[ix].violinplot(variability_list, positions=[i + 2 for i in range(len(variability_list))], showmedians=True)
-            axes[ix].set_title(group_name, fontsize=14)
-            # axes[ix].set_xlabel('Replicates', fontsize=14)
-            axes[ix].set_xticks([i + 2 for i in range(len(variability_list))])
-            axes[ix].set_xticklabels(['{}\n({})'.format(i + 2, len(variability_list[i])) for i in range(len(variability_list))])
-        axes[0].set_ylabel('{}{}'.format('P' if percentage else '', variability), fontsize=14)
-        plt.show()
-    return variability_res
+    for (group_name, sample_names) in groups.items():
+        variability_list = {}
+        sample_names = [sample for sample in sample_names
+                        if (sample in seq_table.reacted_frac_table.columns)
+                        or (sample in seq_table.count_table_input.columns)]
+        if len(sample_names) > 1:
+            for i in range(len(sample_names) - 1):
+                rep_num = i + 2
+                if sample_names[0] in seq_table.reacted_frac_table.columns:
+                    variability_list[rep_num] = get_variability(sub_table=get_sub_table(
+                            master_table=seq_table.reacted_frac_table,
+                            col_names=sample_names,
+                            rep_num=rep_num
+                        ))
+                elif sample_names[0] in seq_table.count_table_input.columns:
+                    variability_list[rep_num] = get_variability(sub_table=get_sub_table(
+                        master_table=seq_table.count_table_input/seq_table.count_table_input.sum(axis=0),
+                        col_names=sample_names,
+                        rep_num=rep_num
+                    ))
+            results[group_name] = variability_list
+    # return results
+
+    fig, axes = plt.subplots(1, len(results), figsize=[3 * len(results), 3], sharey=True)
+    plt.subplots_adjust(hspace=0, wspace=0)
+    for (ix, (group_name, variability_list)) in enumerate(results.items()):
+        axes[ix].violinplot(variability_list.values(), positions=list(variability_list.keys()), showmedians=True)
+        axes[ix].set_title(group_name, fontsize=14)
+        # axes[ix].set_xlabel('Replicates', fontsize=14)
+        axes[ix].set_xticks(list(variability_list.keys()))
+        axes[ix].set_xticklabels(['{}\n({})'.format(rep_num, len(variabilityies))
+                                  for rep_num,variabilityies in variability_list.items()])
+        axes[0].set_ylabel('{}{}'.format('P' if percentage else '', var_method), fontsize=14)
+    plt.show()
 
 
 
