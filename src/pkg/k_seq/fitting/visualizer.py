@@ -1,24 +1,25 @@
-def parse_fitting_results(fitting_res, num_bootstrap_records=0):
+def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
+    from .fitting import SingleFitting, BatchFitting
+    from ..data.pre_processing import SeqTable
 
-    def extract_info_from_SingleFitting(single_res, show_bootstrap_curves=None):
+    def extract_info_from_SingleFitting(single_res):
         data = {
             'x_data': single_res.x_data,
             'y_data': single_res.y_data,
-            'params': single_res.point_est.params[:len(single_res.config['parameters'])].values
+            'params': single_res.point_est.params[:len(single_res.config['parameters'])]
         }
-        if show_bootstrap_curves is not None:
+        if num_bootstrap_records is not None:
             data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
                 axis=0,
-                n=show_bootstrap_curves
-            ).values
+                n=num_bootstrap_records
+            )
         return data
 
-    if show_bootstrap_curves == 0:
-        show_bootstrap_curves = None
+    if num_bootstrap_records == 0:
+        num_bootstrap_records = None
     if isinstance(fitting_res, SeqTable):
         fitting_res = fitting_res.fitting
     if isinstance(fitting_res, BatchFitting):
-        print('input is BatchFitting')
         if seq_ix is None:
             raise Exception('Please provide the names of sequences to plot')
         else:
@@ -29,26 +30,26 @@ def parse_fitting_results(fitting_res, num_bootstrap_records=0):
             if model is None:
                 model = fitting_res.model
             data_to_plot = {
-                name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix],
-                                                      show_bootstrap_curves=show_bootstrap_curves)
+                name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
                 for name, seq_ix in zip(seq_name, seq_ix)
             }
-    if isinstance(fitting_res, SingleFitting):
+    elif isinstance(fitting_res, SingleFitting):
         if seq_name is None:
             seq_name = fitting_res.name
         if model is None:
             model = fitting_res.model
         data_to_plot = {
-            seq_name: extract_info_from_SingleFitting(single_res=fitting_res, show_bootstrap_curves=show_bootstrap_curves)
+            seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
         }
+    else:
+        raise Exception('The input fitting_res should be SeqTable, SingleFitting or BatchFitting')
 
     return model, data_to_plot
 
 def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, show_bootstrap_curves=50,
                        legend_off=False, axis_labels=('x_label', 'y_label'), seq_name=None,
                        ax=None, save_fig_to=None):
-    from .fitting import SingleFitting, BatchFitting
-    from ..data.pre_processing import SeqTable
+
     import matplotlib.pyplot as plt
     import numpy as np
 
@@ -56,6 +57,19 @@ def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, sho
         ax_return = False
     else:
         ax_return = True
+
+    if seq_ix is None:
+        seq_ix = None
+    if seq_name is None:
+        seq_name = None
+    if model is None:
+        model = None
+
+    model, data_to_plot = parse_fitting_results(fitting_res=fitting_res,
+                                                model=model,
+                                                seq_ix=seq_ix,
+                                                seq_name=seq_name,
+                                                num_bootstrap_records=show_bootstrap_curves)
 
     for seq_name, data in data_to_plot.items():
         if not ax_return:
@@ -67,10 +81,10 @@ def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, sho
 
         x_series = np.linspace(0, np.max(data['x_data']) * 1.2, 100)
         if show_bootstrap_curves:
-            for params in data['bs_params']:
+            for params in data['bs_params'].values:
                 ax.plot(x_series, model(x_series, *params), color='#AEAEAE', ls='-', lw=2, alpha=0.2, zorder=1)
 
-        ax.plot(x_series, model(x_series, *data['params']), color='#F39730', ls='-', lw=3, zorder=3)
+        ax.plot(x_series, model(x_series, *data['params'].values), color='#F39730', ls='-', lw=3, zorder=3)
         ax.set_xlim([0, np.max(data['x_data']) * 1.2])
         ax.set_ylim([0, np.max(data['y_data']) * 1.2])
 
@@ -95,13 +109,35 @@ def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, sho
             ax.legend(handles, labels, frameon=False, loc='lower right')
         if save_fig_to:
             plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-
     if ax_return:
         return ax
-
     plt.show()
 
-def
+
+def bootstrap_params_dist_plot(fitting_res, model=None, seq_ix=None, params_to_plot=['k', 'A'],
+                               subsample_num=500, seq_name=None, save_fig_to=None):
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+
+    if seq_ix is None:
+        seq_ix = None
+    if seq_name is None:
+        seq_name = None
+    if model is None:
+        model = None
+
+    model, data_to_plot = parse_fitting_results(fitting_res=fitting_res,
+                                                model=model,
+                                                seq_ix=seq_ix,
+                                                seq_name=seq_name,
+                                                num_bootstrap_records=subsample_num)
+
+    for seq_name, data in data_to_plot.items():
+        jp = sns.jointplot(x=params_to_plot[0], y=params_to_plot[1], data=data['bs_params'], kind='scatter')
+        if save_fig_to:
+            jp.savefig(save_fit_to, bbox_inches='tight', dpi=300)
 
 
 # def fitting_check(k, A, xTrue, y, size=100, average=True):
