@@ -297,6 +297,15 @@ class BatchFitting:
                     for ix, (id, y_values) in enumerate(seq_to_fit.items())
                 ]
 
+        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
+        from ..utility import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              fitting_curve_plot,
+                                              bootstrap_params_dist_plot,
+                                              param_value_plot
+                                          ])
+
     def fitting(self, parallel_cores=1):
         if parallel_cores > 1:
             import multiprocessing as mp

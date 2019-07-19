@@ -48,7 +48,6 @@ class color:
 def blue_header(header):
     print(color.BOLD + color.BLUE + header + color.END)
 
-
 def get_args_params(func, exclude_x=True):
     """
     Utility function to get the number of arguments for a function (callable)
@@ -87,20 +86,16 @@ class FunctionWrapper:
         })
 
 
-class EnvVar(object):
+class Logger:
 
     def __init__(self):
-        pass
+        import pandas as pd
+        self.log = pd.DataFrame(columns=['Timestamp', 'Message'])
+        self.log.set_index(['Timestamp'], inplace=True)
 
-    def add_env(self, name, value):
-        self.__dict__.update({name: value})
-
-    @classmethod
-    def from_dict(cls, env_dict):
-        env = EnvVar()
-        for key,value in env_dict.items():
-            env.__dict__.update({key: value})
-        return env
+    def add_log(self, message):
+        from datetime import datetime
+        self.log.loc[datetime.now()] = [message]
 
 
 def get_file_list(file_root, pattern=None):

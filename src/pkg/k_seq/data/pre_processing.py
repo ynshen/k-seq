@@ -84,16 +84,17 @@ class SeqSample:
                 - Other metadata extracted from the file name
         """
 
-        import datetime
         from k_seq import utility
-        from k_seq.data import io
         from pathlib import Path
         import numpy as np
         import pandas as pd
 
         self.metadata = {}
+        self._logger = utility.Logger()
         file_path = Path(file_path)
         self.metadata['file_path'] = str(file_path)
+        if not silent:
+            print("Creating sample from {}".format(self.metadata['file_path']))
 
         if name_pattern:
             metadata = utility.extract_metadata(target=file_path.name, pattern=name_pattern)
@@ -111,34 +112,28 @@ class SeqSample:
                 self.x_value = self.metadata[x_value]
             else:
                 self.x_value = x_value
-        self.metadata['log'] = ['Sample instance created at {}'.format(str(datetime.datetime.now()))]
 
+        self._logger.add_log('SeqSample instance created')
         if load_data:
-            if not silent:
-                print("Load count data from file...")
-            self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
+            self.load_data(silent=silent)
 
-        if not silent:
-            print("Sample {} created from {}".format(self.name, self.metadata['file_path']))
-
+        # Import visualizers
         from ..utility import FunctionWrapper
         from .visualizer import length_dist_plot_single, sample_count_cut_off_plot_single
         self.visualizer = FunctionWrapper(data=self, functions=[length_dist_plot_single,
                                                                 sample_count_cut_off_plot_single])
 
-
     def load_data(self, silent=False):
-        """Function to load data from file with path in ``self.matadata['file_path']``"""
+        """Load data from file with path in ``self.matadata['file_path']``"""
 
         from k_seq.data import io
-        import datetime
 
         if not silent:
             print("Load count data from file {}".format(self.metadata['file_path']))
-        self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_path'])
-        self.metadata['log'].append('Data imported at {}'.format(str(datetime.datetime.now())))
+        self.unique_seqs, self.total_counts, self._sequences = io.read_count_file(self.metadata['file_path'])
+        self._logger.add_log('Data imported from file')
 
-    def survey_spike_in(self, spike_in_seq, max_dist_to_survey=10, silent=False, inplace=True):
+    def survey_spike_in_peak(self, spike_in_seq, max_dist_to_survey=10, silent=False, inplace=True):
         """Survey spike-in counts in the sample.
         Calculate the total counts of sequences that is *i* (*i* from 0 to `max_dist_to_survey`) edit distance from
             exact spike-in sequences (external standard for quantification) in the sample.
@@ -168,28 +163,30 @@ class SeqSample:
         """
 
         import Levenshtein
-        from datetime import datetime
         import numpy as np
+        import pandas as pd
 
         results = dict()
-        results['spike_in_counts'] = np.zeros(max_dist_to_survey + 1, dtype=np.int)
-        results['spike_in_seq'] = spike_in_seq
-        for seq in self.sequences.index:
-            dist = Levenshtein.distance(spike_in_seq, seq)
-            if dist <= max_dist_to_survey:
-                results['spike_in_counts'][dist] += self.sequences.loc[seq]['counts']
         if not silent:
-            print("Survey spike-in counts for sample {}. Done.".format(self.name))
+            print("Survey spike-in counts for sample {}...".format(self.name))
+        results['spike_in_seq'] = spike_in_seq
+        edit_dist = lambda seq: Levenshtein.distance(spike_in_seq, seq)
+        self._sequences['dist_to_spike_in'] = self._sequences.index.map(edit_dist)
+        dists = np.linspace(0, max_dist_to_survey, max_dist_to_survey + 1, dtype=np.int)
+        results['spike_in_peak'] = pd.DataFrame(index=dists)
+        results['spike_in_peak']['unique_seq'] = [np.sum(self._sequences['dist_to_spike_in'] == dist) for dist in dists]
+        results['spike_in_peak']['total_counts'] = [
+            np.sum(self._sequences[self._sequences['dist_to_spike_in'] == dist]['counts'])
+            for dist in dists
+        ]
+
         if inplace:
             self.spike_in = results
-            self.metadata['log'].append('Spike-in sequences surveyed on {} with maximal distance {}'.format(
-                datetime.now(),
-                max_dist_to_survey
-            ))
+            self._logger.add_log('Spike-in sequences surveyed on with maximal distance {}'.format(max_dist_to_survey))
         else:
             return results
 
-    def get_quant_factor(self, from_spike_in_amount=None, max_dist=0, spike_in_seq=None, from_total_amount=None,
+    def get_quant_factor(self, from_spike_in_amount=None, spike_in_seq=None, max_dist=0, from_total_amount=None,
                          silent=False):
         """Calculate quantification factor for the sample, either from spike in or total amount
         If `from_spike_in_amount` is not `None`, will priory use spike in to quantify the amount of each sequence, and
@@ -214,74 +211,53 @@ class SeqSample:
             quant_factor (`float`): defined as
                 :math:`\\frac{\\text{spike-in amount}}{\\text{total counts}\\times\\text{spike-in counts[: max_dist + 1]}}`
                 if `from_spike_in_amount` is not None
+                effectively the total DNA amount in the sequencing pool
 
             quant_factor_max_dist (`int`): maximum edit distance for a sequence to be spike-in
 
         """
-        from datetime import datetime
         import numpy as np
+
+        if not silent:
+            print("Calculate quant-factor for sample {}...".format(self.name))
 
         if from_spike_in_amount:
             if not hasattr(self, 'spike_in'):
-                self.survey_spike_in(spike_in_seq, max_dist_to_survey=max_dist, silent=silent, inplace=True)
-            self.quant_factor = from_spike_in_amount * self.total_counts / np.sum(self.spike_in['spike_in_counts'][:max_dist + 1])
+                if spike_in_seq is not None:
+                    self.survey_spike_in_peak(spike_in_seq, max_dist_to_survey=max_dist, silent=silent, inplace=True)
+                else:
+                    raise Exception('Please provide spike_in_seq')
+            self.quant_factor = float(from_spike_in_amount) * self.total_counts / np.sum(self.spike_in['spike_in_peak']['total_counts'][:max_dist + 1])
             self.spike_in['quant_factor_max_dist'] = max_dist
             self.spike_in['spike_in_amount'] = from_spike_in_amount
-            self.metadata['log'].append(
-                'quantification factor estimated from spike seq within distance {} at {}'.format(max_dist, datetime.now())
+            self._logger.add_log(
+                'Quantification factor estimated from spike-in seq within distance {}'.format(max_dist)
             )
         elif from_total_amount:
             self.quant_factor = from_total_amount
-            self.total_dna_amount = from_total_amount
-
-        if not silent:
-            print("Calculate quant-factor for sample {}. Done.".format(self.name))
-
-    def remove_spike_in(self, spike_in_seq=None, max_dist=None, inplace=False, silent=False):
-        """Remove sequences that are considered as spike in
-
-        Args:
-            spike_in_seq (`str`): optional, need to be extracted from ``self.spike_in['spike_in_seq']`` if None
-            max_dist (`int`): optional, need to be extracted from ``self.spike_in['quant_factor_max_dist']`` if None
-            inplace (`bool`): if apply in place, if False, return the new `pandas.DataFrame
-            silent (`bool`): if print the process
-
-        Returns: a `pandas.DataFrame` containing filtered sequences if `inplace` is False
-
-        """
-        from datetime import datetime
-
-        if spike_in_seq is None:
-            try:
-                spike_in_seq = self.spike_in['spike_in_seq']
-            except:
-                raise Exception('Error: please input spike-in sequence')
-
-        if max_dist is None:
-            try:
-                max_dist = self.spike_in['quant_factor_max_dist']
-            except:
-                raise Exception('Error: please input max edit distance to count as spike-in')
-
-        import Levenshtein
-
-        filtered_seqs = self.sequences[self.sequences.index.map(lambda seq: Levenshtein.distance(spike_in_seq, seq) > max_dist)]
-        if not silent:
-            print('Spike-in sequence (max_dist = {}) in sample {} is removed: {} --> {}'.format(
-                max_dist, self.name, self.sequences.shape[0], filtered_seqs.shape[0]
-            ))
-        if inplace:
-            self.sequences = filtered_seqs
-            self.metadata['log'].append('Spike-in seqs within distance {} of {} is removed at {}'.format(
-                max_dist, spike_in_seq, datetime.now()
-            ))
+            self._logger.add_log('Quantification factor estimated by total DNA')
         else:
-            return filtered_seqs
+            raise Exception('Please quantify through either spike-in or total DNA amount')
+
+    def sequences(self, with_spike_in=True, filter=None):
+        if with_spike_in:
+            seq = self._sequences
+        else:
+            if hasattr(self, 'spike_in'):
+                seq = self._sequences[self._sequences['dist_to_spike_in'] > self.spike_in['quant_factor_max_dist']]
+            else:
+                seq = Exception('Please calculate quantification factor form spike in first')
+        if filter is None:
+            return seq
+        else:
+            if isinstance(filter, list):
+                return seq[filter]
+            elif callable(filter):
+                return seq[seq.apply(func=filter, axis=1)]
 
     @property
     def log(self):
-        print('-' + '\n-'.join(self.metadata['log']))
-        return None
+        return self._logger.log
 
 
 class SeqSampleSet:
@@ -321,51 +297,50 @@ class SeqSampleSet:
 
         """
         from pathlib import Path
-        from datetime import datetime
+        from k_seq import utility
         import numpy as np
         import pandas as pd
 
+        self._logger = utility.Logger()
+        self._logger.add_log('Dataset created from {}'.format(file_root))
+        self.metadata = {
+            'file_root': file_root
+        }
+        if note:
+            self.metadata['note'] = note
+        else:
+            self.metadata['note'] = None
+        if black_list:
+            self.metadata['black_list'] = black_list
+        else:
+            self.metadata['black_list'] = None
+            black_list = []
         if file_list is None:
             file_list = [file.name for file in Path(file_root).glob('*{}*'.format(count_file_pattern))]
             print("NOTICE: no sample list is given, samples are collected from root folder:\n\t" + '\n\t'.join(file_list))
-
+        self.metadata['file_list'] = file_list
         if isinstance(x_values, list):
             if len(x_values) != len(file_list):
                 raise Exception("Errors: sample_list is given as a list, but the length does not match with "
                                 "sample files")
         else:
             x_values = [x_values for _ in file_list]
-
-        if black_list is None:
-            black_list = []
-
-        self.metadata = {
-            'file_root': file_root,
-            'log': ['Dataset created on {}, from {}'.format(datetime.now(), file_root)],
-            'note': None
-        }
-        if file_list:
-            self.metadata['file_list'] = file_list
-        if black_list:
-            self.metadata['black_list'] = black_list
-        if note is not None:
-            self.metadata['note'] = note
-        if load_data:
-            self.metadata['log'].append('Data loaded as dataset created')
-
+        self.metadata['x_values'] = x_values
         self.sample_set = []
         for file_name, x_value in zip(file_list, x_values):
             if file_name not in black_list:
-                sample = SeqSample(file_path=str(Path.joinpath(Path(file_root), file_name)),
-                                   x_value=x_value,
-                                   name_pattern=name_pattern,
-                                   load_data=load_data,
-                                   silent=silent)
-                self.sample_set.append(sample)
+                self.sample_set.append(SeqSample(file_path=str(Path.joinpath(Path(file_root), file_name)),
+                                                 x_value=x_value,
+                                                 name_pattern=name_pattern,
+                                                 load_data=load_data,
+                                                 silent=silent))
+
+        if load_data:
+            self._logger.add_log('Data loaded as dataset created')
 
         if sort_by:
             if isinstance(sort_by, str):
-                sort_fn = lambda count_file: count_file.metadata[sort_by]
+                sort_fn = lambda single_file: single_file.metadata[sort_by]
             elif callable(sort_by):
                 sort_fn = sort_by
             self.sample_set = sorted(self.sample_set, key=sort_fn)
@@ -385,14 +360,13 @@ class SeqSampleSet:
                                           ])
 
     def load_data(self, silent=True):
-        from datetime import datetime
-
+        """Load data after creating the object, suitable for large files"""
         for sample in self.sample_set:
             sample.load_data(silent=silent)
-        self.metadata['log'].append('Data loaded at {}, from {}'.format(datetime.now(), self.metadata['file_root']))
+        self._logger.add_log('Data loaded at from {}'.format(self.metadata['file_root']))
 
     def get_quant_factors(self, from_spike_in_amounts=None, spike_in_seq=None, max_dist=2,
-                          max_dist_to_survey=None, from_total_amounts = None, quant_factors=None,
+                          max_dist_to_survey=None, from_total_amounts=None, quant_factors=None,
                           survey_only=False, silent=True):
         """Calculate quantification factors for each sample in `SeqSampleSet`.
         This method will first survey the spike-in sequence, then calculate the quantification factor for each sample if
@@ -434,6 +408,8 @@ class SeqSampleSet:
                 elif isinstance(quant_factors, list):
                     for sample, quant_factor in zip(self.sample_set, quant_factors):
                         sample.quant_factor = quant_factor
+            else:
+                raise Exception('Error: input quant_factor has different number as samples')
         elif from_spike_in_amounts:
             if spike_in_seq:
                 if max_dist_to_survey is None:
@@ -445,7 +421,7 @@ class SeqSampleSet:
                                            max_dist_to_survey=max_dist_to_survey,
                                            silent=silent,
                                            inplace=True)
-            else:
+            elif not hasattr(self.sample_set[0], 'spike_in'):
                 raise Exception('Please indicate spike in sequence')
             if not survey_only:
                 if isinstance(from_spike_in_amounts, dict):
@@ -457,6 +433,8 @@ class SeqSampleSet:
                     for sample, spike_in_amount in zip(self.sample_set, from_spike_in_amounts):
                         sample.get_quant_factor(from_spike_in_amount=spike_in_amount,
                                                 max_dist=max_dist, silent=silent)
+                else:
+                    raise Exception('from_spike_in_amounts should be either list or dict')
         elif from_total_amounts:
             if isinstance(from_total_amounts, dict):
                 for sample in self.sample_set:
@@ -465,8 +443,10 @@ class SeqSampleSet:
             elif isinstance(from_total_amounts, list):
                 for sample, total_amount in zip(self.sample_set, from_total_amounts):
                     sample.get_quant_factor(from_total_amount=total_amount, silent=silent)
+            else:
+                raise Exception('from_total_amounts should be either list or dict')
 
-    def get_sample(self, sample_id, return_SeqSample=False):
+    def get_samples(self, sample_id, with_spike_in=False, return_SeqSample=False):
         """Return (count) info of sample(s)
 
         Args:
@@ -492,10 +472,10 @@ class SeqSampleSet:
         else:
             seq_list = set()
             for sample in sample_to_return:
-                seq_list.update(list(sample.sequences.index))
+                seq_list.update(list(sample.sequences(with_spike_in).index))
             return_df = pd.DataFrame(index=seq_list)
             for sample in sample_to_return:
-                return_df[sample.name] = sample.sequences['counts']
+                return_df[sample.name] = sample.sequences(with_spike_in)
             return return_df
 
     def filter_sample(self, sample_to_keep, inplace=True):
@@ -516,17 +496,6 @@ class SeqSampleSet:
             new_set = copy.deepcopy(self)
             new_set.sample_set = [sample for sample in new_set.sample_set if sample.name in sample_to_keep]
             return new_set
-
-    def remove_spike_in(self, spike_in_seq=None, max_dist=None, silent=True):
-        from datetime import datetime
-
-        if spike_in_seq is None:
-            spike_in_seq = None
-        if max_dist is None:
-            max_dist = None
-        for sample in self.sample_set:
-            sample.remove_spike_in(spike_in_seq=spike_in_seq, max_dist=max_dist, inplace=True, silent=silent)
-        self.metadata['log'].append('Spike in sequence removed inplace for all samples at {}'.format(datetime.now()))
 
     @property
     def sample_names(self):
@@ -595,26 +564,27 @@ class SeqTable:
 
             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples
         """
-        from datetime import datetime
+        from k_seq.utility import Logger
 
-        # find valid sequence set
-
-        self.metadata = {'log': ['Dataset created on {}'.format(datetime.now())]}
+        self._logger = Logger()
+        self._logger.add_log('Dataset created')
+        self.metadata = {}
         if note:
             self.metadata['note'] = note
-        if remove_spike_in:
-            import copy
-            sample_set = copy.deepcopy(sample_set)
-            sample_set.remove_spike_in()
-            self.metadata['remove_spike_in'] = True
-        input_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'input')
-        reacted_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'reacted')
+
+        # find valid sequence set
+        self.metadata['remove_spike_in'] = remove_spike_in
+        input_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'input',
+                                          with_spike_in=not(remove_spike_in))
+        reacted_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'reacted',
+                                            with_spike_in=not(remove_spike_in))
         valid_set = set(input_set.index) & set(reacted_set.index)
         self.metadata['seq_nums'] = {
             'input_seq_num': input_set.shape[0],
             'reacted_seq_num': reacted_set.shape[0],
             'valid_seq_num': len(valid_set)
         }
+
         self.count_table_reacted = reacted_set.loc[valid_set]
         self.count_table_input = input_set.loc[valid_set]
 
@@ -622,10 +592,11 @@ class SeqTable:
         self.sample_info = {}
         for sample in sample_set.sample_set:
             sample_info_dict = sample.__dict__.copy()
-            sequences = sample_info_dict.pop('sequences', None)
+            _ = sample_info_dict.pop('visualizer')
+            sequences = sample_info_dict.pop('_sequences', None)
             self.sample_info[sample.name] = {
                 'valid_seqs_num': len(set(sequences.index) & valid_set),
-                'valid_seqs_counts': len(set(sequences.index) & valid_set)
+                'valid_seqs_counts': np.sum(sequences[list(set(sequences.index) & valid_set)]['counts'])
             }
             self.sample_info[sample.name].update(sample_info_dict)
 
@@ -636,7 +607,6 @@ class SeqTable:
                                               seq_occurrence_plot,
                                               rep_variability_plot
                                           ])
-
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
         """Calculate reacted fraction for sequences
@@ -689,25 +659,23 @@ class SeqTable:
         reacted_frac_table = reacted_frac_table.divide(input_amount_avg, axis=0)
         if inplace:
             self.reacted_frac_table = reacted_frac_table
+            self._logger.add_log('reacted_frac_tabled added using {} as input average'.format(input_average))
         else:
             return reacted_frac_table
 
-    def x_values(self, with_col_name=True):
+    @property
+    def x_values(self):
         """Return x values corresponding to each column in `reacted_frac_table` (or `count_table_reacted`)
-        Args:
-            with_col_name (`bool`): return a dict instead of a list if True
-
+        as pd.Series
         """
+        import pandas as pd
+
         if hasattr(self, 'reacted_frac_table'):
             table = self.reacted_frac_table
         else:
             table = self.count_table_reacted
-        if with_col_name:
-            return {
-                sample: float(self.sample_info[sample]['x_value']) for sample in table.columns
-            }
-        else:
-            return [float(self.sample_info[sample]['x_value']) for sample in table.columns]
+        return pd.Series(data=[self.sample_info[sample]['x_value'] for sample in table.columns],
+                         index=table.columns)
 
     @property
     def seq_info(self):
@@ -725,7 +693,6 @@ class SeqTable:
             self.count_table_reacted.apply(get_rel_abun, axis=0).mean(axis=1)
         )
         return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
-
 
     def filter_seq(self, seq_to_keep=None, filter_fn=None, update_all=True, inplace=True):
         """Filter sequence in dataset
@@ -753,6 +720,50 @@ class SeqTable:
             table_to_use.reacted_frac_table = table_to_use.reacted_frac_table.loc[seq_to_keep]
         if not inplace:
             return table_to_use
+
+    def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
+                    bootstrap_depth=0, bs_return_size=None,
+                    resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None):
+        """
+        Add a `k_seq.fitting.BatchFitting` instance to SeqTable for fitting
+        Args:
+            model:
+            seq_to_fit:
+            weights:
+            bounds:
+            bootstrap_depth:
+            bs_return_size:
+            resample_pct_res:
+            missing_data_as_zero:
+            random_init:
+            metrics:
+
+        """
+        from ..fitting.fitting import BatchFitting
+        if seq_to_fit is None:
+            seq_to_fit = None
+        if weights is None:
+            weights = None
+        if bounds is None:
+            bounds = None
+        if bs_return_size is None:
+            bs_return_size = None
+        if metrics is None:
+            metrics = None
+        self.fitting = BatchFitting.from_SeqTable(
+            seq_table=self,
+            model=model,
+            seq_to_fit=seq_to_fit,
+            weights=weights,
+            bounds=bounds,
+            bootstrap_depth=bootstrap_depth,
+            bs_return_size=bs_return_size,
+            resample_pct_res=resample_pct_res,
+            missing_data_as_zero=missing_data_as_zero,
+            random_init=random_init,
+            metrics=metrics)
+        self._logger.add_log('BatchFitting fitter added')
+
 
 class SeqFilter:
     # Todo: add some filters for sequences
