@@ -28,7 +28,8 @@ To run this notebook, make sure:
   - Use `k_seq.data.SeqSampleSet` to parse count files and analyze k-seq data
   - Use `k_seq.data.SeqTable` to obtain and analyze a collection of "valid sequences"
   - Use `k_seq.data.SeqTable` to fit the kinetic model and estimate the kinetic coefficients with uncertainty estimation
-
+  - Use `k_seq.fitting.SingleFitting` to fit any function with bootstrap estimated confidence interval ([Jump to section](https://github.com/ynshen/k-seq/tree/master/examples#))
+  
 ## Initialize the workspace
 
 We first setup the workspace by loading the core modules from `k_seq` package, assign the path to count file, and path to working space for data or figure saving
@@ -1015,6 +1016,9 @@ seq_table.fitting.visualizer.param_value_plot(param='kA', show_point_est=True)
 ```
 
 ![png](./_README_meta/output_38_0.png)
+
+
+## Use `k-seq` to fit arbitrary functions with bootstrap CI estimation
 
 
 ### Summary

@@ -162,6 +162,14 @@ class SingleFitting:
         if metrics is not None:
             self.metrics = metrics
 
+        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
+        from ..utility import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              fitting_curve_plot,
+                                              bootstrap_params_dist_plot
+                                          ])
+
     def fitting(self):
         import numpy as np
         import pandas as pd
@@ -185,6 +193,25 @@ class SingleFitting:
                    weights=weights, bounds=bounds,
                    bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
                    missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
+
+    @classmethod
+    def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
+                   name=None, weights=None, bounds=None,
+                   bootstrap_depth=0, bs_return_size=None, resample_pct_res=False, missing_data_as_zero=False,
+                   random_init=True, metrics=None, **kwargs):
+        from ..data.io import read_table_files
+
+        if path_to_x is not None and path_to_y is not None:
+            x_data = read_table_files(file_path=path_to_x, col_name=x_col_name)
+            y_data = read_table_files(file_path=path_to_y, col_name=y_col_name)
+        elif path_to_file is not None:
+            x_data = read_table_files(file_path=path_to_file, col_name=x_col_name)
+            y_data = read_table_files(file_path=path_to_file, col_name=y_col_name)
+
+        return cls(x_data=x_data, y_data=y_data, name=name, model=model, weights=weights, bounds=bounds,
+                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
+                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
+
     @property
     def summary(self):
         import numpy as np
