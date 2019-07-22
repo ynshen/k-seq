@@ -1,10 +1,10 @@
 
 # Getting Started with `k-seq` package
 
-This notebook is the interactive tutorial on core `k-seq` package usages. To see a static web version of the content in this notebook at [GitHub:k_seq/examples](https://github.com/ynshen/k-seq/tree/master/examples). For the details of the package, see [k-seq documentation](https://ynshen.github.io/k-seq/).
+This is the quick-start manual for `k-seq` package to analyze kinetic sequencing data. This page is the static version for notebook [`examples/getting_started.ipynb`](https://github.com/ynshen/k-seq/tree/master/examples/getting_started.ipynb). For the details of the package, see [k-seq documentation](https://ynshen.github.io/k-seq/).
 
 
-#### Example project: estimate the kinetic coefficients for ribozymes from post selection pool in self-aminoacylcation with BFO (Biotinyl-phenylalanine-oxazolone) ribozyme selection
+#### Example project: estimate the kinetic coefficients for selected ribozymes catalyzing self-aminoacylcation with BFO (biotinyl-phenylalanine-oxazolone)
 
 This tutorial uses data from Evan Janzen's kinetic sequencing experiments on ribozymes that are selected to catalyze self-aminoacylation with BFO. In the experiment design, each unique sequence (unqiue type ribozyme) *s* follows the pseudo first-order reaction kinetics:
 
@@ -12,17 +12,8 @@ This tutorial uses data from Evan Janzen's kinetic sequencing experiments on rib
 
 where
 
-$$
-\begin{align}
-&t  \quad & \text{reaction time t} \\
-&t_0 \quad & \text{initial time} \\
-&c_{BFO} \quad & \text{initial concentration of BFO} \\
-&m \quad & \text{amount of seq s, e.g. fmol} \\
-&\alpha \quad & \text{parameter adjust for degradation of BFO} \\
-&A \quad & \text{fraction of active RNA} \\
-&k \quad & \text{kinetic coefficient} \\
-\end{align}
-$$
+![eq1-1](http://bit.ly/2GqmciP)
+
 
 In this tutorial, we will use the python package `k-seq` to conduct step-by-step analysis and visualization from count file for each sample to final estimated kinetic coefficients. For examples of command line tool of pipelines see [GitHub:k_seq/examples/clt (to do)](https://github.com/ynshen/k-seq/tree/master/examples/clt)
 
@@ -38,18 +29,15 @@ To run this notebook, make sure:
   - Use `k_seq.data.SeqTable` to obtain and analyze a collection of "valid sequences"
   - Use `k_seq.data.SeqTable` to fit the kinetic model and estimate the kinetic coefficients with uncertainty estimation
 
-
 ## Initialize the workspace
 
-We first setup the workspace by loading the necessary content from `k_seq` package, assign the path to count file, and path to working space for data or figure saving
+We first setup the workspace by loading the core modules from `k_seq` package, assign the path to count file, and path to working space for data or figure saving
 
 
 ```python
-%load_ext autoreload
-%autoreload 2
 from k_seq.data import SeqSampleSet, SeqTable, SeqFilter
 
-# Set default screen dpi for jupyter notebook
+# Optional, set default screen dpi for jupyter notebook for download figures with correct resolution directly
 import matplotlib as mpl
 mpl.rcParams['figure.dpi']= 300
 
@@ -63,15 +51,17 @@ if not output_dir.exists():
     output_dir.mkdir(parents=True)
 ```
 
-## `k-seq` sample analysis
+## Sequencing sample analysis
 
 In this section, we use `SeqSampleSet` to load a batch of count files from given path (folder storing count files) and analyze the data based on each sequencing samples.
 
 ### load sample count files
 We can create a `SeqSampleSet` object and named it as `sample_set` by linking the object to multiple count files autmatically scan and extracted. We can use
+
 ```ipython
->?SeqSampleSet()```
-To list the docstring for the class to see the usage details, here are the common parameters:
+?SeqSampleSet()
+```
+To list the docstring for modules/classes/methods to see the usage details, here are the common parameters to create a `SeqSampleSet` instance:
 
 | Parameter | Note |
 |:-----|:-----|

@@ -7,6 +7,40 @@ k-seq
 - select valid sequences and
 
 
+## `skin_mb` package contents
+The skin microbiome package `skin_mb` is now `pip` installable for authorized users that has access to this repo. A short
+Jupyter notebook example of using `skin_mb` to manipulate OTU tables is in `OTU_table_manipulation_example.ipynb`
+
+### Package installation through `pip`
+#### Method 1: local installation from git repo clone
+Step 1: Clone the git repo to your local machine
+```bash
+# If you already has SSH keygen set up for GitHub on your local machine
+> git clone git@github.com:ichen-lab-ucsb/skin_wound_microbiome.git
+
+# If you prefer HTTPS to authorize by GitHub Username and password
+> git clone https://github.com/ichen-lab-ucsb/skin_wound_microbiome.git
+```
+
+Step 2: `pip` install from the wheel
+```bash
+> pip install dist/<the_newest_version>.whl
+```
+
+#### Method 2: directly install from GitHub.com
+This method only works when the SSH keygen has been set up on your local machine and no additional key is added to the
+keygen
+```bash
+> pip install git+ssh://git@github.com/ichen-lab-ucsb/skin_wound_microbiome.git
+```
+
+#### To varify the installation of package
+```bash
+> python -c "import skin_mb"
+import successfully
+```
+
+
 # See [documentation website](https://ynshen.github.io/k-seq/) for usage
 
 
