@@ -58,7 +58,7 @@ In this section, we use `SeqSampleSet` to load a batch of count files from given
 ### load sample count files
 We can create a `SeqSampleSet` object and named it as `sample_set` by linking the object to multiple count files autmatically scan and extracted. We can use
 
-```185
+```notebook
 ?SeqSampleSet()
 ```
 To list the docstring for modules/classes/methods to see the usage details, here are the common parameters to create a `SeqSampleSet` instance:
