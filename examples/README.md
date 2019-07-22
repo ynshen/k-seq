@@ -8,9 +8,7 @@ This notebook is the interactive tutorial on core `k-seq` package usages. To see
 
 This tutorial uses data from Evan Janzen's kinetic sequencing experiments on ribozymes that are selected to catalyze self-aminoacylation with BFO. In the experiment design, each unique sequence (unqiue type ribozyme) *s* follows the pseudo first-order reaction kinetics:
 
-$$
-F_{s, \text{Reacted}} = \frac{m_{s, t}}{m_{s, t_0}}= A(1-exp(-\alpha k c_{BFO} (t-t_0)))
-$$
+[img]http://bit.ly/2GmrdZI[/img]
 
 where
 
@@ -185,7 +183,7 @@ plt.show()
 ```
 
 
-![png](./README_meta/output_7_0.png)
+![png](./_README_meta/output_7_0.png)
 
 
 From the plots, we can see that by setting the maximal edit distance to count as a spike-in as 2, the error can be in general controlled within 1%. Thus, we set `max_dist=2`
@@ -591,7 +589,7 @@ sample_set.visualizer.count_file_info_plot(plot_total_counts=True,
 ```
 
 
-![png](output_12_0.png)
+![png](./_README_meta/output_12_0.png)
 
 
 We can see that for samples `A-0A_S7`, `A-0B_S14`, `B-0A_S21`, and `B-0B_S29` (negative standards), most of reads belong to spike-in sequences, and minimal passing of RNA was observed. Here we choose to exclude these samples in further analysis.
@@ -605,7 +603,7 @@ sample_set.visualizer.rep_spike_in_plot(group_by='bfo')
 ```
 
 
-![png](output_14_0.png)
+![png](./_README_meta/output_14_0.png)
 
 
 ###  Distribution of sequences length and sequence populations
@@ -617,7 +615,7 @@ sample_set.visualizer.length_dist_plot_all(y_log=False)
 ```
 
 
-![png](output_16_0.png)
+![png](./_README_meta/output_16_0.png)
 
 
 
@@ -626,7 +624,7 @@ sample_set.visualizer.sample_count_cut_off_plot_all()
 ```
 
 
-![png](output_17_0.png)
+![png](./_README_meta/output_17_0.png)
 
 
 ## Valid sequences analysis
@@ -667,7 +665,7 @@ seq_table.visualizer.seq_occurrence_plot()
 ```
 
 
-![png](output_23_0.png)
+![png](./_README_meta/output_23_0.png)
 
 
 Here we can see that this dataset is obviously heterogenous that most of unique sequences detected are only detected in limited number of samples while a smaller number of unique sequences are very abundant and has been detected in all the samples, including the sample with zero concentration BFO.
@@ -682,11 +680,11 @@ seq_table.visualizer.rep_variability_plot(group_by='bfo', percentage=True)
 ```
 
 
-![png](output_25_0.png)
+![png](./_README_meta/output_25_0.png)
 
 
 
-![png](output_25_1.png)
+![png](./_README_meta/output_25_1.png)
 
 
 We can see that, with different initial concentration of BFO, the variability varies; however, the percent variability is similar across different BFO concentration. This gives us the sense of exisitance of heteroscedasticity in fitting.
@@ -762,7 +760,7 @@ seq_table.fitting.visualizer.fitting_curve_plot(seq_ix=['CTCTTCAAACAATCGGTCTTC']
 ```
 
 
-![png](output_33_0.png)
+![png](./_README_meta/output_33_0.png)
 
 
 
@@ -776,7 +774,7 @@ seq_table.fitting.visualizer.bootstrap_params_dist_plot(params_to_plot=['k', 'A'
 
 
 
-![png](output_34_1.png)
+![png](./_README_meta/output_34_1.png)
 
 
 ### All sequences results
@@ -1074,7 +1072,7 @@ seq_table.fitting.visualizer.param_value_plot(param='kA', show_point_est=True)
 ```
 
 
-![png](output_38_0.png)
+![png](./_README_meta/output_38_0.png)
 
 
 ### Summary
