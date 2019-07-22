@@ -25,10 +25,10 @@ To run this notebook, make sure:
   - Count files from k-seq experiment is obtained
 
 ### Contents of this tutorial: 
-  - Use `k_seq.data.SeqSampleSet` to parse count files and analyze k-seq data
-  - Use `k_seq.data.SeqTable` to obtain and analyze a collection of "valid sequences"
-  - Use `k_seq.data.SeqTable` to fit the kinetic model and estimate the kinetic coefficients with uncertainty estimation
-  - Use `k_seq.fitting.SingleFitting` to fit any function with bootstrap estimated confidence interval ([Jump to section](https://github.com/ynshen/k-seq/tree/master/examples#))
+  - Use `k_seq.data.SeqSampleSet` to parse count files and analyze k-seq data ([Jump to section](https://github.com/ynshen/k-seq/tree/master/examples#sequencing-sample-analysis))
+  - Use `k_seq.data.SeqTable` to obtain and analyze a collection of "valid sequences" ([Jump to section](https://github.com/ynshen/k-seq/tree/master/examples#valid-sequences-analysis))
+  - Use `k_seq.data.SeqTable` to fit the kinetic model and estimate the kinetic coefficients with uncertainty estimation ([Jump to section](https://github.com/ynshen/k-seq/tree/master/examples#fit-the-sequences-to-kinetic-model))
+  - Use `k_seq.fitting.SingleFitting` to fit any function with bootstrap estimated confidence interval ([Jump to section](https://github.com/ynshen/k-seq/tree/master/examples#use-k-seq-to-fit-arbitrary-functions-with-bootstrap-ci-estimation))
   
 ## Initialize the workspace
 
@@ -1019,6 +1019,83 @@ seq_table.fitting.visualizer.param_value_plot(param='kA', show_point_est=True)
 
 
 ## Use `k-seq` to fit arbitrary functions with bootstrap CI estimation
+`k-seq` package also provide a single fitting tool `k_seq.fitting.SingleFitting` for general fitting one or more (easily programmable using `for` loop on a list of `SingleFitting` instance)
+Here is a example on the fitting of one single simulated peudo first-order data:
+
+We first simulate the `y_data` (reacted fraction) from known BFO model with 20% noise and 6 replicates:
+```python
+def bfo_model(x, A, k):
+    return A * (1 - np.exp(-0.3371 * 90 * k * x * 1e-6))
+
+from k_seq.data.simu import y_value_simulator
+
+x = [2, 10, 50, 250, 1250]
+params = {'A': 0.6, 'k': 20}
+x_simu, y_simu = y_value_simulator(params=params, model=bfo_model,
+                                   x_true=x, percent_noise=0.2, replicates=6)
+```
+We have
+```python
+x_simu = [   2   10   50  250 1250    2   10   50  250 1250    2   10   50  250
+ 1250    2   10   50  250 1250    2   10   50  250 1250    2   10   50
+  250 1250]
+y_simy = [6.93526788e-04 2.82106299e-03 1.42922033e-02 5.86353893e-02
+ 3.14735450e-01 4.83896265e-04 3.23012024e-03 1.73030041e-02
+ 1.17112653e-01 2.87588136e-01 9.27775019e-04 3.37773741e-03
+ 2.36141063e-02 9.54233133e-02 4.90261588e-01 6.68531874e-04
+ 3.65720643e-03 1.77006926e-02 7.08452062e-02 4.07033637e-01
+ 6.61144672e-04 5.12541363e-03 1.69305162e-02 9.60875840e-02
+ 3.90141327e-01 4.92444985e-04 4.27843074e-03 2.12767052e-02
+ 8.86895089e-02 1.68885022e-01]
+```
+
+Then, we can use `SingleFitting` to fit this fake data to the BFO model:
+```python
+from k_seq.fitting import SingleFitting
+import numpy as np
+
+fitter = SingleFitting(x_data=x_simu, y_data=y_simu, model=bfo_model,
+                       bounds=[[0, 0], [1, np.inf]], name='simu_fitting',
+                       metrics={'kA': lambda data: data['k'] * data['A']},
+                       bootstrap_depth=500, bs_return_size=100, random_init=True,
+                       resample_pct_res=False)
+fitter.fitting()
+```
+
+To get the result:
+```python
+>fitter.summary
+A_point_est      0.644380
+k_point_est     17.150871
+kA_point_est    11.051685
+A_mean           0.678758
+A_std            0.221631
+A_2.5            0.318335
+A_median         0.648308
+A_97.5           1.000000
+k_mean          19.066933
+k_std            8.136968
+k_2.5           10.094943
+k_median        17.304432
+k_97.5          37.923666
+kA_mean         11.304144
+kA_std           0.790969
+kA_2.5           9.670178
+kA_median       11.367237
+kA_97.5         12.878792
+Name: simu_fitting, dtype: float64
+```
+
+To visualize the fitting
+```python
+fitter.visualizer.fitting_curve_plot()
+```
+![img](./_README_meta/output_43_0.png)
+
+```python
+fitter.visualizer.bootstrap_params_dist_plot(params_to_plot=['k', 'A'])
+```
+![img](./_README_meta/output_43_2.png)
 
 
 ### Summary
