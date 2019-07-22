@@ -8,7 +8,7 @@ This notebook is the interactive tutorial on core `k-seq` package usages. To see
 
 This tutorial uses data from Evan Janzen's kinetic sequencing experiments on ribozymes that are selected to catalyze self-aminoacylation with BFO. In the experiment design, each unique sequence (unqiue type ribozyme) *s* follows the pseudo first-order reaction kinetics:
 
-![eq1](http://bit.ly/2GmrdZI[/img])
+![eq1](http://bit.ly/2GmrdZI)
 
 where
 
