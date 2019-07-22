@@ -56,12 +56,7 @@ if not output_dir.exists():
 In this section, we use `SeqSampleSet` to load a batch of count files from given path (folder storing count files) and analyze the data based on each sequencing samples.
 
 ### load sample count files
-We can create a `SeqSampleSet` object and named it as `sample_set` by linking the object to multiple count files autmatically scan and extracted. We can use
-
-```notebook
-?SeqSampleSet()
-```
-To list the docstring for modules/classes/methods to see the usage details, here are the common parameters to create a `SeqSampleSet` instance:
+We can create a `SeqSampleSet` object and named it as `sample_set` by linking the object to multiple count files autmatically scan and extracted. We can use`?SeqSampleSet()` to list docstrings for modules/classes/methods to see the usage details, here are the common parameters to create a `SeqSampleSet` instance:
 
 | Parameter | Note |
 |:-----|:-----|
@@ -91,13 +86,12 @@ sample_set = SeqSampleSet(
 As different sequencing sample has different amount of DNA and sequencing depth, raw count number can not reflect a sequence's absolute abundance. Here, in this experiment, we use a method of spike in that adding a non-reactive RNA `AAAACAAAACAAAACAAA` with known amount to normalize each sample.
 
 We define the quantification factor as the effective DNA amount to sequence, which can be calucalted as
-$$
-q_i = \frac{\text{Spike in amount (mol)}}{\text{Spike in counts}} \times \text{Total counts *N*}
-$$
 
-Thus, the absolute amount of Seq *s* with count *n* is $\frac{n}{N} \times q_i$
+![eq2](http://bit.ly/2Z4xZKV)
 
-Due to the synthsis and sequencing error, we will see the spike-in sequence not only as the exact spike-in sequence but also as some similar sequences. Surveying the sequence peak around the spike-in can help us assess the sequencing error and determine the cutoff distance to count a sequence as spike in.
+Thus, the absolute amount of Seq *s* with count *n* is ![eq3](http://bit.ly/2Z7MY6S)
+
+Due to the synthesis and sequencing error, detected reads for spike-in sequence not only as the exact spike-in sequence but also as some similar sequences. Surveying the sequence peak around the spike-in can help us assess the sequencing error and determine the cutoff distance to count a sequence as spike in.
 
 We can use `get_quant_factors` methods of `SeqSampleSet` to survey spike-in and calculate quantification factors. `max_dist_to_survey` is the argument control the maximal distance to survey around spike in.
 
@@ -141,12 +135,9 @@ sample_set.visualizer.spike_in_peak_plot(max_dist=15, norm_on_center=True,log_y=
 plt.show()
 ```
 
-
 ![png](./_README_meta/output_7_0.png)
 
-
 From the plots, we can see that by setting the maximal edit distance to count as a spike-in as 2, the error can be in general controlled within 1%. Thus, we set `max_dist=2`
-
 
 ```python
 # amount of spike-in DNA in unit fmol. We can also use a dictionary to avoid order difference
@@ -166,7 +157,7 @@ Another useful visualizer of total counts, number of unique sequences, fraction 
 ```python
 sample_set.sample_overview
 ```
-
+It will show the table in `Jupyter Notebook`
 <div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -538,8 +529,6 @@ sample_set.sample_overview
 </div>
 
 
-
-
 ```python
 sample_set.visualizer.count_file_info_plot(plot_total_counts=True,
                                            plot_unique_seq=True,
@@ -547,26 +536,22 @@ sample_set.visualizer.count_file_info_plot(plot_total_counts=True,
                                            sep_plot=True)
 ```
 
-
 ![png](./_README_meta/output_12_0.png)
-
 
 We can see that for samples `A-0A_S7`, `A-0B_S14`, `B-0A_S21`, and `B-0B_S29` (negative standards), most of reads belong to spike-in sequences, and minimal passing of RNA was observed. Here we choose to exclude these samples in further analysis.
 
 ### Replicates repeatability at sample level
 In this experiment, we have four replicates for each of BFO concentration (2 sequencing reps for each of 2 experimental reps). We have a visualizer to examine the repeatablity of replicates in terms of its spike-in fractions and entropy efficiency (a measure of population distribution)
 
-
 ```python
 sample_set.visualizer.rep_spike_in_plot(group_by='bfo')
 ```
-
 
 ![png](./_README_meta/output_14_0.png)
 
 
 ###  Distribution of sequences length and sequence populations
-There are some built-in functions to visualize other properties of sequences in each sample, e.g. sequence length and population hetrogeneity
+There are some built-in functions to visualize other properties of sequences in each sample, e.g. sequence length and population heterogeneity
 
 
 ```python
@@ -590,6 +575,7 @@ sample_set.visualizer.sample_count_cut_off_plot_all()
 In this section, we will pool and extract valid sequences from all the k-seq samples we have in `sample_set`, which can be further used for per sequence kinetic fitting. Extract valid seuqence (which has been detected in at least one input sample and one reacted sample) and convert to a `SeqTable` object can be easily done by using `SeqSampleSet.to_SeqTable()` function, and we can choose to remove the spike in the table.
 
 There are some core attributes and methods in `SeqTable`:
+
 | Attributes | Note |
 |:-----|:-----|
 |`x_values`| x values corresponding to each sample |
@@ -628,6 +614,7 @@ seq_table.visualizer.seq_occurrence_plot()
 
 
 Here we can see that this dataset is obviously heterogenous that most of unique sequences detected are only detected in limited number of samples while a smaller number of unique sequences are very abundant and has been detected in all the samples, including the sample with zero concentration BFO.
+
 #### Measure variability across replicates
 
 The variablity among replicates of experiments can be further evaluated by the reacted value of valid sequences across different replicates. The built-in method `visualizer.rep_variablity_plot` can draw violin plots indicating the standard deviation (`var_method='SD'`) or median absolute deviation (`var_method='MAD'`), with original value or at percent on mean (PSD) or median (PMAD): 
@@ -681,7 +668,7 @@ And then only fit on these sequences
 ```python
 def kA_fn(param):
     return param['k'] * param['A']
-
+    
 filters = SeqFilter(seq_table=seq_table, min_occur_reacted=24, min_occur_input=4, min_rel_abun_input=0.01)
 filters.apply_filters()
 seq_table.add_fitting(model=bfo_model,
@@ -738,7 +725,6 @@ seq_table.fitting.visualizer.bootstrap_params_dist_plot(params_to_plot=['k', 'A'
 
 ### All sequences results
 We can show the fitting results for sequences using `fitting.summary` to return a `df.DataFrame` object, which can be further saved as `.csv` using `.to_csv()` method
-
 
 ```python
 seq_table.fitting.summary
@@ -1022,14 +1008,11 @@ seq_table.fitting.summary
 </div>
 
 
-
 We can also show one estimated parameter as a line plot with shade indicating 95% confidence intervals using `fitting.visualizer.param_value_plot`:
-
 
 ```python
 seq_table.fitting.visualizer.param_value_plot(param='kA', show_point_est=True)
 ```
-
 
 ![png](./_README_meta/output_38_0.png)
 
