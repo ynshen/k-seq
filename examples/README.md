@@ -8,11 +8,11 @@ This is the quick-start manual for `k-seq` package to analyze kinetic sequencing
 
 This tutorial uses data from Evan Janzen's kinetic sequencing experiments on ribozymes that are selected to catalyze self-aminoacylation with BFO. In the experiment design, each unique sequence (unqiue type ribozyme) *s* follows the pseudo first-order reaction kinetics:
 
-![eq1-0](http://www.sciweavers.org/tex2img.php?eq=F_%7Bs%2C%20%5Ctext%7BReacted%7D%7D%20%3D%20%5Cfrac%7Bm_%7Bs%2C%20t%7D%7D%7Bm_%7Bs%2C%20t_0%7D%7D%3D%20A%281-exp%28-%5Calpha%20k%20c_%7BBFO%7D%20%28t-t_0%29%29%29&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)
+<img src="http://www.sciweavers.org/tex2img.php?eq=F_%7Bs%2C%20%5Ctext%7BReacted%7D%7D%20%3D%20%5Cfrac%7Bm_%7Bs%2C%20t%7D%7D%7Bm_%7Bs%2C%20t_0%7D%7D%3D%20A%281-exp%28-%5Calpha%20k%20c_%7BBFO%7D%20%28t-t_0%29%29%29&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0" align="center" border="0" alt="F_{s, \text{Reacted}} = \frac{m_{s, t}}{m_{s, t_0}}= A(1-exp(-\alpha k c_{BFO} (t-t_0)))" width="397" height="44" />
 
 where
 
-![eq1-1](http://bit.ly/2GqmciP)
+<img src="http://www.sciweavers.org/tex2img.php?eq=%5Cbegin%7Baligned%7D%0A%26t%20%20%5Cquad%20%26%20%5Ctext%7Breaction%20time%20t%7D%20%5C%5C%0A%26t_0%20%5Cquad%20%26%20%5Ctext%7Binitial%20time%7D%20%5C%5C%0A%26c_%7BBFO%7D%20%5Cquad%20%26%20%5Ctext%7Binitial%20concentration%20of%20BFO%7D%20%5C%5C%0A%26m%20%5Cquad%20%26%20%5Ctext%7Bamount%20of%20seq%20s%2C%20e.g.%20fmol%7D%20%5C%5C%0A%26%5Calpha%20%5Cquad%20%26%20%5Ctext%7Bparameter%20adjust%20for%20degradation%20of%20BFO%7D%20%5C%5C%0A%26A%20%5Cquad%20%26%20%5Ctext%7Bfraction%20of%20active%20RNA%7D%20%5C%5C%0A%26k%20%5Cquad%20%26%20%5Ctext%7Bkinetic%20coefficient%7D%20%5C%5C%0A%5Cend%7Baligned%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0" align="center" border="0" alt="\begin{aligned}&t  \quad & \text{reaction time t} \\&t_0 \quad & \text{initial time} \\&c_{BFO} \quad & \text{initial concentration of BFO} \\&m \quad & \text{amount of seq s, e.g. fmol} \\&\alpha \quad & \text{parameter adjust for degradation of BFO} \\&A \quad & \text{fraction of active RNA} \\&k \quad & \text{kinetic coefficient} \\\end{aligned}" width="408" height="161" />
 
 
 In this tutorial, we will use the python package `k-seq` to conduct step-by-step analysis and visualization from count file for each sample to final estimated kinetic coefficients. For examples of command line tool of pipelines see [GitHub:k_seq/examples/clt (to do)](https://github.com/ynshen/k-seq/tree/master/examples/clt)
@@ -86,11 +86,11 @@ sample_set = SeqSampleSet(
 ### Calculate quantification factors
 As different sequencing sample has different amount of DNA and sequencing depth, raw count number can not reflect a sequence's absolute abundance. Here, in this experiment, we use a method of spike in that adding a non-reactive RNA `AAAACAAAACAAAACAAA` with known amount to normalize each sample.
 
-We define the quantification factor as the effective DNA amount to sequence, which can be calucalted as
+We define the quantification factor as the effective DNA amount to sequence, which can be calculated as
 
-![eq2](http://bit.ly/2Z4xZKV)
+<img src="http://www.sciweavers.org/tex2img.php?eq=q_i%20%3D%20%5Cfrac%7B%5Ctext%7BSpike%20in%20amount%20%28mol%29%7D%7D%7B%5Ctext%7BSpike%20in%20counts%7D%7D%20%5Ctimes%20%5Ctext%7BTotal%20counts%20N%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0" align="center" border="0" alt="q_i = \frac{\text{Spike in amount (mol)}}{\text{Spike in counts}} \times \text{Total counts N}" width="364" height="47" /> 
 
-Thus, the absolute amount of Seq *s* with count *n* is ![eq3](http://bit.ly/2Z7MY6S)
+Thus, the absolute amount of Seq *s* with count *n* is <img src="http://www.sciweavers.org/tex2img.php?eq=%5Cfrac%7Bn%7D%7BN%7D%20%5Ctimes%20q_i&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0" align="center" border="0" alt="\frac{n}{N} \times q_i" width="54" height="40" />
 
 Due to the synthesis and sequencing error, detected reads for spike-in sequence not only as the exact spike-in sequence but also as some similar sequences. Surveying the sequence peak around the spike-in can help us assess the sequencing error and determine the cutoff distance to count a sequence as spike in.
 
@@ -1020,7 +1020,7 @@ seq_table.fitting.visualizer.param_value_plot(param='kA', show_point_est=True)
 
 ## Use `k-seq` to fit arbitrary functions with bootstrap CI estimation
 `k-seq` package also provide a single fitting tool `k_seq.fitting.SingleFitting` for general fitting one or more (easily programmable using `for` loop on a list of `SingleFitting` instance)
-Here is a example on the fitting of one single simulated peudo first-order data:
+Here is a example on the fitting of one single simulated peudo first-order data directly from data (x-data, y-data can also read from `.xls`, `.xlsx`, `.csv` files using `SingleFitting.from_files()`):
 
 We first simulate the `y_data` (reacted fraction) from known BFO model with 20% noise and 6 replicates:
 ```python
