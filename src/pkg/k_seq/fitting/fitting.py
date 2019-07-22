@@ -330,7 +330,7 @@ class BatchFitting:
         if metrics is None:
             metrics = None
         return cls(seq_to_fit = {seq: seq_table.reacted_frac_table.loc[seq] for seq in seq_to_fit},
-                   x_values=seq_table.x_values(with_col_name=False), model=model,
+                   x_values=seq_table.x_values, model=model,
                    weights=weights, bounds=bounds,
                    bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
                    resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,

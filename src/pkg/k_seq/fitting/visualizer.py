@@ -9,10 +9,13 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
             'params': single_res.point_est.params[:len(single_res.config['parameters'])]
         }
         if num_bootstrap_records is not None:
-            data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
-                axis=0,
-                n=num_bootstrap_records
-            )
+            if single_res.bootstrap.records.shape[0] > num_bootstrap_records:
+                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
+                    axis=0,
+                    n=num_bootstrap_records
+                )
+            else:
+                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])]
         return data
 
     if num_bootstrap_records == 0:

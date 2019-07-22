@@ -7,5 +7,5 @@
     * ``simu``: module contains codes to generate simulated data used in analysis in paper (TODO: add paper citation)
 """
 
-from . import io, analysis, pre_processing, simu
-print('Reload successfully!')
+from . import io, visualizer, simu
+from .pre_processing import SeqSample, SeqSampleSet, SeqTable, SeqFilter

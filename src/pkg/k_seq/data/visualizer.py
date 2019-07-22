@@ -35,11 +35,11 @@ def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=Fals
     else:
         show_fig = False
 
-    sample.sequences['length'] = sample.sequences.index.map(mapper=len)
-    bins = np.linspace(min(sample.sequences['length']), max(sample.sequences['length']), 50)
-    ax.hist(sample.sequences['length'], bins=bins, weights=sample.sequences['counts'], color='#AEAEAE',
+    sample._sequences['length'] = sample._sequences.index.map(mapper=len)
+    bins = np.linspace(min(sample._sequences['length']), max(sample._sequences['length']), 50)
+    ax.hist(sample._sequences['length'], bins=bins, weights=sample._sequences['counts'], color='#AEAEAE',
             zorder=1, label='counts')
-    ax.hist(sample.sequences['length'], bins=bins, color='#2C73B4', zorder=2, label='unique seqs')
+    ax.hist(sample._sequences['length'], bins=bins, color='#2C73B4', zorder=2, label='unique seqs')
     if y_log:
         ax.set_yscale('log')
     if not labels_off:
@@ -76,11 +76,7 @@ def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, i
 
     import numpy as np
 
-    if not include_spike_in:
-        sequences = sample.remove_spike_in(inplace=False, silent=True)
-    else:
-        sequences = sample.sequences
-
+    sequences = sample.sequences(with_spike_in=include_spike_in)
     if not on_counts:
         series_to_use = sequences['counts']/np.sum(sequences['counts'])
     else:
@@ -88,10 +84,10 @@ def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, i
 
     if thresholds is None:
         if on_counts:
-            thresholds = np.logspace(0, np.log10(sample.sequences['counts'].max()), 10)
+            thresholds = np.logspace(0, np.log10(sample._sequences['counts'].max()), 10)
         else:
             thresholds = np.logspace(np.log10(1/sample.total_counts),
-                                     np.log10(sample.sequences['counts'].max()/sample.total_counts),
+                                     np.log10(sample._sequences['counts'].max()/sample.total_counts),
                                      10)
 
     filtered_uniques = [np.sum(series_to_use >= threshold) for threshold in thresholds]
@@ -162,11 +158,11 @@ def count_file_info_table(sample_set, return_table=False):
     if hasattr(sample_set[0], 'spike_in'):
         table['spike-in amount'] = [sample.spike_in['spike_in_amount'] for sample in sample_set]
         table['spike-in counts (dist={})'.format(sample_set[0].spike_in['quant_factor_max_dist'])] = [
-            np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])
+            np.sum(sample.spike_in['spike_in_peak']['total_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])
             for sample in sample_set
         ]
         table['spike-in percent'] = [
-            np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
+            np.sum(sample.spike_in['spike_in_peak']['total_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
             for sample in sample_set
         ]
         table['quantification factor'] = [sample.quant_factor for sample in sample_set]
@@ -240,7 +236,7 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
         if plot_spike_in_frac and hasattr(sample_set[0], 'spike_in'):
             ax = axes[ax_ix]
             ax.scatter([i for i in range(sample_num)],
-                       [np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1]) / sample.total_counts
+                       [np.sum(sample.spike_in['spike_in_peak']['total_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1]) / sample.total_counts
                          for sample in sample_set],
                         color='#B2112A', marker='x')
             ax.set_ylabel('Fraction of spike-in', fontsize=12)
@@ -287,7 +283,7 @@ def count_file_info_plot(sample_set, plot_unique_seq=True, plot_total_counts=Tru
         if plot_spike_in_frac and hasattr(sample_set[0], 'spike_in'):
             ax3 = ax.twinx()
             ax3.scatter([i for i in range(sample_num)],
-                        [np.sum(sample.spike_in['spike_in_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
+                        [np.sum(sample.spike_in['spike_in_peak']['total_counts'][0:sample.spike_in['quant_factor_max_dist'] + 1])/sample.total_counts
                          for sample in sample_set],
                         color='#B2112A', marker='x')
             ax3.plot([-0.5, sample_num - 0.5], [0.2, 0.2], '#B2112A', ls='--', alpha=0.3)
@@ -365,17 +361,17 @@ def spike_in_peak_plot(sample_set, black_list=None, max_dist=15,
     for sample, color, marker in zip(samples_to_plot, color_list, marker_list):
         if not hasattr(sample, 'spike_in'):
             raise Exception('Error: please survey the spike-in counts before plot')
-        elif len(sample.spike_in['spike_in_counts'] < max_dist + 1):
-            spike_in = sample.survey_spike_in(spike_in_seq=sample.spike_in['spike_in_seq'],
-                                              max_dist_to_survey=max_dist,
-                                              silent=True, inplace=False)
+        elif len(sample.spike_in['spike_in_peak']['total_counts'] < max_dist + 1):
+            spike_in = sample.survey_spike_in_peak(spike_in_seq=sample.spike_in['spike_in_seq'],
+                                                   max_dist_to_survey=max_dist,
+                                                   silent=True, inplace=False)
         else:
             spike_in = sample.spike_in
 
         if accumulate:
-            counts = np.array([np.sum(spike_in['spike_in_counts'][:i + 1]) for i in range(max_dist + 1)])
+            counts = np.array([np.sum(spike_in['spike_in_peak']['total_counts'][:i + 1]) for i in range(max_dist + 1)])
         else:
-            counts = np.array(spike_in['spike_in_counts'][:max_dist + 1])
+            counts = np.array(spike_in['spike_in_peak']['total_counts'][:max_dist + 1])
         if norm_on_center:
             counts = counts/counts[0]
         ax.plot([i for i in range(max_dist + 1)], counts, marker, color=color,
@@ -476,10 +472,11 @@ def rep_spike_in_plot(sample_set, group_by, plot_spike_in_frac=True, plot_entrop
         axes = [ax, ax]
 
     def get_spike_in_frac(sample):
-        return sample.spike_in['spike_in_counts'][sample.spike_in['quant_factor_max_dist']] / sample.total_counts
+        return np.sum(sample.spike_in['spike_in_peak']['total_counts'][:sample.spike_in['quant_factor_max_dist']])/sample.total_counts
 
     def get_entropy_eff(sample):
-        seq_rel_abun = sample.sequences['counts'] / sample.total_counts
+        sequences = sample.sequences(with_spike_in=False)['counts']
+        seq_rel_abun = sequences/ sequences.sum()
         return -np.sum(np.multiply(seq_rel_abun, np.log2(seq_rel_abun))) / np.log2(len(seq_rel_abun))
     # texts1 = []
     # texts2 = []
@@ -508,9 +505,6 @@ def rep_spike_in_plot(sample_set, group_by, plot_spike_in_frac=True, plot_entrop
         fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
     if ax_show:
         plt.show()
-
-
-
 
 
 def length_dist_plot_all(sample_set, black_list=None, fig_layout=None, y_log=True, save_fig_to=None):

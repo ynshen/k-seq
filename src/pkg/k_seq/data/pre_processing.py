@@ -146,20 +146,15 @@ class SeqSample:
 
             silent (`bool`): don't print progress if True
 
-            inplace (`bool`): Add attribute ``spike_in`` if True, else return a dict object
-                {
-                    'spike_in_seq': str, spike in sequence,
-                    'spike_in_counts': list of `int`, number of sequences that is *i* edit distance away
-                }
+            inplace (`bool`): Add attribute ``spike_in`` if True, else return a `pd.DataFrame` object with index as
+              the edit distance to exact spike-in sequences, columns as unqiue_seqs and total_counts
 
         Attributes:
 
-            spike_in (`dict`):
+            spike_in (`pd.DataFrame`):
+              - index: edit distance to exact spike-in sequences
 
-                - spike_in_counts (`list` of `int`): length `max_dist_to_survey + 1` list, number of total counts with
-                    different edit distance to exact spike-in sequence
-
-                - spike_in (`str`): exact spike in sequence
+              - columns: unqiue_seqs and total_counts
         """
 
         import Levenshtein
@@ -200,7 +195,7 @@ class SeqSample:
             max_dist (`int`): maximum edit distance to count a sequence as spike-in, `from_spike_in_amount` has to be not `None`.
                 Default 0.
 
-            spike_in_seq (`str`): Optional. Exact spike in sequence, pass to `survey_spike_in` if not performed yet
+            spike_in_seq (`str`): Optional. Exact spike in sequence, pass to `survey_spike_in_peak` if not performed yet
 
             from_total_amount (`float`): Optional. Total amount of DNA measured for ths sample
 
@@ -365,6 +360,21 @@ class SeqSampleSet:
             sample.load_data(silent=silent)
         self._logger.add_log('Data loaded at from {}'.format(self.metadata['file_root']))
 
+    def survey_spike_in_peak(self, spike_in_seq, max_dist_to_survey=10, silent=True):
+        """Survey spike-in sequences
+
+        Args:
+            spike_in_seq:
+            max_dist_to_surve:
+            silent:
+
+        """
+        for sample in self.sample_set:
+            sample.survey_spike_in_peak(spike_in_seq=spike_in_seq,
+                                        max_dist_to_survey=max_dist_to_survey,
+                                        silent=silent,
+                                        inplace=True)
+
     def get_quant_factors(self, from_spike_in_amounts=None, spike_in_seq=None, max_dist=2,
                           max_dist_to_survey=None, from_total_amounts=None, quant_factors=None,
                           survey_only=False, silent=True):
@@ -392,11 +402,10 @@ class SeqSampleSet:
             quant_factors (list/dict of `float`): optional, accept a list/dict of manually curated quant_factor. If `dict`,
               the key must match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            survey_only (`bool`): optional. If True, only survey the spike-in counts within maximum edit distance
-
             silent (`bool`): don't print process if True
 
         """
+        import numpy as np
 
         if quant_factors:
             # curated quant factors has highest priority
@@ -405,42 +414,43 @@ class SeqSampleSet:
                     for sample in self.sample_set:
                         if sample.name in quant_factors.keys():
                             sample.quant_factor = quant_factors[sample.name]
+                    else:
+                        print('Warning: {} is not found in sample set'.format(sample))
                 elif isinstance(quant_factors, list):
                     for sample, quant_factor in zip(self.sample_set, quant_factors):
                         sample.quant_factor = quant_factor
             else:
                 raise Exception('Error: input quant_factor has different number as samples')
-        elif from_spike_in_amounts:
-            if spike_in_seq:
-                if max_dist_to_survey is None:
+        elif from_spike_in_amounts is not None:
+            if not hasattr(self.sample_set[0], 'spike_in'):
+                if spike_in_seq is None:
+                    raise Exception('Error: please provide spike-in sequence or survey the spike-in before this step')
+                elif max_dist_to_survey is None:
                     max_dist_to_survey = max_dist
                     if not silent:
                         print('Use max_dist ({}) as max_dist_to_survey as it is not provided'.fromat(max_dist))
                 for sample in self.sample_set:
-                    sample.survey_spike_in(spike_in_seq=spike_in_seq,
-                                           max_dist_to_survey=max_dist_to_survey,
-                                           silent=silent,
-                                           inplace=True)
-            elif not hasattr(self.sample_set[0], 'spike_in'):
-                raise Exception('Please indicate spike in sequence')
-            if not survey_only:
-                if isinstance(from_spike_in_amounts, dict):
-                    for sample in self.sample_set:
-                        if sample.name in from_spike_in_amounts.keys():
-                            sample.get_quant_factor(from_spike_in_amount=from_spike_in_amounts[sample.name],
-                                                    max_dist=max_dist, silent=silent)
-                elif isinstance(from_spike_in_amounts, list):
-                    for sample, spike_in_amount in zip(self.sample_set, from_spike_in_amounts):
-                        sample.get_quant_factor(from_spike_in_amount=spike_in_amount,
+                    sample.survey_spike_in_peak(spike_in_seq=spike_in_seq,
+                                                max_dist_to_survey=max_dist_to_survey,
+                                                silent=silent,
+                                                inplace=True)
+            if isinstance(from_spike_in_amounts, dict):
+                for sample in self.sample_set:
+                    if sample.name in from_spike_in_amounts.keys():
+                        sample.get_quant_factor(from_spike_in_amount=from_spike_in_amounts[sample.name],
                                                 max_dist=max_dist, silent=silent)
-                else:
-                    raise Exception('from_spike_in_amounts should be either list or dict')
-        elif from_total_amounts:
+            elif isinstance(from_spike_in_amounts, list) or isinstance(from_spike_in_amounts, np.ndarray):
+                for sample, spike_in_amount in zip(self.sample_set, from_spike_in_amounts):
+                    sample.get_quant_factor(from_spike_in_amount=spike_in_amount,
+                                            max_dist=max_dist, silent=silent)
+            else:
+                raise Exception('from_spike_in_amounts should be either list or dict')
+        elif from_total_amounts is not None:
             if isinstance(from_total_amounts, dict):
                 for sample in self.sample_set:
                     if sample.name in from_total_amounts.keys():
                         sample.get_quant_factor(from_total_amount=from_total_amounts[sample.name], silent=silent)
-            elif isinstance(from_total_amounts, list):
+            elif isinstance(from_total_amounts, list) or isinstance(from_total_amounts, np.ndarray):
                 for sample, total_amount in zip(self.sample_set, from_total_amounts):
                     sample.get_quant_factor(from_total_amount=total_amount, silent=silent)
             else:
@@ -475,26 +485,34 @@ class SeqSampleSet:
                 seq_list.update(list(sample.sequences(with_spike_in).index))
             return_df = pd.DataFrame(index=seq_list)
             for sample in sample_to_return:
-                return_df[sample.name] = sample.sequences(with_spike_in)
+                return_df[sample.name] = sample.sequences(with_spike_in)['counts']
             return return_df
 
-    def filter_sample(self, sample_to_keep, inplace=True):
+    def filter_sample(self, sample_to_keep=None, sample_to_remove=None, inplace=True):
         """filter samples in sample set
 
         Args:
-            sample_to_keep (list of `str`): name of samples to keep
-            inplace (`bool`): return a new SequencingSampleSet if False
+            sample_to_keep (list of `str`): optional, names of samples to keep
+            sample_to_remove (list of `str`): optional, names of samples to remove
+            inplace (`bool`): return a new `SeqSampleSet` if False
 
         Returns: None if inplace is True, `SeqSampleSet` if inplace is False
 
         """
 
+        if sample_to_keep is None and sample_to_remove is not None:
+            sample_to_keep = [sample for sample in self.sample_names if sample not in sample_to_remove]
         if inplace:
             self.sample_set = [sample for sample in self.sample_set if sample.name in sample_to_keep]
         else:
             import copy
             new_set = copy.deepcopy(self)
             new_set.sample_set = [sample for sample in new_set.sample_set if sample.name in sample_to_keep]
+            new_set._logger.add_log(
+                'Sample is filtered and saved to this new object. Samples kept: {}'.format(
+                    ','.join(sample_to_keep)
+                )
+            )
             return new_set
 
     @property
@@ -565,6 +583,7 @@ class SeqTable:
             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples
         """
         from k_seq.utility import Logger
+        import numpy as np
 
         self._logger = Logger()
         self._logger.add_log('Dataset created')
@@ -574,9 +593,9 @@ class SeqTable:
 
         # find valid sequence set
         self.metadata['remove_spike_in'] = remove_spike_in
-        input_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'input',
+        input_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'input',
                                           with_spike_in=not(remove_spike_in))
-        reacted_set = sample_set.get_sample(sample_id=lambda sample: sample.sample_type == 'reacted',
+        reacted_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'reacted',
                                             with_spike_in=not(remove_spike_in))
         valid_set = set(input_set.index) & set(reacted_set.index)
         self.metadata['seq_nums'] = {
@@ -595,8 +614,8 @@ class SeqTable:
             _ = sample_info_dict.pop('visualizer')
             sequences = sample_info_dict.pop('_sequences', None)
             self.sample_info[sample.name] = {
-                'valid_seqs_num': len(set(sequences.index) & valid_set),
-                'valid_seqs_counts': np.sum(sequences[list(set(sequences.index) & valid_set)]['counts'])
+                'valid_seqs_num': len(set(sequences.index.values) & valid_set),
+                'valid_seqs_counts': np.sum(sequences.loc[list(set(sequences.index.values) & valid_set)]['counts'])
             }
             self.sample_info[sample.name].update(sample_info_dict)
 
@@ -694,7 +713,7 @@ class SeqTable:
         )
         return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
 
-    def filter_seq(self, seq_to_keep=None, filter_fn=None, update_all=True, inplace=True):
+    def filter_seq(self, seq_to_keep=None, filter_fn=None, update_all=True, inplace=True, return_id_only=False):
         """Filter sequence in dataset
         In current version, only ``count_table`` and ``reacted_frac_table`` will change if applicable
         Other meta info will keep the same
@@ -706,6 +725,15 @@ class SeqTable:
         Returns: Return a new SequenceSet object with only ``seq_to_keep`` if inplace is False
 
         """
+        import pandas as pd
+
+        if seq_to_keep is None:
+            master_table = pd.concat([self.count_table_input, self.count_table_reacted], axis=1)
+            if callable(filter_fn):
+                seq_to_keep = master_table.index[master_table.apply(filter_fn, axis=1)]
+            elif isinstance(filter_fn, SeqFilter):
+                seq_to_keep = filter_fn.seq_to_keep
+
         if inplace:
             table_to_use = self
         else:
@@ -718,8 +746,12 @@ class SeqTable:
 
         if hasattr(table_to_use, 'reacted_frac_table'):
             table_to_use.reacted_frac_table = table_to_use.reacted_frac_table.loc[seq_to_keep]
+
         if not inplace:
-            return table_to_use
+            if return_id_only:
+                return table_to_use.index
+            else:
+                return table_to_use
 
     def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
                     bootstrap_depth=0, bs_return_size=None,
@@ -727,16 +759,19 @@ class SeqTable:
         """
         Add a `k_seq.fitting.BatchFitting` instance to SeqTable for fitting
         Args:
-            model:
-            seq_to_fit:
-            weights:
-            bounds:
-            bootstrap_depth:
-            bs_return_size:
-            resample_pct_res:
-            missing_data_as_zero:
-            random_init:
-            metrics:
+            model (`callable`): the model to fit
+            seq_to_fit (list of `str`): optional. All the sequences will be fit if None
+            weights (list of `float`): optional. If assign different weights in the fitting for sample points.
+            bounds (k by 2 list of `float`): optional. If set bounds for each parameters to fit
+            bootstrap_depth (`int`): optional. Number of bootstrap to perform. No bootstrap if None
+            bs_return_size (`int`): optional. If only keep part of the bootstrap results for memory
+            resample_pct_res (`bool`):
+            missing_data_as_zero (`bool`): If treat missing value as zero. Default False
+            random_init (`bool`): If use random initialization between [0, 1] in optimization for each parameter, default True
+            metrics (`dict` of `callable`): optional. If calculate other metrics from estimated parameter. Has form
+              {
+                metric_name: callable_to_cal_metric_from_pd.Series
+            }
 
         """
         from ..fitting.fitting import BatchFitting
@@ -761,12 +796,130 @@ class SeqTable:
             resample_pct_res=resample_pct_res,
             missing_data_as_zero=missing_data_as_zero,
             random_init=random_init,
-            metrics=metrics)
+            metrics=metrics
+        )
         self._logger.add_log('BatchFitting fitter added')
+
+    def save_as_dill(self, dirc):
+        import dill
+        with open(dirc, 'w') as handle:
+            handle.write(dill.dumps(self))
+
+    @staticmethod
+    def load_from_dill(dirc):
+        import dill
+        with open(dirc) as handle:
+            return dill.loads(handle.readline())
 
 
 class SeqFilter:
-    # Todo: add some filters for sequences
 
-    def __init__(self):
-        pass
+    class Filter:
+        def __init__(self, func, value):
+            self.func = func
+            self.value = value
+
+    def __init__(self, seq_table, seq_length_range=None, max_edit_dist_to_seqs=None,
+                 min_occur_input=None, min_occur_reacted=None,
+                 min_counts_input=None, min_counts_reacted=None,
+                 min_rel_abun_input=None, min_rel_abun_reacted=None):
+        """
+        Filter object with some built-in filter options
+
+        Use `SeqFilter.filter_fn` to get the `callable` function
+
+        Use `SeqFilter.seq_to_keep` to get a list of sequences passed the filters
+
+        Args:
+            seq_table (`SeqTable`): the `SeqTable` instance to apply filters on
+            seq_length_range ([min, max]): only keep sequences within range [min, max]
+            max_edit_dist_to_seqs (`int`):
+            min_counts_input (`int`):
+            min_counts_reacted (`int`):
+            min_rel_abun_input (`float`): relative abundance is only based on valid sequences
+            min_rel_abun_reacted (`float`): relative abundance is only based on valid sequences
+        """
+
+        import numpy as np
+        import pandas as pd
+
+        self.seq_table = seq_table
+
+        if seq_length_range is not None:
+            self.seq_length_range = self.Filter(
+                func=lambda seq: seq_length_range[0] <= len(seq) <= seq_length_range[1],
+                value = seq_length_range)
+
+        if max_edit_dist_to_seqs is not None:
+            if isinstance(max_edit_dist_to_seqs, list) or isinstance(max_edit_dist_to_seqs, tuple):
+                max_edit_dist_to_seqs = {seq[0]: int(seq[1]) for seq in max_edit_dist_to_seqs}
+
+            def edit_dist_filter_fn(seq):
+                import Levenshtein
+                flag = True
+                for target, max_dist in max_edit_dist_to_seqs.items():
+                    flag = flag and Levenshtein.distance(seq, target) <= max_dist
+                return flag
+
+            self.max_edit_dist_to_seqs = self.Filter(
+                func=edit_dist_filter_fn,
+                value=max_edit_dist_to_seqs
+            )
+
+        if min_occur_input is not None:
+            self.min_occur_input = self.Filter(
+                func=lambda seq: np.sum(self.seq_table.count_table_input.loc[seq] > 0) >= min_occur_input,
+                value=min_occur_input
+            )
+        if min_occur_reacted is not None:
+            self.min_occur_reacted = self.Filter(
+                func=lambda seq: np.sum(self.seq_table.count_table_reacted.loc[seq] > 0) >= min_occur_reacted,
+                value=min_occur_reacted
+            )
+
+
+        if min_counts_input is not None:
+            self.min_counts_input = self.Filter(
+                func=lambda seq: self.seq_table.count_table_input.loc[seq].mean() >= min_counts_input,
+                value=min_counts_input
+            )
+
+        if min_counts_reacted is not None:
+            self.min_counts_reacted = self.Filter(
+                func=lambda seq: self.seq_table.count_table_reacted.loc[seq].mean() >= min_counts_reacted,
+                value=min_counts_reacted
+            )
+
+        if min_rel_abun_input is not None:
+            self.min_rel_abun_input = self.Filter(
+                func=lambda seq: (self.seq_table.count_table_input.loc[seq]/self.seq_table.count_table_input.sum(axis=0)).mean() >= min_rel_abun_input,
+                value=min_rel_abun_input
+            )
+
+        if min_rel_abun_reacted is not None:
+            self.min_rel_abun_reacted = self.Filter(
+                func=lambda seq: (self.seq_table.count_table_reacted.loc[seq]/self.seq_table.count_table_reacted.sum(axis=0)).mean() >= min_rel_abun_reacted,
+                value=min_rel_abun_reacted
+            )
+
+    def print_filters(self):
+        print('Following filter added:')
+        for filter,content in self.__dict__.items():
+            if isinstance(content, self.Filter):
+                print('\t{}:{}'.format(filter, content.value))
+
+    def apply_filters(self):
+        seq_to_keep = self.seq_table.count_table_reacted.index
+        self.seq_to_keep = seq_to_keep[seq_to_keep.map(self.filter_fn)]
+
+    @property
+    def filter_fn(self):
+        def _filter_fn(seq):
+            import numpy as np
+            flags = [filter.func(seq) for filter in self.__dict__.values()
+                     if isinstance(filter, self.Filter)]
+            return np.all(flags)
+        return _filter_fn
+
+
+

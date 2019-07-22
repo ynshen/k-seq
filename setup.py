@@ -18,7 +18,9 @@ setup(
         'python-levenshtein',
         'scipy',
         'seaborn',
-        'jupyter'
+        'jupyter',
+	'dill',
+	'jsonlib-python3'
     ],
     zip_safe=False
 )
