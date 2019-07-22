@@ -8,7 +8,7 @@ This is the quick-start manual for `k-seq` package to analyze kinetic sequencing
 
 This tutorial uses data from Evan Janzen's kinetic sequencing experiments on ribozymes that are selected to catalyze self-aminoacylation with BFO. In the experiment design, each unique sequence (unqiue type ribozyme) *s* follows the pseudo first-order reaction kinetics:
 
-![eq1](http://bit.ly/2GmrdZI)
+![eq1-0](http://www.sciweavers.org/tex2img.php?eq=F_%7Bs%2C%20%5Ctext%7BReacted%7D%7D%20%3D%20%5Cfrac%7Bm_%7Bs%2C%20t%7D%7D%7Bm_%7Bs%2C%20t_0%7D%7D%3D%20A%281-exp%28-%5Calpha%20k%20c_%7BBFO%7D%20%28t-t_0%29%29%29&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)
 
 where
 
@@ -58,7 +58,7 @@ In this section, we use `SeqSampleSet` to load a batch of count files from given
 ### load sample count files
 We can create a `SeqSampleSet` object and named it as `sample_set` by linking the object to multiple count files autmatically scan and extracted. We can use
 
-```ipython
+```185
 ?SeqSampleSet()
 ```
 To list the docstring for modules/classes/methods to see the usage details, here are the common parameters to create a `SeqSampleSet` instance:
@@ -85,37 +85,6 @@ sample_set = SeqSampleSet(
     silent=True
 )
 ```
-
-    NOTICE: no sample list is given, samples are collected from root folder:
-    	R4A-0A_S7_counts.txt
-    	R4B-250A_S17_counts.txt
-    	R4B-250B_S24_counts.txt
-    	R4A-50A_S4_counts.txt
-    	R4B-2A_S20_counts.txt
-    	R4A-10B_S12_counts.txt
-    	R4B-inputA_S15_counts.txt
-    	R4A-inputA_S1_counts.txt
-    	R4A-250A_S3_counts.txt
-    	R4B-inputB_S22_counts.txt
-    	R4A-250B_S10_counts.txt
-    	R4B-50B_S25_counts.txt
-    	R4B-0A_S21_counts.txt
-    	R4A-50B_S11_counts.txt
-    	R4A-2A_S6_counts.txt
-    	R4B-10A_S19_counts.txt
-    	R4B-2B_S27_counts.txt
-    	R4A-inputB_S8_counts.txt
-    	R4A-10A_S5_counts.txt
-    	R4B-0B_S28_counts.txt
-    	R4B-1250B_S23_counts.txt
-    	R4B-50A_S18_counts.txt
-    	R4B-10B_S26_counts.txt
-    	R4B-1250A_S16_counts.txt
-    	R4A-2B_S13_counts.txt
-    	R4A-1250B_S9_counts.txt
-    	R4A-1250A_S2_counts.txt
-    	R4A-0B_S14_counts.txt
-    Samples imported from /mnt/storage/projects/k-seq/input/bfo_counts/counts
 
 
 ### Calculate quantification factors
