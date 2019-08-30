@@ -14,7 +14,9 @@ Todo:
 
 __author__ = "Yuning Shen"
 __email__ = "yuningshen@ucsb.edu"
-__version__ = '0.1dev'
+__version__ = '0.1-dev0'
 __status__ = 'Developing'
 
 from . import utility
+from . import data
+from . import fitting

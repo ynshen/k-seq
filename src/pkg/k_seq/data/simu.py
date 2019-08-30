@@ -11,7 +11,7 @@ def func_default(x, A, k):
     """
     return A * (1 - np.exp(-0.479 * 90 * k * x))
 
-def y_value_simulator(params, x_true, func=None, percent_noise=0.2,
+def y_value_simulator(params, x_true, model=None, percent_noise=0.2,
                       replicates=1, y_allow_zero=False, average=False):
     """Simulator to simulate y value of a function, given x and noise level
 
@@ -41,9 +41,13 @@ def y_value_simulator(params, x_true, func=None, percent_noise=0.2,
 
     x_true = np.array(x_true)
 
-    if not func:
+    if not model:
         func = func_default
-    y_true = func(x_true, *params)
+    if isinstance(params, list):
+        y_true = model(x_true, *params.values())
+    elif isinstance(params, dict):
+        y_true = model(x_true, **params)
+
     if type(percent_noise) is float or type(percent_noise) is int:
         y_noise = [percent_noise * y for y in y_true]
     else:

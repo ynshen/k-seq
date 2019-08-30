@@ -4,30 +4,6 @@ This module contain methods for k-seq calculation
 
 
 
-def get_q_factor(dirc, std, amount, maxDist=1):
-    """
-    ** BE AWARE: the q_factor has been changed to its original's reciprocal for an easier definition **
-    calculate quantification factor from a k-seq sample
-    :param dirc: k-seq sample count file dirc
-    :param std: spike-in sequence
-    :param amount: amount of spike-in sequence
-    :param maxDist: maximum distance of edit distanced counted as standard
-    :return: (qFactor, stdCount, total)
-    """
-    import Levenshtein
-
-    stdCount = 0
-    with open(dirc) as file:
-        next(file)
-        total = int([elem for elem in next(file).strip().split()][-1])
-        next(file)
-        for line in file:
-            seq = line.strip().split()
-            dist = Levenshtein.distance(std, seq[0])
-            if dist <= maxDist:
-                stdCount += int(seq[1])
-
-    return (total*amount/stdCount, stdCount, total)
 
 def get_seqToFit(initDirc, sampleDircList, validSampleList):
     """

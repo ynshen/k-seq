@@ -1,331 +1,564 @@
-"""This module contains methods for data preprocessing from count files to ``SequenceSet`` for fitting
+"""This module contains methods for data preprocessing from count files to ``CountFile`` for fitting
 TODOs:
   - write output function for each class as JSON file
 """
 
-import numpy as np
-import pandas as pd
-from . import io
-from .. import utility
 
-
-class SequencingSample(object):
+class SeqSample:
     """This class describes experimental samples sequenced in k-seq
     """
 
-    def __init__(self, file_dirc, x_value, silent=True, name_pattern=None):
-        """``SequencingSample`` instance store the data of each sequencing sample in k-seq experiment
-        Initialize a ``SequencingSample`` instance by reading a count file
-
+    def __init__(self, file_path, x_value, name_pattern=None, load_data=False, silent=False):
+        """`SeqSample` instance store the count file data for each sequencing sample in k-seq experiments
+        Initialize a `SeqSample` instance by linking to a count file
         Args:
-            file_dirc (str): directory to the count file of sample
+            file_path (`str`): directory to the count file of sample
 
-            x_value (float or str): corresponding x_value for the sample. If string, it will extract value from
-                corresponding domain with the name
+            x_value (`float` or `str`): x-axis value for the sample (e.g. time point or substrate concentration) in the fitting.
+                If `str`, it will extract value from the domain indicated by ``name_pattern``
 
-            silent (bool): optional. Print progress to std.out if True
+            name_pattern (`str`): optional. Pattern to automatically extract metadata using
+                :func:`~k_seq.utility.extract_metadata` (click to see details). Briefly,
 
-            name_pattern (str): optional. Pattern to extract metadata using :func:`~k_seq.utility.extract_metadata`.
-                Use ``[...]`` to include the region of sample_name,
-                use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata,
-                including ``[,int/float]`` will convert the domain value to float in applicable, otherwise, string.
+                - Use ``[...]`` to include the region of sample_name (required),
+
+                - Use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata,
+
+                including ``[,int/float]`` will convert the domain value to int/float if applicable, otherwise, string.
+
+            load_data (`bool`): if load data from the count file when initializing the object. Recommend to set as False
+                for large files. Default False.
+
+            silent (bool): Print progress to std.out if False.
 
         Example:
 
-            Example on metadata extraction from pattern:
+                .. code-block:: python
+
+                   sample = SeqSample{
+                       file_path = "path/to/count/file/R4B-1250A_S16_counts.txt",
+                       x_value = 'concentration',
+                       name_pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}]_S{id, int}_counts.txt"
+                       load_data = False,
+                       silent = False
+                    }
+
+            will return a ``SeqSample`` instance ``sample`` that
 
                 .. code-block:: python
 
-                   SequencingSample{
-                       sample_name = "R4B-1250A_S16_counts.txt"
-                       pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}_S{id, int}_counts.txt"
-                       ...
+                    > sample.name
+                    'B-1250A'
+                    > sample.metadata
+                    {
+                        'exp_rep': 'B',
+                        'concentration': 1250.0,
+                        'seq_rep': 'A',
+                        'id': 16
                     }
-
-            will return
-
-                .. code-block:: python
-
-                   SequencingSample.metadata = {
-                       'exp_rep': 'B',
-                       'concentration': 1250.0,
-                       'seq_rep': 'A',
-                       'id': 16
-                    }
+                    > sample.sequences
+                    Error
 
         Attributes:
 
-            name (str): name of sample, extracted from file name
+            name (`str`): name of the sample, extracted from the file name
 
-            unique_seqs (int): number of unique sequences in the sample
+            unique_seqs (``int``): number of unique sequences in the sample
 
-            total_counts (int): number of total reads in the sample
+            total_counts (``int``): number of total reads in the sample
 
-            sequences (dict): a dictionary of counts for each unique sequences
+            sequences (``dict``): a dictionary of counts for each unique sequences
                 {seq: counts}
 
-            sample_type ('input' or 'reacted'): 'input' if sample is initial pool; 'reacted' if sample is reacted pool
+            sample_type (``str``, 'input' or 'reacted'): 'input' if sample is from initial pool;
+                'reacted' if sample is reacted pool
 
             x_value (float): the value of time point or concentration point for the sample
 
             metadata (dict): a dictionary contains metadata of the sample:
 
-                - file_dirc (str):
+                - file_path (`str`): path to the count file
 
-                - time_stamp (time): time the instance created
+                - log (`str`): logging of all modification applied on the data
 
-                - Other metadata extracted from file name
+                - Other metadata extracted from the file name
         """
 
-        import datetime
-        from .. import utility
+        from k_seq import utility
+        from pathlib import Path
+        import numpy as np
+        import pandas as pd
 
         self.metadata = {}
-        sample_name = file_dirc[file_dirc.rfind('/') + 1:]
-        self.metadata['file_dirc'] = file_dirc
-        self.unique_seqs, self.total_counts, self.sequences = io.read_count_file(self.metadata['file_dirc'])
+        self._logger = utility.Logger()
+        file_path = Path(file_path)
+        self.metadata['file_path'] = str(file_path)
+        if not silent:
+            print("Creating sample from {}".format(self.metadata['file_path']))
 
         if name_pattern:
-            metadata = utility.extract_metadata(target=sample_name, pattern=name_pattern)
+            metadata = utility.extract_metadata(target=file_path.name, pattern=name_pattern)
             self.name = metadata.pop('name', None)
             self.metadata.update(metadata)
         else:
-            self.name = sample_name
+            self.name = file_path.name
 
         if 'input' in self.name or 'Input' in self.name:
             self.sample_type = 'input'
-        else:
-            self.sample_type = 'reacted'
-
-        if self.sample_type == 'input':
             self.x_value = np.nan
         else:
-            if type(x_value) == str:
+            self.sample_type = 'reacted'
+            if isinstance(x_value, str):
                 self.x_value = self.metadata[x_value]
             else:
                 self.x_value = x_value
 
-        self.metadata['timestamp'] = str(datetime.datetime.now())
-        if not silent:
-            print("Sample {} imported from {}".format(self.name, self.metadata['file_dirc']))
+        self._logger.add_log('SeqSample instance created')
+        if load_data:
+            self.load_data(silent=silent)
 
-    def survey_spike_in(self, spike_in, max_dist_to_survey=10, silent=True, inplace=True):
+        # Import visualizers
+        from ..utility import FunctionWrapper
+        from .visualizer import length_dist_plot_single, sample_count_cut_off_plot_single
+        self.visualizer = FunctionWrapper(data=self, functions=[length_dist_plot_single,
+                                                                sample_count_cut_off_plot_single])
+
+    def load_data(self, silent=False):
+        """Load data from file with path in ``self.matadata['file_path']``"""
+
+        from k_seq.data import io
+
+        if not silent:
+            print("Load count data from file {}".format(self.metadata['file_path']))
+        self.unique_seqs, self.total_counts, self._sequences = io.read_count_file(self.metadata['file_path'])
+        self._logger.add_log('Data imported from file')
+
+    def survey_spike_in_peak(self, spike_in_seq, max_dist_to_survey=10, silent=False, inplace=True):
         """Survey spike-in counts in the sample.
-        Count number of sequences at different edit distance to spike-in sequences (external standard for quantification)
-          in the sample. Add attribute ``spike_in`` to the instance if inplace is True.
+        Calculate the total counts of sequences that is *i* (*i* from 0 to `max_dist_to_survey`) edit distance from
+            exact spike-in sequences (external standard for quantification) in the sample.
+            Add attribute ``spike_in`` to the instance if `inplace` is True.
 
         Args:
-            spike_in (str): the sequence of spike-in, as the center sequence
+            spike_in_seq (`str`): the exact sequence of spike-in
 
-            max_dist_to_survey (int): the maximum distance to survey
+            max_dist_to_survey (`int`): the maximum distance to survey
 
-            silent (bool): don't print progress if True
+            silent (`bool`): don't print progress if True
 
-            inplace (bool): Add attribute ``spike_in`` if inplace is True, else return a dict object
-                {
-                    'spike_in_seq': str, spike in sequence,
-                    'spike_in_counts': list of int, number of sequences that is i edit distance away
-                }
+            inplace (`bool`): Add attribute ``spike_in`` if True, else return a `pd.DataFrame` object with index as
+              the edit distance to exact spike-in sequences, columns as unqiue_seqs and total_counts
 
         Attributes:
 
-            spike_in (dict):
+            spike_in (`pd.DataFrame`):
+              - index: edit distance to exact spike-in sequences
 
-                - spike_in_counts (list): length max_dist_to_survey + 1, number of total counts with different edit
-                  distance to spike-in sequence
-
-                - spike_in (str): center spike_in sequence
-
+              - columns: unqiue_seqs and total_counts
         """
+
         import Levenshtein
+        import numpy as np
+        import pandas as pd
 
         results = dict()
-        results['spike_in_counts'] = np.zeros(max_dist_to_survey + 1, dtype=np.int)
-        results['spike_in_seq'] = spike_in
-        for seq,counts in self.sequences.items():
-            dist = Levenshtein.distance(spike_in, seq)
-            if dist <= max_dist_to_survey:
-                results['spike_in_counts'][dist] += counts
         if not silent:
-            print("Survey spike-in counts for sample {}. Done.".format(self.name))
+            print("Survey spike-in counts for sample {}...".format(self.name))
+        results['spike_in_seq'] = spike_in_seq
+        edit_dist = lambda seq: Levenshtein.distance(spike_in_seq, seq)
+        self._sequences['dist_to_spike_in'] = self._sequences.index.map(edit_dist)
+        dists = np.linspace(0, max_dist_to_survey, max_dist_to_survey + 1, dtype=np.int)
+        results['spike_in_peak'] = pd.DataFrame(index=dists)
+        results['spike_in_peak']['unique_seq'] = [np.sum(self._sequences['dist_to_spike_in'] == dist) for dist in dists]
+        results['spike_in_peak']['total_counts'] = [
+            np.sum(self._sequences[self._sequences['dist_to_spike_in'] == dist]['counts'])
+            for dist in dists
+        ]
+
         if inplace:
             self.spike_in = results
+            self._logger.add_log('Spike-in sequences surveyed on with maximal distance {}'.format(max_dist_to_survey))
         else:
             return results
 
-    def get_quant_factor(self, spike_in_amount, max_dist=0, silent=True):
-        """Calculate quantification factor for the sample.
-        Add ``quant_factor`` and ``quant_factor_max_dist`` attributes to the instance
+    def get_quant_factor(self, from_spike_in_amount=None, spike_in_seq=None, max_dist=0, from_total_amount=None,
+                         silent=False):
+        """Calculate quantification factor for the sample, either from spike in or total amount
+        If `from_spike_in_amount` is not `None`, will priory use spike in to quantify the amount of each sequence, and
+            attributes ``quant_factor`` and ``quant_factor_max_dist`` will be add to the instance,
+        If `from_spike_in_amount` is `None`, we expect `from_total_amount` to be not `None`
 
         Args:
-            max_dist (int): maximum edit distance for a sequence to be pike-in
 
-            spike_in_amount (float): amount of actual spike-in added in experiment
+            from_spike_in_amount (`float`): Optional. Amount of actual spike-in added in this sample
+
+            max_dist (`int`): maximum edit distance to count a sequence as spike-in, `from_spike_in_amount` has to be not `None`.
+                Default 0.
+
+            spike_in_seq (`str`): Optional. Exact spike in sequence, pass to `survey_spike_in_peak` if not performed yet
+
+            from_total_amount (`float`): Optional. Total amount of DNA measured for ths sample
+
+            silent (`bool`): don't print process info if False
 
         Attributes:
-            quant_factor (float): defined as :math:`\\frac{\\text{spike-in amount}}{\\text{total counts}\\times\\text{spike-in counts[: max_dist + 1]}}`
 
-            quant_factor_max_dist (int): maximum edit distance for a sequence to be spike-in
+            quant_factor (`float`): defined as
+                :math:`\\frac{\\text{spike-in amount}}{\\text{total counts}\\times\\text{spike-in counts[: max_dist + 1]}}`
+                if `from_spike_in_amount` is not None
+                effectively the total DNA amount in the sequencing pool
+
+            quant_factor_max_dist (`int`): maximum edit distance for a sequence to be spike-in
 
         """
-
-        self.quant_factor = spike_in_amount * self.total_counts / np.sum(self.spike_in['spike_in_counts'][:max_dist + 1])
-        self.spike_in['quant_factor_max_dist'] = max_dist
-        self.spike_in['spike_in_amount'] = spike_in_amount
+        import numpy as np
 
         if not silent:
-            print("Calculate quant-factor for sample {}. Done.".format(self.name))
+            print("Calculate quant-factor for sample {}...".format(self.name))
+
+        if from_spike_in_amount:
+            if not hasattr(self, 'spike_in'):
+                if spike_in_seq is not None:
+                    self.survey_spike_in_peak(spike_in_seq, max_dist_to_survey=max_dist, silent=silent, inplace=True)
+                else:
+                    raise Exception('Please provide spike_in_seq')
+            self.quant_factor = float(from_spike_in_amount) * self.total_counts / np.sum(self.spike_in['spike_in_peak']['total_counts'][:max_dist + 1])
+            self.spike_in['quant_factor_max_dist'] = max_dist
+            self.spike_in['spike_in_amount'] = from_spike_in_amount
+            self._logger.add_log(
+                'Quantification factor estimated from spike-in seq within distance {}'.format(max_dist)
+            )
+        elif from_total_amount:
+            self.quant_factor = from_total_amount
+            self._logger.add_log('Quantification factor estimated by total DNA')
+        else:
+            raise Exception('Please quantify through either spike-in or total DNA amount')
+
+    def sequences(self, with_spike_in=True, filter=None):
+        if with_spike_in:
+            seq = self._sequences
+        else:
+            if hasattr(self, 'spike_in'):
+                seq = self._sequences[self._sequences['dist_to_spike_in'] > self.spike_in['quant_factor_max_dist']]
+            else:
+                seq = Exception('Please calculate quantification factor form spike in first')
+        if filter is None:
+            return seq
+        else:
+            if isinstance(filter, list):
+                return seq[filter]
+            elif callable(filter):
+                return seq[seq.apply(func=filter, axis=1)]
+
+    @property
+    def log(self):
+        return self._logger.log
 
 
-class SequencingSampleSet(object):
-    """Object to load and store batch of samples
+class SeqSampleSet:
+    """Object to load and store a set of samples
     """
 
-    def __init__(self, file_root, x_values, sample_list=None, pattern=None, name_pattern=None,
-                 sort_fn=None, black_list=[], silent=True):
-        """load count files under a root folder into :func:`~SequencingSample` objects
+    def __init__(self, file_root, x_values, count_file_pattern=None, name_pattern=None,
+                 sort_by=None, file_list=None, black_list=None, load_data=False, silent=True, note=None):
+        """Initialize by linking count files under a root folder into :func:`~SeqSample` objects
 
         Args:
-            file_root (str): directory to the root folder
+            file_root (`str`): directory to the root folder for count files
 
-            x_values (str or list of float): string or a list of floats. The time points or concentration points value for
-              each sample. If string, the function will use it as domain name to extract x_value from file name; if a list
-              of floats, it should have same length and order as sample file under file_root
+            x_values (`str` or list of `float`): Time points or concentration points values for samples. If `str`, the
+              function will use it as the domain name to extract value from file name; if a list
+              of `float`, it should have same length and order as sample file under `file_root`
               (Use :func:`~k_seq.utility.get_file_list' to examine the files automatically extracted)
 
-            sample_list (list of str): optional, only import the file in sample_list if not None
+            count_file_pattern (`str`): optional, name pattern to identify count files. Only file name contains
+              the pattern will be included
 
-            pattern (str): optional, file name pattern to identify count files. Only file with name strictly contains
-              the pattern will be collected.
+            name_pattern (`str`): optional. Pattern to extract metadata, see :func:`~k_seq.utility.extract_metadata'
+              for details
 
-            name_pattern (str): optional. Pattern to extract metadata, see :func:`~k_seq.utility.extract_metadata'
+            sort_by (`str` or `callable`): optional. If `str`, it should be the domain name to order the sample in the
+              ascending order. If `callable`, the input is `SeqSample` instance and the sample will ordered by the
+              return value
 
-            sort_fn (callable): optional. A callable to customize sample order
+            file_list (list of `str`): optional, only import the file in sample_list if not `None`
 
-            black_list (list of str): name of sample files that will be excluded in loading
+            black_list (list of `str`): optional, name of sample files that are excluded
+
+            load_sample (`bool`): if read and load count file during initialization. Recommand to be False for large
+              count files, default False.
 
             silent (boolean): don't print process if True
 
         """
-        if sample_list is None:
-            sample_list = utility.get_file_list(file_root=file_root, pattern=pattern)
-            if not silent:
-                print("NOTICE: no sample_list is given, samples will extract automatically from file_root.")
-            if type(x_values) != str:
-                raise Exception("No sample_list is given, "
-                                "please indicate domain name instead of list of real values to extract x_values")
+        from pathlib import Path
+        from k_seq import utility
+        import numpy as np
+        import pandas as pd
+
+        self._logger = utility.Logger()
+        self._logger.add_log('Dataset created from {}'.format(file_root))
+        self.metadata = {
+            'file_root': file_root
+        }
+        if note:
+            self.metadata['note'] = note
+        else:
+            self.metadata['note'] = None
+        if black_list:
+            self.metadata['black_list'] = black_list
+        else:
+            self.metadata['black_list'] = None
+            black_list = []
+        if file_list is None:
+            file_list = [file.name for file in Path(file_root).glob('*{}*'.format(count_file_pattern))]
+            print("NOTICE: no sample list is given, samples are collected from root folder:\n\t" + '\n\t'.join(file_list))
+        self.metadata['file_list'] = file_list
+        if isinstance(x_values, list):
+            if len(x_values) != len(file_list):
+                raise Exception("Errors: sample_list is given as a list, but the length does not match with "
+                                "sample files")
+        else:
+            x_values = [x_values for _ in file_list]
+        self.metadata['x_values'] = x_values
         self.sample_set = []
-        if file_root[-1] != '/':
-            file_root += '/'
-        if type(x_values) == str:
-            x_values = [x_values for _ in sample_list]
-        for sample_ix, sample_name in enumerate(sample_list):
-            if sample_name not in black_list:
-                sample = SequencingSample(file_dirc=file_root + sample_name,
-                                          x_value=x_values[sample_ix],
-                                          name_pattern=name_pattern,
-                                          silent=silent)
-                self.sample_set.append(sample)
-        if sort_fn:
-            self.sample_set.sort(key=sort_fn)
+        for file_name, x_value in zip(file_list, x_values):
+            if file_name not in black_list:
+                self.sample_set.append(SeqSample(file_path=str(Path.joinpath(Path(file_root), file_name)),
+                                                 x_value=x_value,
+                                                 name_pattern=name_pattern,
+                                                 load_data=load_data,
+                                                 silent=silent))
 
-        self.sample_num = len(self.sample_set)
-        self.sample_names = [sample.name for sample in self.sample_set]
+        if load_data:
+            self._logger.add_log('Data loaded as dataset created')
 
-        if not silent:
-            print("Samples imported from {}".format(file_root))
+        if sort_by:
+            if isinstance(sort_by, str):
+                sort_fn = lambda single_file: single_file.metadata[sort_by]
+            elif callable(sort_by):
+                sort_fn = sort_by
+            self.sample_set = sorted(self.sample_set, key=sort_fn)
 
-    def get_quant_factors(self, spike_in_amounts, spike_in='AAAAACAAAAACAAAAACAAA', max_dist=2, max_dist_to_survey=None,
-                          quant_factor=None, survey_only=False, silent=True):
-        """Calculate quantification factors for each sample in SequencingSampleSet.
+        print("Samples imported from {}".format(file_root))
+
+        from .visualizer import count_file_info_table, count_file_info_plot, spike_in_peak_plot, rep_spike_in_plot, length_dist_plot_all, sample_count_cut_off_plot_all
+        from ..utility import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              count_file_info_table,
+                                              count_file_info_plot,
+                                              spike_in_peak_plot,
+                                              rep_spike_in_plot,
+                                              length_dist_plot_all,
+                                              sample_count_cut_off_plot_all
+                                          ])
+
+    def load_data(self, silent=True):
+        """Load data after creating the object, suitable for large files"""
+        for sample in self.sample_set:
+            sample.load_data(silent=silent)
+        self._logger.add_log('Data loaded at from {}'.format(self.metadata['file_root']))
+
+    def survey_spike_in_peak(self, spike_in_seq, max_dist_to_survey=10, silent=True):
+        """Survey spike-in sequences
+
+        Args:
+            spike_in_seq:
+            max_dist_to_surve:
+            silent:
+
+        """
+        for sample in self.sample_set:
+            sample.survey_spike_in_peak(spike_in_seq=spike_in_seq,
+                                        max_dist_to_survey=max_dist_to_survey,
+                                        silent=silent,
+                                        inplace=True)
+
+    def get_quant_factors(self, from_spike_in_amounts=None, spike_in_seq=None, max_dist=2,
+                          max_dist_to_survey=None, from_total_amounts=None, quant_factors=None,
+                          survey_only=False, silent=True):
+        """Calculate quantification factors for each sample in `SeqSampleSet`.
         This method will first survey the spike-in sequence, then calculate the quantification factor for each sample if
         applies.
 
         Args:
-            spike_in_amounts (list/dict of float): a list/dict of absolute amount of spike-in sequence for each sample
-              if dict, the key must match the name of sample.
+            from_spike_in_amounts (list/dict of `float`): optional. Use if using spike in for quantification.
+              A list/dict of absolute amount of spike-in sequence in each sample
+              If `dict`, the key must match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            spike_in (str): optional, spike in sequence. Default: AAAAACAAAAACAAAAACAAA
+            spike_in_seq (`str`): optional. Spike in sequence if using spike in for quantification.
 
-            max_dist (int): optional, maximum edit distance to center spike-in sequence to be counted as spike-in.
+            max_dist (`int`): optional, maximum edit distance to exact spike-in sequence to be counted as spike-in.
               Default: 2
 
-            max_dist_to_survey (int): optional, survey the spike-in counts with maximum edit distance if not None
+            max_dist_to_survey (`int`): optional, survey the spike-in counts with maximum edit distance. If `None`,
+              `max_dist` will be used
 
-            quant_factor (list/dict of float): optional, accept a list/dict of manually applied quant_factor
+            from_total_amounts (list/dict of 'float'): optional. Use if using total DNA amount for quantification. Same
+              as `from_spike_in_amount`, a list/dict of total amount of DNA in each sample. If `dict`, the key must
+              match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            survey_only (bool): optional. If True, only survey the spike-in counts within maximum edit distance
+            quant_factors (list/dict of `float`): optional, accept a list/dict of manually curated quant_factor. If `dict`,
+              the key must match the names of samples; if `list`, the length and order much match the `sample_names`
 
-            silent (bool): don't print process if True
+            silent (`bool`): don't print process if True
 
         """
+        import numpy as np
 
-        for sample in self.sample_set:
-            sample.survey_spike_in(spike_in=spike_in, max_dist_to_survey=max_dist_to_survey,
-                                   silent=silent, inplace=True)
-        if not survey_only:
-            if quant_factor:
-                for sample_ix, sample in enumerate(self.sample_set):
-                    if isinstance(quant_factor, dict):
-                        if sample.name in quant_factor.keys():
-                            sample.quant_factor = quant_fasctor[sample.name]
-                    elif isinstance(quant_factor, list):
-                        sample.quant_factor = quant_factor[sample_ix]
+        if quant_factors:
+            # curated quant factors has highest priority
+            if len(quant_factors) == len(self.sample_set):
+                if isinstance(quant_factors, dict):
+                    for sample in self.sample_set:
+                        if sample.name in quant_factors.keys():
+                            sample.quant_factor = quant_factors[sample.name]
+                    else:
+                        print('Warning: {} is not found in sample set'.format(sample))
+                elif isinstance(quant_factors, list):
+                    for sample, quant_factor in zip(self.sample_set, quant_factors):
+                        sample.quant_factor = quant_factor
             else:
-                for sample_ix, sample in enumerate(self.sample_set):
-                    if isinstance(spike_in_amounts, dict):
-                        if sample.name in spike_in_amounts.keys():
-                            sample.get_quant_factor(spike_in_amount=spike_in_amounts[sample.name],
-                                                    max_dist=max_dist)
-                    elif isinstance(spike_in_amounts, list):
-                        sample.get_quant_factor(spike_in_amount=spike_in_amounts[sample_ix],
-                                                max_dist=max_dist)
+                raise Exception('Error: input quant_factor has different number as samples')
+        elif from_spike_in_amounts is not None:
+            if not hasattr(self.sample_set[0], 'spike_in'):
+                if spike_in_seq is None:
+                    raise Exception('Error: please provide spike-in sequence or survey the spike-in before this step')
+                elif max_dist_to_survey is None:
+                    max_dist_to_survey = max_dist
+                    if not silent:
+                        print('Use max_dist ({}) as max_dist_to_survey as it is not provided'.fromat(max_dist))
+                for sample in self.sample_set:
+                    sample.survey_spike_in_peak(spike_in_seq=spike_in_seq,
+                                                max_dist_to_survey=max_dist_to_survey,
+                                                silent=silent,
+                                                inplace=True)
+            if isinstance(from_spike_in_amounts, dict):
+                for sample in self.sample_set:
+                    if sample.name in from_spike_in_amounts.keys():
+                        sample.get_quant_factor(from_spike_in_amount=from_spike_in_amounts[sample.name],
+                                                max_dist=max_dist, silent=silent)
+            elif isinstance(from_spike_in_amounts, list) or isinstance(from_spike_in_amounts, np.ndarray):
+                for sample, spike_in_amount in zip(self.sample_set, from_spike_in_amounts):
+                    sample.get_quant_factor(from_spike_in_amount=spike_in_amount,
+                                            max_dist=max_dist, silent=silent)
+            else:
+                raise Exception('from_spike_in_amounts should be either list or dict')
+        elif from_total_amounts is not None:
+            if isinstance(from_total_amounts, dict):
+                for sample in self.sample_set:
+                    if sample.name in from_total_amounts.keys():
+                        sample.get_quant_factor(from_total_amount=from_total_amounts[sample.name], silent=silent)
+            elif isinstance(from_total_amounts, list) or isinstance(from_total_amounts, np.ndarray):
+                for sample, total_amount in zip(self.sample_set, from_total_amounts):
+                    sample.get_quant_factor(from_total_amount=total_amount, silent=silent)
+            else:
+                raise Exception('from_total_amounts should be either list or dict')
 
-    def filter_sample(self, sample_to_keep, inplace=True):
+    def get_samples(self, sample_id, with_spike_in=False, return_SeqSample=False):
+        """Return (count) info of sample(s)
+
+        Args:
+            sample_id (`str`, list of `str`, or `callable`): indicate what sample to select
+            return_SeqSample (`bool`): return a list of `SeqSample` if True; return a `pd.DataFrame` of counts if False
+
+        Returns: list of `SeqSample` or `pd.DataFrame`
+
+        """
+        import pandas as pd
+
+        if isinstance(sample_id, str):
+            sample_to_return = [sample for sample in self.sample_set if sample.name == sample_id]
+        elif isinstance(sample_id, list):
+            sample_to_return = [sample for sample in self.sample_set if sample.name in sample_id]
+        elif callable(sample_id):
+            sample_to_return = [sample for sample in self.sample_set if sample_id(sample)]
+        else:
+            raise Exception('Error: please pass sample id, a list of sample id, or a callable on SeqSample')
+
+        if return_SeqSample:
+            return sample_to_return
+        else:
+            seq_list = set()
+            for sample in sample_to_return:
+                seq_list.update(list(sample.sequences(with_spike_in).index))
+            return_df = pd.DataFrame(index=seq_list)
+            for sample in sample_to_return:
+                return_df[sample.name] = sample.sequences(with_spike_in)['counts']
+            return return_df
+
+    def filter_sample(self, sample_to_keep=None, sample_to_remove=None, inplace=True):
         """filter samples in sample set
 
         Args:
-            sample_to_keep (list of str): name of samples to keep
-            inplace (bool): return a new SequencingSampleSet if False
+            sample_to_keep (list of `str`): optional, names of samples to keep
+            sample_to_remove (list of `str`): optional, names of samples to remove
+            inplace (`bool`): return a new `SeqSampleSet` if False
 
-        Returns: None if inplace is True, SequencingSampleSet if inplace is False
+        Returns: None if inplace is True, `SeqSampleSet` if inplace is False
 
         """
 
+        if sample_to_keep is None and sample_to_remove is not None:
+            sample_to_keep = [sample for sample in self.sample_names if sample not in sample_to_remove]
         if inplace:
             self.sample_set = [sample for sample in self.sample_set if sample.name in sample_to_keep]
-            self.sample_num = len(self.sample_set)
-            self.sample_names = sample_to_keep
         else:
             import copy
             new_set = copy.deepcopy(self)
             new_set.sample_set = [sample for sample in new_set.sample_set if sample.name in sample_to_keep]
-            new_set.sample_num = len(new_set.sample_set)
-            new_set.sample_names = sample_to_keep
+            new_set._logger.add_log(
+                'Sample is filtered and saved to this new object. Samples kept: {}'.format(
+                    ','.join(sample_to_keep)
+                )
+            )
             return new_set
 
+    @property
+    def sample_names(self):
+        return [sample.name for sample in self.sample_set]
 
-class SequenceSet(object):
-    """This class contains the dataset of valid sequences extracted and aligned from a list of ``SequencingSample``
+    @property
+    def sample_overview(self):
+        from . import visualizer
+        return visualizer.count_file_info_table(self, return_table=True)
+
+    def to_SeqTable(self, remove_spike_in=True, note=None):
+        """Convert to a `SeqTable` object
+
+        Args:
+            remove_spike_in (`bool`): remove spike in if True. Default True.
+            note (`str`): optional. Note about the sample set
+
+        Returns: `SeqTable` instance
+        """
+        if note is None:
+            note = None
+        return SeqTable(self, remove_spike_in=remove_spike_in, note=note)
+
+
+class SeqTable:
+    """This class contains the dataset of valid sequences extracted and aligned from a list of ``SeqSampleSet``
     """
 
     def __init__(self, sample_set, remove_spike_in=True, note=None):
-        """Initialize from a list of ``SequencingSample`` to a SequenceSet object.
+        """Initialize from a ``SeqSampleSet`` instance
         Find all valid sequences that occur at least once in any 'input' sample and once in any 'reacted' sample
 
         Args:
 
-            sample_set (``SequencingSampleSet``): valid samples to convert to ``SequenceSet``
+            sample_set (`SeqSampleSet`): valid samples to convert to ``SequenceSet``
 
-            remove_spike_in (bool): sequences considered as spike-in will be removed, all number are calculated after
-              removal
+            remove_spike_in (`bool`): sequences considered as spike-in will be removed, all number are calculated after
+              removal of spike-in
 
-            note (str): optional. Additional note to add to the dataset
+            note (`str`): optional. Additional note to add to the dataset
 
 
         Attributes:
 `
-            dataset_info (dict): dictionary of basic info of dataset:
+            metadata (`dict`): dictionary of basic info of dataset:
 
                 - input_seq_num (int): number of unique sequences in all "input" samples
 
@@ -349,63 +582,50 @@ class SequenceSet(object):
 
             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples
         """
-        import Levenshtein
-        import datetime
+        from k_seq.utility import Logger
+        import numpy as np
+
+        self._logger = Logger()
+        self._logger.add_log('Dataset created')
+        self.metadata = {}
+        if note:
+            self.metadata['note'] = note
 
         # find valid sequence set
-        input_seq_set = set()
-        reacted_seq_set = set()
-
-        sample_set = sample_set.sample_set
-
-        if remove_spike_in:
-            for sample in sample_set:
-                if sample.sample_type == 'input':
-                    input_seq_set.update([
-                        seq for seq in sample.sequences.keys()
-                        if Levenshtein.distance(seq, sample.spike_in['spike_in_seq']) > sample.spike_in['quant_factor_max_dist']
-                    ])
-                elif sample.sample_type == 'reacted':
-                    reacted_seq_set.update([
-                        seq for seq in sample.sequences.keys()
-                        if Levenshtein.distance(seq, sample.spike_in['spike_in_seq']) > sample.spike_in['quant_factor_max_dist']
-                    ])
-        else:
-            for sample in sample_set:
-                if sample.sample_type == 'input':
-                    input_seq_set.update(list(sample.sequences.keys()))
-                elif sample.sample_type == 'reacted':
-                    reacted_seq_set.update(list(sample.sequences.keys()))
-
-        valid_set = input_seq_set & reacted_seq_set
-        self.dataset_info = {
-            'input_seq_num': len(input_seq_set),
-            'reacted_seq_num': len(reacted_seq_set),
-            'valid_seq_num': len(valid_set),
-            'remove_spike_in': remove_spike_in
+        self.metadata['remove_spike_in'] = remove_spike_in
+        input_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'input',
+                                          with_spike_in=not(remove_spike_in))
+        reacted_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'reacted',
+                                            with_spike_in=not(remove_spike_in))
+        valid_set = set(input_set.index) & set(reacted_set.index)
+        self.metadata['seq_nums'] = {
+            'input_seq_num': input_set.shape[0],
+            'reacted_seq_num': reacted_set.shape[0],
+            'valid_seq_num': len(valid_set)
         }
-        if note:
-            self.dataset_info['note'] = note
+
+        self.count_table_reacted = reacted_set.loc[valid_set]
+        self.count_table_input = input_set.loc[valid_set]
 
         # preserve sample info
         self.sample_info = {}
-        for sample in sample_set:
+        for sample in sample_set.sample_set:
             sample_info_dict = sample.__dict__.copy()
-            sequences = sample_info_dict.pop('sequences', None)
+            _ = sample_info_dict.pop('visualizer')
+            sequences = sample_info_dict.pop('_sequences', None)
             self.sample_info[sample.name] = {
-                'valid_seqs_num': np.sum([1 for seq in sequences.keys() if seq in valid_set]),
-                'valid_seqs_counts': np.sum([seq[1] for seq in sequences.items() if seq[0] in valid_set])
+                'valid_seqs_num': len(set(sequences.index.values) & valid_set),
+                'valid_seqs_counts': np.sum(sequences.loc[list(set(sequences.index.values) & valid_set)]['counts'])
             }
             self.sample_info[sample.name].update(sample_info_dict)
 
-        # create valid sequence table
-        self.count_table = pd.DataFrame(index=list(valid_set), columns=[sample.name for sample in sample_set])
-        for seq in valid_set:
-            for sample in sample_set:
-                if seq in sample.sequences.keys():
-                    self.count_table.loc[seq, sample.name] = sample.sequences[seq]
-
-        self.dataset_info['timestamp'] = str(datetime.datetime.now())
+        from .visualizer import seq_occurrence_plot, rep_variability_plot
+        from ..utility import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              seq_occurrence_plot,
+                                              rep_variability_plot
+                                          ])
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
         """Calculate reacted fraction for sequences
@@ -414,7 +634,7 @@ class SequenceSet(object):
 
             input_average ('median' or 'mean'): method to calculate the average amount of input for a sequence
 
-            black_list (list of str): optional, list of names of samples to be excluded in calculation
+            black_list (list of `str`): optional, list of names of samples to be excluded in calculation
 
             inplace (bool): add ``reacted_frac_table`` to the attribute of instance if True; return
                 ``reacted_frac_table`` if False
@@ -437,56 +657,63 @@ class SequenceSet(object):
 
         if not black_list:
             black_list = []
-        input_samples = [sample[0] for sample in self.sample_info.items()
-                         if sample[0] not in black_list and sample[1]['sample_type'] == 'input']
-        reacted_samples = [sample[0] for sample in self.sample_info.items()
-                           if sample[0] not in black_list and sample[1]['sample_type'] == 'reacted']
-        reacted_frac_table = pd.DataFrame(index=self.count_table.index, columns=reacted_samples)
-        reacted_frac_table.input_avg_type = input_average
-        reacted_frac_table.col_x_values = [float(self.sample_info[sample]['x_value']) for sample in reacted_frac_table.columns]
-
+        col_to_use = [col_name for col_name in self.count_table_reacted.columns if col_name not in black_list]
+        reacted_frac_table = self.count_table_reacted[col_to_use]
+        reacted_frac_table = reacted_frac_table.apply(
+            lambda sample: sample/self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
+            axis=0
+        )
+        self.metadata['input_avg_type'] = input_average
+        input_amount = self.count_table_input.loc[reacted_frac_table.index]
+        input_amount = input_amount.apply(
+            lambda sample: sample / self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
+            axis=0
+        )
         if input_average == 'median':
-            input_amount_avg = np.nanmedian(np.array([
-                list(self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                     self.sample_info[sample]['quant_factor'])
-                for sample in input_samples
-            ]), axis=0)
+            input_amount_avg = input_amount.median(axis=1)
         elif input_average == 'mean':
-            input_amount_avg = np.nanmean(np.array([
-                list(self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                     self.sample_info[sample]['quant_factor'])
-                for sample in input_samples
-            ]), axis=0)
+            input_amount_avg = input_amount.median(axis=1)
         else:
             raise Exception("Error: input_average should be 'median' or 'mean'")
-
-        reacted_frac_table.input_avg = input_amount_avg
-        for sample in reacted_samples:
-            reacted_frac_table[sample] = (
-                                                 self.count_table[sample] / self.sample_info[sample]['total_counts'] *
-                                                 self.sample_info[sample]['quant_factor']
-                                         )/reacted_frac_table.input_avg
-
+        reacted_frac_table = reacted_frac_table.divide(input_amount_avg, axis=0)
         if inplace:
             self.reacted_frac_table = reacted_frac_table
+            self._logger.add_log('reacted_frac_tabled added using {} as input average'.format(input_average))
         else:
             return reacted_frac_table
 
-    def get_x_values(self, with_col_name=True):
-        """Return x values corresponding to each column
-        Args:
-
-            with_col_name (bool): return a dict instead of a list if True
-
+    @property
+    def x_values(self):
+        """Return x values corresponding to each column in `reacted_frac_table` (or `count_table_reacted`)
+        as pd.Series
         """
-        if with_col_name:
-            return {
-                sample: float(self.sample_info[sample]['x_value']) for sample in self.reacted_frac_table.columns
-            }
-        else:
-            return [float(self.sample_info[sample]['x_value']) for sample in self.reacted_frac_table.columns]
+        import pandas as pd
 
-    def filter_seq(self, seq_to_keep, inplace=True):
+        if hasattr(self, 'reacted_frac_table'):
+            table = self.reacted_frac_table
+        else:
+            table = self.count_table_reacted
+        return pd.Series(data=[self.sample_info[sample]['x_value'] for sample in table.columns],
+                         index=table.columns)
+
+    @property
+    def seq_info(self):
+        import pandas as pd
+        import numpy as np
+
+        seq_info = pd.DataFrame(index=self.count_table_input.index)
+        seq_info['occurred_in_inputs'] = pd.Series(np.sum(self.count_table_input > 0, axis=1))
+        seq_info['occurred_in_reacted'] = pd.Series(np.sum(self.count_table_reacted > 0, axis=1))
+        get_rel_abun = lambda series: series/series.sum()
+        seq_info['avg_rel_abun_in_inputs'] = pd.Series(
+            self.count_table_input.apply(get_rel_abun, axis=0).mean(axis=1)
+        )
+        seq_info['avg_rel_abun_in_reacted'] = pd.Series(
+            self.count_table_reacted.apply(get_rel_abun, axis=0).mean(axis=1)
+        )
+        return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
+
+    def filter_seq(self, seq_to_keep=None, filter_fn=None, update_all=True, inplace=True, return_id_only=False):
         """Filter sequence in dataset
         In current version, only ``count_table`` and ``reacted_frac_table`` will change if applicable
         Other meta info will keep the same
@@ -498,25 +725,201 @@ class SequenceSet(object):
         Returns: Return a new SequenceSet object with only ``seq_to_keep`` if inplace is False
 
         """
+        import pandas as pd
+
+        if seq_to_keep is None:
+            master_table = pd.concat([self.count_table_input, self.count_table_reacted], axis=1)
+            if callable(filter_fn):
+                seq_to_keep = master_table.index[master_table.apply(filter_fn, axis=1)]
+            elif isinstance(filter_fn, SeqFilter):
+                seq_to_keep = filter_fn.seq_to_keep
+
         if inplace:
-            self.count_table = self.count_table.loc[seq_to_keep]
-            if hasattr(self, 'reacted_frac_table'):
-                col_x_values = self.reacted_frac_table.col_x_values
-                input_avg_type = self.reacted_frac_table.input_avg_type
-                self.reacted_frac_table = self.reacted_frac_table.loc[seq_to_keep]
-                self.reacted_frac_table.input_avg_type = input_avg_type
-                self.reacted_frac_table.col_x_values = col_x_values
+            table_to_use = self
         else:
             import copy
-            sequence_set_copy = copy.deepcopy(self)
-            sequence_set_copy.count_table = self.count_table.loc[seq_to_keep]
-            if hasattr(self, 'reacted_frac_table'):
-                col_x_values = self.reacted_frac_table.col_x_values
-                input_avg_type = self.reacted_frac_table.input_avg_type
-                sequence_set_copy.reacted_frac_table = self.reacted_frac_table.loc[seq_to_keep]
-                sequence_set_copy.reacted_frac_table.input_avg_type = input_avg_type
-                sequence_set_copy.reacted_frac_table.col_x_values = col_x_values
-            return sequence_set_copy
+            table_to_use = copy.deepcopy(self)
+
+        if update_all:
+            table_to_use.count_table_input = table_to_use.count_table_input.loc[seq_to_keep]
+            table_to_use.count_table_reacted = table_to_use.count_table_reacted.loc[seq_to_keep]
+
+        if hasattr(table_to_use, 'reacted_frac_table'):
+            table_to_use.reacted_frac_table = table_to_use.reacted_frac_table.loc[seq_to_keep]
+
+        if not inplace:
+            if return_id_only:
+                return table_to_use.index
+            else:
+                return table_to_use
+
+    def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
+                    bootstrap_depth=0, bs_return_size=None,
+                    resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None):
+        """
+        Add a `k_seq.fitting.BatchFitting` instance to SeqTable for fitting
+        Args:
+            model (`callable`): the model to fit
+            seq_to_fit (list of `str`): optional. All the sequences will be fit if None
+            weights (list of `float`): optional. If assign different weights in the fitting for sample points.
+            bounds (k by 2 list of `float`): optional. If set bounds for each parameters to fit
+            bootstrap_depth (`int`): optional. Number of bootstrap to perform. No bootstrap if None
+            bs_return_size (`int`): optional. If only keep part of the bootstrap results for memory
+            resample_pct_res (`bool`):
+            missing_data_as_zero (`bool`): If treat missing value as zero. Default False
+            random_init (`bool`): If use random initialization between [0, 1] in optimization for each parameter, default True
+            metrics (`dict` of `callable`): optional. If calculate other metrics from estimated parameter. Has form
+              {
+                metric_name: callable_to_cal_metric_from_pd.Series
+            }
+
+        """
+        from ..fitting.fitting import BatchFitting
+        if seq_to_fit is None:
+            seq_to_fit = None
+        if weights is None:
+            weights = None
+        if bounds is None:
+            bounds = None
+        if bs_return_size is None:
+            bs_return_size = None
+        if metrics is None:
+            metrics = None
+        self.fitting = BatchFitting.from_SeqTable(
+            seq_table=self,
+            model=model,
+            seq_to_fit=seq_to_fit,
+            weights=weights,
+            bounds=bounds,
+            bootstrap_depth=bootstrap_depth,
+            bs_return_size=bs_return_size,
+            resample_pct_res=resample_pct_res,
+            missing_data_as_zero=missing_data_as_zero,
+            random_init=random_init,
+            metrics=metrics
+        )
+        self._logger.add_log('BatchFitting fitter added')
+
+    def save_as_dill(self, dirc):
+        import dill
+        with open(dirc, 'w') as handle:
+            handle.write(dill.dumps(self))
+
+    @staticmethod
+    def load_from_dill(dirc):
+        import dill
+        with open(dirc) as handle:
+            return dill.loads(handle.readline())
+
+
+class SeqFilter:
+
+    class Filter:
+        def __init__(self, func, value):
+            self.func = func
+            self.value = value
+
+    def __init__(self, seq_table, seq_length_range=None, max_edit_dist_to_seqs=None,
+                 min_occur_input=None, min_occur_reacted=None,
+                 min_counts_input=None, min_counts_reacted=None,
+                 min_rel_abun_input=None, min_rel_abun_reacted=None):
+        """
+        Filter object with some built-in filter options
+
+        Use `SeqFilter.filter_fn` to get the `callable` function
+
+        Use `SeqFilter.seq_to_keep` to get a list of sequences passed the filters
+
+        Args:
+            seq_table (`SeqTable`): the `SeqTable` instance to apply filters on
+            seq_length_range ([min, max]): only keep sequences within range [min, max]
+            max_edit_dist_to_seqs (`int`):
+            min_counts_input (`int`):
+            min_counts_reacted (`int`):
+            min_rel_abun_input (`float`): relative abundance is only based on valid sequences
+            min_rel_abun_reacted (`float`): relative abundance is only based on valid sequences
+        """
+
+        import numpy as np
+        import pandas as pd
+
+        self.seq_table = seq_table
+
+        if seq_length_range is not None:
+            self.seq_length_range = self.Filter(
+                func=lambda seq: seq_length_range[0] <= len(seq) <= seq_length_range[1],
+                value = seq_length_range)
+
+        if max_edit_dist_to_seqs is not None:
+            if isinstance(max_edit_dist_to_seqs, list) or isinstance(max_edit_dist_to_seqs, tuple):
+                max_edit_dist_to_seqs = {seq[0]: int(seq[1]) for seq in max_edit_dist_to_seqs}
+
+            def edit_dist_filter_fn(seq):
+                import Levenshtein
+                flag = True
+                for target, max_dist in max_edit_dist_to_seqs.items():
+                    flag = flag and Levenshtein.distance(seq, target) <= max_dist
+                return flag
+
+            self.max_edit_dist_to_seqs = self.Filter(
+                func=edit_dist_filter_fn,
+                value=max_edit_dist_to_seqs
+            )
+
+        if min_occur_input is not None:
+            self.min_occur_input = self.Filter(
+                func=lambda seq: np.sum(self.seq_table.count_table_input.loc[seq] > 0) >= min_occur_input,
+                value=min_occur_input
+            )
+        if min_occur_reacted is not None:
+            self.min_occur_reacted = self.Filter(
+                func=lambda seq: np.sum(self.seq_table.count_table_reacted.loc[seq] > 0) >= min_occur_reacted,
+                value=min_occur_reacted
+            )
+
+
+        if min_counts_input is not None:
+            self.min_counts_input = self.Filter(
+                func=lambda seq: self.seq_table.count_table_input.loc[seq].mean() >= min_counts_input,
+                value=min_counts_input
+            )
+
+        if min_counts_reacted is not None:
+            self.min_counts_reacted = self.Filter(
+                func=lambda seq: self.seq_table.count_table_reacted.loc[seq].mean() >= min_counts_reacted,
+                value=min_counts_reacted
+            )
+
+        if min_rel_abun_input is not None:
+            self.min_rel_abun_input = self.Filter(
+                func=lambda seq: (self.seq_table.count_table_input.loc[seq]/self.seq_table.count_table_input.sum(axis=0)).mean() >= min_rel_abun_input,
+                value=min_rel_abun_input
+            )
+
+        if min_rel_abun_reacted is not None:
+            self.min_rel_abun_reacted = self.Filter(
+                func=lambda seq: (self.seq_table.count_table_reacted.loc[seq]/self.seq_table.count_table_reacted.sum(axis=0)).mean() >= min_rel_abun_reacted,
+                value=min_rel_abun_reacted
+            )
+
+    def print_filters(self):
+        print('Following filter added:')
+        for filter,content in self.__dict__.items():
+            if isinstance(content, self.Filter):
+                print('\t{}:{}'.format(filter, content.value))
+
+    def apply_filters(self):
+        seq_to_keep = self.seq_table.count_table_reacted.index
+        self.seq_to_keep = seq_to_keep[seq_to_keep.map(self.filter_fn)]
+
+    @property
+    def filter_fn(self):
+        def _filter_fn(seq):
+            import numpy as np
+            flags = [filter.func(seq) for filter in self.__dict__.values()
+                     if isinstance(filter, self.Filter)]
+            return np.all(flags)
+        return _filter_fn
 
 
 
