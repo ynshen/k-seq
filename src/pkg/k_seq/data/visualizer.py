@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatch
-from . import pre_processing
+from . import seq_table
 from IPython.display import HTML
 
 

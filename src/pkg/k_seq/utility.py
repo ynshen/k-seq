@@ -87,15 +87,20 @@ class FunctionWrapper:
 
 
 class Logger:
+    """A simple logger to log data"""
 
-    def __init__(self):
+    def __init__(self, silent=False):
         import pandas as pd
         self.log = pd.DataFrame(columns=['Timestamp', 'Message'])
         self.log.set_index(['Timestamp'], inplace=True)
+        self._silent = silent
 
-    def add_log(self, message):
+    def add_log(self, message, show=False):
         from datetime import datetime
         self.log.loc[datetime.now()] = [message]
+        if (not self._silent) or show:
+            print(message)
+
 
 
 def get_file_list(file_root, pattern=None):

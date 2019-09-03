@@ -1,5 +1,5 @@
 import numpy as np
-import util
+# import util
 
 def func_default(x, A, k):
     """
@@ -103,8 +103,8 @@ def data_simulator_convergence_map(A_range, k_range, x, save_dir=None, percent_n
         'x': x,
         'y_tensor': data_tensor
     }
-    if save_dir:
-        util.dump_pickle(dataset_to_dump, save_dir,
-                         log='Simulated dataset for convergence map of k ({}), A ({}), with x:{} and percent_noise:{}'.format(k_range, A_range, x, percent_noise),
-                         overwrite=True)
+    # if save_dir:
+    #     util.dump_pickle(dataset_to_dump, save_dir,
+    #                      log='Simulated dataset for convergence map of k ({}), A ({}), with x:{} and percent_noise:{}'.format(k_range, A_range, x, percent_noise),
+    #                      overwrite=True)
     return dataset_to_dump
