@@ -19,4 +19,4 @@ __status__ = 'Developing'
 
 from . import utility
 from . import data
-from . import fitting
+from . import estimator

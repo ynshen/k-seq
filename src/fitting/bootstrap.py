@@ -1,5 +1,5 @@
 """
-This module contains the methods used for bootstrap fitting
+This module contains the methods used for bootstrap estimator
 """
 
 
@@ -8,11 +8,11 @@ def fitting(ydata, xdata, maxFold=None, fitMtd='trf', ciEst=True, alpha=0.479, f
     :param ydata: the y-value (reacted fraction), 1-D array
     :param xdata: the x-value, same shape as ydata
     :param maxFold: if the maximum reacted fraction can exceed the indicated value, default None
-    :param fitMtd: fitting method to use
+    :param fitMtd: estimator method to use
     :param ciEst: If the confidence interval will be estimated by bootstrapping
     :param alpha: degradation factor, default is measured factor for BYO
     :param func: func to fit, if None will fit to default exponential function
-    :return: seq with fitting results
+    :return: seq with estimator results
     """
     from scipy.optimize import curve_fit
     import numpy as np

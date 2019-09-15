@@ -1,18 +1,68 @@
-"""This module contains methods for data preprocessing from count files to ``CountFile`` for fitting
-TODOs:
+"""This module contains methods for data preprocessing from count files to ``CountFile`` for estimator
+TODO:
+  - use sparse matrix, to depricate SeqSampleSet
   - write output function for each class as JSON file
 """
 
 
-class SeqTable:
+class SeqTable(object):
     """This class contains the dataset of valid sequences extracted and aligned from a list of ``SeqSampleSet``
     """
 
-    def __init__(self, sample_set, remove_spike_in=True, note=None):
-        """Initialize from a ``SeqSampleSet`` instance
+    def __init__(self, data_mtx, data_type='count',
+                 seq_list=None, sample_info=None, sample_grouper=None,
+                 unit=None, note=None, silent=True):
+
+        """
+        todo:
+          - use hidden variable and seq/sample list for masking count table, amount table, dna amount
+        Initialize from a ``SeqSampleSet`` instance
         Find all valid sequences that occur at least once in any 'input' sample and once in any 'reacted' sample
+        """
+
+        from ..utility.log import Logger
+        import numpy as np
+        import pandas as pd
+
+        allowed_data_type = ['count', 'counts', 'read', 'reads', 'amount']
+        if data_type.lower() not in allowed_data_type:
+            raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_type))
+
+        self.logger = Logger(silent=silent)
+        self.logger.add('SeqTable created')
+
+        if isinstance(data_mtx, pd.DataFrame):
+            dtype = pd.SparseDtype(int, fill_value=0) if data_mtx in ['count', 'counts', 'reads'] else pd.SparseDtype(
+                float,
+                fill_value=0
+            )
+            self.data = data_mtx.astype(dtype)
+        elif isinstance(data_mtx, np.ndarray):
+            if seq_list is None:
+                raise ValueError('')
 
 
+
+
+
+        self.metadata = {}
+        if note:
+            self.metadata['note'] = note
+        self.dna_amount = None
+
+
+        from .visualizer import seq_occurrence_plot, rep_variability_plot
+        from ..utility.func_tools import FunctionWrapper
+        self.visualizer = FunctionWrapper(data=self,
+                                          functions=[
+                                              seq_occurrence_plot,
+                                              rep_variability_plot
+                                          ])
+
+    @classmethod
+    def from_SeqSampleSet(cls, sample_set,  sample_list=None, black_list=None, seq_list=None, with_spike_in=True,
+                          keep_all_seqs=False, use_count=False, note=None):
+        """
         Args:
 
             sample_set (`SeqSampleSet`): valid samples to convert to ``SequenceSet``
@@ -47,23 +97,60 @@ class SeqTable:
 
                 - valid_seq_count (int): total counts of valid sequences in this sample
 
-            count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples
-        """
-        from k_seq.utility import Logger
-        import numpy as np
+            count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples"""
+        import pandas as pd
 
-        self._logger = Logger()
-        self._logger.add_log('Dataset created')
-        self.metadata = {}
-        if note:
-            self.metadata['note'] = note
+        if sample_list is None:
+            sample_list = sample_set.sample_names
+        if black_list is not None:
+            sample_list = [sample for sample in sample_list if sample not in black_list]
+
+        input_samples = [sample for sample in sample_list if sample_set[sample].sample_type == 'input']
+        reacted_samples = [sample for sample in sample_list if sample_set[sample].sample_type == 'reacted']
+
+        if seq_list is None:
+            if keep_all_seqs:
+                seq_table = sample_set.to_dataframe(samples=sample_list,
+                                                    with_spike_in=with_spike_in,
+                                                    return_counts=use_count)
+            else:
+                seq_table = pd.merge(
+                    sample_set.to_dataframe(samples=input_samples,
+                                            with_spike_in=with_spike_in,
+                                            return_counts=use_count),
+                    sample_set.to_dataframe(samples=reacted_samples,
+                                            with_spike_in=with_spike_in,
+                                            return_counts=use_count),
+                    left_index=True, right_index=True, how='inner'
+                )
+        else:
+            seq_table = sample_set.to_dataframe(samples=sample_list,
+                                                seq_list=seq_list,
+                                                with_spike_in=with_spike_in,
+                                                return_counts=use_count)
+
+        if note is None:
+            note = sample_set.metadata['note']
+        # if return raw counts, need to get dna amount (corrected) as well
+        if use_count:
+
+            return cls(count_table=seq_table, input_samples=input_samples, reacted_samples=reacted_samples,
+                       metadata=sample_set.metadata.update(
+                           {'source_sample_set_summary': sample_set.summary().loc[sample_list]}
+                       ), note=note)
+        else:
+            return cls(amount_table=seq_table, input_samples=input_samples, reacted_samples=reacted_samples,
+                       metadata=sample_set.metadata.update(
+                           {'source_sample_set_summary': sample_set.summary().loc[sample_list]}
+                       ), note=note)
+
 
         # find valid sequence set
         self.metadata['remove_spike_in'] = remove_spike_in
         input_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'input',
-                                          with_spike_in=not(remove_spike_in))
+                                           with_spike_in=not remove_spike_in)
         reacted_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'reacted',
-                                            with_spike_in=not(remove_spike_in))
+                                            with_spike_in=not remove_spike_in)
         valid_set = set(input_set.index) & set(reacted_set.index)
         self.metadata['seq_nums'] = {
             'input_seq_num': input_set.shape[0],
@@ -86,13 +173,9 @@ class SeqTable:
             }
             self.sample_info[sample.name].update(sample_info_dict)
 
-        from .visualizer import seq_occurrence_plot, rep_variability_plot
-        from ..utility import FunctionWrapper
-        self.visualizer = FunctionWrapper(data=self,
-                                          functions=[
-                                              seq_occurrence_plot,
-                                              rep_variability_plot
-                                          ])
+
+
+
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
         """Calculate reacted fraction for sequences
@@ -145,7 +228,7 @@ class SeqTable:
         reacted_frac_table = reacted_frac_table.divide(input_amount_avg, axis=0)
         if inplace:
             self.reacted_frac_table = reacted_frac_table
-            self._logger.add_log('reacted_frac_tabled added using {} as input average'.format(input_average))
+            self.logger.add('reacted_frac_tabled added using {} as input average'.format(input_average))
         else:
             return reacted_frac_table
 
@@ -224,11 +307,11 @@ class SeqTable:
                     bootstrap_depth=0, bs_return_size=None,
                     resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None):
         """
-        Add a `k_seq.fitting.BatchFitting` instance to SeqTable for fitting
+        Add a `k_seq.estimator.BatchFitting` instance to SeqTable for estimator
         Args:
             model (`callable`): the model to fit
             seq_to_fit (list of `str`): optional. All the sequences will be fit if None
-            weights (list of `float`): optional. If assign different weights in the fitting for sample points.
+            weights (list of `float`): optional. If assign different weights in the estimator for sample points.
             bounds (k by 2 list of `float`): optional. If set bounds for each parameters to fit
             bootstrap_depth (`int`): optional. Number of bootstrap to perform. No bootstrap if None
             bs_return_size (`int`): optional. If only keep part of the bootstrap results for memory
@@ -241,7 +324,7 @@ class SeqTable:
             }
 
         """
-        from ..fitting.fitting import BatchFitting
+        from ..estimator.least_square import BatchFitting
         if seq_to_fit is None:
             seq_to_fit = None
         if weights is None:
@@ -265,7 +348,7 @@ class SeqTable:
             random_init=random_init,
             metrics=metrics
         )
-        self._logger.add_log('BatchFitting fitter added')
+        self.logger.add('BatchFitting fitter added')
 
     def save_as_dill(self, dirc):
         import dill

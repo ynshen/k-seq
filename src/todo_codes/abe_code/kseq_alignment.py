@@ -354,7 +354,7 @@ def readAll(firstLoc, otherLoc, firstMin, otherMin, peakCtrs=False, searchList=[
     return (masterCounts, masterUniques, masterTotals)
 
 def printCounts(outLoc, counts, uniqs, tots, firstLoc, otherLoc, separator='\t', fitAvg=[], centerSeq='', normByInit=False, compact=False, replaceCounts=False):
-    # main function for fitting
+    # main function for estimator
     # ----------define type of calculation and output heading
     if compact == 1:
         line0 = firstLoc

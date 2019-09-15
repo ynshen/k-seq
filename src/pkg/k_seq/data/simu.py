@@ -17,7 +17,7 @@ def y_value_simulator(params, x_true, model=None, percent_noise=0.2,
 
     :param params: a list of parameters used in the function
     :param x_true: a list of true values for x
-    :param func: callable, function used to fit, default Abe's BYO fitting function
+    :param func: callable, function used to fit, default Abe's BYO estimator function
     :param percent_noise: percent standard deviation of normal noise, real value or a list of real value with same order
                           of x_true for its corresponding y (Default value = 0.2)
     :param replicates: int, number of replicates for each x value (Default value = 1)

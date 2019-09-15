@@ -52,10 +52,10 @@ def main():
     )
     print('Reacted fraction calculated')
 
-    # fitting
-    print('Start fitting valide sequences...')
+    # estimator
+    print('Start estimator valide sequences...')
     fitting.fitting_sequence_set(sequence_set=sequence_set_test, inplace=True, parallel_threads=6)
 
-    # TODO: save fitting results
+    # TODO: save estimator results
 
 

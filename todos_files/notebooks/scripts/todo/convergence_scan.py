@@ -91,6 +91,6 @@ if __name__ == '__main__':
 
     util.dump_pickle(convMtx,
                      '/mnt/storage/projects/ribozyme_predict/data/k_seq/fit_simu/convergence_scan_err%.2f_x%.1e-%.1e_allRes.pkl' %(err, xTrue[0], xTrue[-1]),
-                     log='Scan the convergence of k (res 100), A (res 100), each (k,A) sampled 10 datasets for 10 fittings with selected concentration %s, all fitting results preserved' %xTrue,
+                     log='Scan the convergence of k (res 100), A (res 100), each (k,A) sampled 10 datasets for 10 fittings with selected concentration %s, all estimator results preserved' %xTrue,
                      overwrite=True)
     print('Code finish running in %f' %(time.time()-timeStart))

@@ -7,7 +7,7 @@ This module contain methods for k-seq calculation
 
 def get_seqToFit(initDirc, sampleDircList, validSampleList):
     """
-    This function generate a list of sequences that will pass to fitting
+    This function generate a list of sequences that will pass to estimator
     Three steps: 1) create candidate list; 2) align each sample to candidate list; 3) select sequences with interests
     :param initDirc: directory to the count file of initial pool
     :param sampleDircList: FULL list of directories to all k-seq samples
@@ -17,7 +17,7 @@ def get_seqToFit(initDirc, sampleDircList, validSampleList):
     [[replicates in time/concentration point 1],
      [replicates in time/concentration point 2],
      ...]
-    :return seqToFit: a list of sequences will be used in fitting
+    :return seqToFit: a list of sequences will be used in estimator
     """
 
     import numpy as np
@@ -91,7 +91,7 @@ def get_seqToFit(initDirc, sampleDircList, validSampleList):
 
 def get_normalized_fraction(seqToFit, sampleTotals, qFactors):
     """
-    :param seqToFit: list of sequences will pass to fitting
+    :param seqToFit: list of sequences will pass to estimator
     :param sampleTotals: list of total counts of reads in samples
     :param qFactors:
     :return:

@@ -1,5 +1,5 @@
 def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-    from .fitting import SingleFitting, BatchFitting
+    from .least_square import SingleFitting, BatchFitting
     from ..data.seq_table import SeqTable
 
     def extract_info_from_SingleFitting(single_res):
@@ -150,7 +150,7 @@ def param_value_plot(fitting_res, param, with_ci=True, show_point_est=False, use
 
     import matplotlib.pyplot as plt
     import numpy as np
-    from .fitting import BatchFitting
+    from .least_square import BatchFitting
     from ..data.seq_table import SeqTable
 
     def plot_with_shade(ax, x, center, high, low):
