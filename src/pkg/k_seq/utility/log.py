@@ -20,6 +20,13 @@ class Logger:
         if (not self._silent) or show:
             print(message)
 
+    def merge_from(self, logger_list):
+        if isinstance(logger_list, Logger):
+            logger_list = [logger_list]
+        for logger in logger_list:
+            self.log = self.log.append(logger.log)
+        self.log.sort_index(inplace=True)
+
     def to_json(self):
         return self.log.to_json(orient='index')
 
