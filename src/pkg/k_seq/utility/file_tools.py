@@ -1,31 +1,48 @@
 
-def get_file_list(file_root, pattern=None):
-    """list all files under the given file root, folders are not included
+def get_file_list(file_root, pattern=None, black_list=None, full_path=None):
+    """list all files under the given file root(s) follows the pattern if given, folders are not included
 
     Args:
-        file_root (str): root directory
+        file_root (`str` of list of `str`): root directory or a list of root directory
 
-        pattern (str): optional, only include the files with the substring
+        pattern (`str`): optional, include all the files under directories if None
 
-        full_directory (bool): return full directory instead of name if True
+        black_list (list of `str`): optional, file name include substring in black list will be excluded
+
+        full_path (`bool`): if return the full path or only name of the file, by default, if file_root is one string,
+          only file name will be returned; if file_root contains multiple strings, full path will be returned
 
     Returns:
-        list of str: list of file names/full directory
+        list of `str`: list of file names/full directory
     """
 
-    import glob
     from pathlib import Path
 
-    if not pattern:
-        pattern = ''
-    if full_directory:
-        file_list = [file_name for file_name in glob.glob("{}/*{}*".format(file_root, pattern)) if not '@' in file_name]
+    if pattern is None:
+        pattern = '*'
     else:
-        file_list = [file_name[file_name.rfind('/')+1:]
-                     for file_name in glob.glob("{}/*{}*".format(file_root, pattern))
-                     if not '@' in file_name]
-    file_list.sort()
-    return file_list
+        pattern  = '*{}*'.format(pattern)
+
+    if black_list is None:
+        black_list = []
+
+    if isinstance(file_root, str):
+        if full_path is None:
+            full_path = False
+        file_list = [file for file in Path(file_root).glob(pattern) if file.name not in black_list]
+    elif isinstance(file_root, list):
+        if full_path is None:
+            full_path = True
+        file_list = []
+        for root_path in file_root:
+            file_list += [file for file in Path(root_path).glob(pattern) if file.name not in black_list]
+    else:
+        raise TypeError('file_root should be string or list of string')
+
+    if full_path:
+        return [str(file) for file in file_list]
+    else:
+        return [file.name for file in file_list]
 
 
 def extract_metadata(target, pattern):

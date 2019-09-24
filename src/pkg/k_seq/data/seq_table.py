@@ -1,8 +1,30 @@
 """This module contains methods for data preprocessing from count files to ``CountFile`` for estimator
 TODO:
-  - use sparse matrix, to depricate SeqSampleSet
+  - use sparse matrix, to deprecate SeqSampleSet
   - write output function for each class as JSON file
 """
+
+from ..utility.func_tools import DictToAttr
+
+
+class Metadata(DictToAttr):
+
+    def __init__(self, attr_dict):
+        self.dataset = None
+        self.logger = None
+        self.samples = None
+        self.sequences = None
+        super().__init__(attr_dict)
+
+
+class Grouper(DictToAttr):
+
+    def __init__(self, attr_dict):
+        super().__init__(attr_dict=attr_dict)
+
+    def get_table(self, group):
+        """todo: implement the methods to directly get table"""
+        pass
 
 
 class SeqTable(object):
@@ -10,7 +32,7 @@ class SeqTable(object):
     """
 
     def __init__(self, data_mtx, data_type='count',
-                 seq_list=None, sample_info=None, sample_grouper=None,
+                 seq_list=None, sample_list=None, sample_grouper=None,
                  unit=None, note=None, silent=True):
 
         """
@@ -24,45 +46,151 @@ class SeqTable(object):
         import numpy as np
         import pandas as pd
 
-        allowed_data_type = ['count', 'counts', 'read', 'reads', 'amount']
-        if data_type.lower() not in allowed_data_type:
-            raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_type))
+        allowed_data_type_mapper = {'count': 'count',
+                                    'counts': 'count',
+                                    'read': 'count',
+                                    'reads': 'count',
+                                    'amount': 'amount'}
+        if data_type.lower() not in allowed_data_type_mapper.keys():
+            raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_type_mapper.keys()))
 
-        self.logger = Logger(silent=silent)
-        self.logger.add('SeqTable created')
+        from datetime import datetime
+        self.metadata = Metadata({
+            'dataset': {
+                'time': datetime.now(),
+                'dtype': allowed_data_type_mapper[data_type],
+                'note': note,
+                'unit':unit
+            },
+            'logger': Logger(silent=silent),
+            'samples': None,
+            'sequences': None
+        })
+
+        self.metadata.logger.add('SeqTable created')
 
         if isinstance(data_mtx, pd.DataFrame):
-            dtype = pd.SparseDtype(int, fill_value=0) if data_mtx in ['count', 'counts', 'reads'] else pd.SparseDtype(
+            dtype = pd.SparseDtype(int, fill_value=0) if self.metadata.dataset['dtype'] == 'count' else pd.SparseDtype(
                 float,
                 fill_value=0
             )
-            self.data = data_mtx.astype(dtype)
+            self._raw_table = data_mtx.astype(dtype)
+            self.seq_list = self._raw_table.index.to_series()
+            self.sample_list = self._raw_table.columns.to_series()
+            if sample_list is not None:
+                if isinstance(sample_list, dict):
+                    self.metadata.samples = sample_list
+                elif isinstance(sample_list, list):
+                    pass
+                else:
+                    raise TypeError('sample_list needs to be a list of sample names or a dictionary of sample metadata')
+
+            if seq_list is not None:
+                if isinstance(seq_list, dict):
+                    self.metadata.sequences = seq_list
+                elif isinstance(seq_list, list):
+                    pass
+                else:
+                    raise TypeError('seq_list needs to be a list of sample names or a dictionary of sample metadata')
+            self.metadata.logger.add('Data value imported from Pandas DataFrame, dtype={}'.format(
+                self.metadata.dataset['dtype']
+            ))
         elif isinstance(data_mtx, np.ndarray):
-            if seq_list is None:
-                raise ValueError('')
+            if (seq_list is None) or (sample_list is None):
+                raise ValueError('seq_list and sample_list must be indicated if using Numpy array')
+            else:
+                if isinstance(sample_list, dict):
+                    self.metadata.samples = sample_list
+                    sample_list = sample_list.keys()
+                elif isinstance(sample_list, list):
+                    pass
+                else:
+                    raise TypeError('sample_list needs to be a list of sample names or a dict of sample metadata')
 
+                if isinstance(seq_list, dict):
+                    self.metadata.sequences = seq_list
+                    seq_list = seq_list.keys()
+                elif isinstance(seq_list, list):
+                    pass
+                else:
+                    raise TypeError('seq_list needs to be a list of sample names or a dict of sample metadata')
+                self._raw_table = pd.DataFrame(pd.SparseArray(data_mtx, fill_value=0),
+                                               columns=sample_list,
+                                               index=seq_list)
+                self.metadata.logger.add('Data value imported from Numpy array, dtype={}'.format(
+                    self.metadata.dataset['dtype']
+                ))
 
+        if isinstance(sample_grouper, Grouper):
+            self.grouper = sample_grouper
+        else:
+            self.grouper = Grouper(sample_grouper)
 
+        # from .visualizer import seq_occurrence_plot, rep_variability_plot
+        # from ..utility.func_tools import FuncToMethod
+        # self.visualizer = FuncToMethod(obj=self,
+        #                                functions=[
+        #                                    seq_occurrence_plot,
+        #                                    rep_variability_plot
+        #                                ])
 
+    @property
+    def table(self):
+        return self._raw_table.loc[self.seq_list][self.sample_list]
 
-        self.metadata = {}
-        if note:
-            self.metadata['note'] = note
-        self.dna_amount = None
+    def add_norm_table(self, norm_fn, table_name, axis=0):
+        self.__dict__[table_name] = self.table.apply(norm_fn, axis=axis)
 
+    def filter_value(self, filter_fn, axis=0, inplace=True):
+        "implement the elementwise filter for values, axis=-1 for elementwise, "
+        pass
 
-        from .visualizer import seq_occurrence_plot, rep_variability_plot
-        from ..utility.func_tools import FunctionWrapper
-        self.visualizer = FunctionWrapper(data=self,
-                                          functions=[
-                                              seq_occurrence_plot,
-                                              rep_variability_plot
-                                          ])
+    def filter_axis(self, filter, axis='sample', inplace=True):
+        allowed_axis = {
+            'sample': 'sample',
+            'observation': 'sample',
+            1: 'sample',
+            'seq': 'sequence',
+            'sequences': 'sequence',
+            'seqs': 'sequences',
+            0: 'sequences'
+        }
+        if isinstance(axis, str):
+            axis = axis.lower()
+        if axis not in allowed_axis.keys():
+            raise ValueError('Unknown axis, please use sample or sequence')
+        else:
+            axis = allowed_axis[axis]
+        if axis == 'sample':
+            handle = self.sample_list.copy()
+        else:
+            handle = self.seq_list.copy()
+        if callable(filter):
+            handle = handle[handle.map(filter)]
+        elif isinstance(filter, list):
+            handle = handle[handle.isin(filter)]
+        
+        if inplace:
+            obj = self
+        else:
+            from copy import deepcopy
+            obj = deepcopy(self)
+        if axis == 'sample':
+            obj.sample_list = handle
+        else:
+            obj.seq_list = handle
+        if not inplace:
+            return obj
+
+    @classmethod
+    def from_count_files(cls):
+        """todo: implement the method to generate directly from count files"""
 
     @classmethod
     def from_SeqSampleSet(cls, sample_set,  sample_list=None, black_list=None, seq_list=None, with_spike_in=True,
                           keep_all_seqs=False, use_count=False, note=None):
         """
+        todo: move this to SeqSampleSet as to_SeqTable
         Args:
 
             sample_set (`SeqSampleSet`): valid samples to convert to ``SequenceSet``
@@ -131,7 +259,7 @@ class SeqTable(object):
 
         if note is None:
             note = sample_set.metadata['note']
-        # if return raw counts, need to get dna amount (corrected) as well
+        # if return raw counts, need to get  dna amount (corrected) as well
         if use_count:
 
             return cls(count_table=seq_table, input_samples=input_samples, reacted_samples=reacted_samples,
@@ -172,9 +300,6 @@ class SeqTable(object):
                 'valid_seqs_counts': np.sum(sequences.loc[list(set(sequences.index.values) & valid_set)]['counts'])
             }
             self.sample_info[sample.name].update(sample_info_dict)
-
-
-
 
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
@@ -263,45 +388,6 @@ class SeqTable(object):
         )
         return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
 
-    def filter_seq(self, seq_to_keep=None, filter_fn=None, update_all=True, inplace=True, return_id_only=False):
-        """Filter sequence in dataset
-        In current version, only ``count_table`` and ``reacted_frac_table`` will change if applicable
-        Other meta info will keep the same
-
-        Args:
-            seq_to_keep (list of str): sequences to keep
-            inplace: change in place if True
-
-        Returns: Return a new SequenceSet object with only ``seq_to_keep`` if inplace is False
-
-        """
-        import pandas as pd
-
-        if seq_to_keep is None:
-            master_table = pd.concat([self.count_table_input, self.count_table_reacted], axis=1)
-            if callable(filter_fn):
-                seq_to_keep = master_table.index[master_table.apply(filter_fn, axis=1)]
-            elif isinstance(filter_fn, SeqFilter):
-                seq_to_keep = filter_fn.seq_to_keep
-
-        if inplace:
-            table_to_use = self
-        else:
-            import copy
-            table_to_use = copy.deepcopy(self)
-
-        if update_all:
-            table_to_use.count_table_input = table_to_use.count_table_input.loc[seq_to_keep]
-            table_to_use.count_table_reacted = table_to_use.count_table_reacted.loc[seq_to_keep]
-
-        if hasattr(table_to_use, 'reacted_frac_table'):
-            table_to_use.reacted_frac_table = table_to_use.reacted_frac_table.loc[seq_to_keep]
-
-        if not inplace:
-            if return_id_only:
-                return table_to_use.index
-            else:
-                return table_to_use
 
     def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
                     bootstrap_depth=0, bs_return_size=None,

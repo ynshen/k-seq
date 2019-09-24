@@ -20,7 +20,7 @@ setup(
         'seaborn',
         'jupyter',
 	'dill',
-	'jsonlib-python3'
+	'jsonlib-python3', 'statsmodels'
     ],
     zip_safe=False
 )

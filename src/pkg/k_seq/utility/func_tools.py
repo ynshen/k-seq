@@ -1,5 +1,5 @@
 
-def get_args_params(func, exclude_x=True):
+def get_func_params(func, exclude_x=True):
     """
     Utility function to get the number of arguments for a function (callable)
     Args:
@@ -17,57 +17,40 @@ def get_args_params(func, exclude_x=True):
         return arg_tuple
 
 
-class FunctionWrapper:
+class FuncToMethod(object):
+    """Convert a set of functions to a collection of methods on the object"""
 
     @staticmethod
-    def _wrap_function(func, data):
+    def _wrap_function(func, obj=None):
         from functools import partial, update_wrapper
-        wrapped = partial(func, data)
-        update_wrapper(wrapped, func)
-        return wrapped
+        if obj is None:
+            return func
+        else:
+            wrapped = partial(func, obj)
+            update_wrapper(wrapped, func)
+            return wrapped
 
-    def __init__(self, data, functions):
+    def __init__(self, functions, obj=None):
         if callable(functions):
             functions = [functions]
 
-        from functools import partial, update_wrapper
-
         self.__dict__.update({
-            func.__name__: self._wrap_function(func, data) for func in functions
+            func.__name__: self._wrap_function(func, obj=obj) for func in functions
         })
 
 
-class DotDict(dict):
-    """A dict with dot access and autocompletion. The snippet get from git/globor
+class DictToAttr(object):
+    """Convert a dictionary to a group of attributes"""
 
-    The idea and most of the code was taken from
-    http://stackoverflow.com/a/23689767,
-    http://code.activestate.com/recipes/52308-the-simple-but-handy-collector-of-a-bunch-of-named/
-    http://stackoverflow.com/questions/2390827/how-to-properly-subclass-dict-and-override-get-set
-    """
+    def __init__(self, attr_dict):
+        if isinstance(attr_dict, dict):
+            self.__dict__.update(attr_dict)
+        else:
+            raise TypeError('attr_dict needs to be dictionary')
 
-    def __init__(self, *a, **kw):
-        dict.__init__(self)
-        self.update(*a, **kw)
-        self.__dict__ = self
+    def __getitem__(self, item):
+        return self.__getattribute__(item)
 
-    def __setattr__(self, key, value):
-        if key in dict.__dict__:
-            raise AttributeError('This key is reserved for the dict methods.')
-        dict.__setattr__(self, key, value)
+    def add(self, attr_dict):
+        self.__dict__.update(attr_dict)
 
-    def __setitem__(self, key, value):
-        if key in dict.__dict__:
-            raise AttributeError('This key is reserved for the dict methods.')
-        dict.__setitem__(self, key, value)
-
-    def update(self, *args, **kwargs):
-        for k, v in dict(*args, **kwargs).iteritems():
-            self[k] = v
-
-    def __getstate__(self):
-        return self
-
-    def __setstate__(self, state):
-        self.update(state)
-        self.__dict__ = self

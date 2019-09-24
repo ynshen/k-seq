@@ -8,7 +8,7 @@
 """
 
 from . import io, visualizer, simu
-from .count_file import SeqSample, SeqSampleSet
+from .count_file import CountFile, SeqSampleSet
 from .seq_table import SeqTable, SeqFilter
 
 print('data reloaded')

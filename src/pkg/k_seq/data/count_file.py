@@ -28,7 +28,6 @@ class CountFile(object):
 
 
     TODO:
-     - add to count to series, add sample info to dict
      - update docstrings (attributes, method docstrings)
 
     """
@@ -122,6 +121,7 @@ class CountFile(object):
             self.metadata.update(metadata)
         else:
             self.name = file_path.name
+            self.metadata.update(metadata)
 
         if 'input' in self.name.lower() or 'init' in self.name.lower():
             # Primary: if input or init exist
@@ -170,6 +170,31 @@ class CountFile(object):
         # from .visualizer import length_dist_plot_single, sample_count_cut_off_plot_single
         # self.visualizer = FunctionWrapper(data=self, functions=[length_dist_plot_single,
         #                                                         sample_count_cut_off_plot_single])
+
+    @classmethod
+    def load_test_sample(cls, dataset='byo'):
+        if dataset.lower() in ['byo']:
+            kwargs = {
+                'file_path': '/mnt/storage/projects/k-seq/input/byo_counts/counts-1A.txt',
+                'x_value': 250,
+                'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
+                'spike_in_amount': 1,
+                'spike_in_dia': 2,
+                'unit': 'ng',
+                'metadata': {}
+            }
+        elif dataset.lower() in ['bfo']:
+            kwargs = {
+                'file_path': '/mnt/storage/projects/k-seq/input/bfo_counts/counts/R4A-inputA_S1_counts.txt',
+                'x_value': 'byo',
+                'name_pattern': 'R4[{exp_rep}-{byo, float}{seq_rep}]_S{id, int}_counts.txt',
+                'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
+                'spike_in_amount': 4130,
+                'unit': 'fmol'
+            }
+        else:
+            raise NotImplementedError(f'dataset {dataset} is not implemented')
+        return cls(**kwargs)
 
     @property
     def dna_amount(self):
@@ -231,8 +256,7 @@ class CountFile(object):
             summary = summary.append(pd.Series(data=[self._dna_amount],
                                                index=['dna amount{}'.format(
                                                    '' if self.unit is None else '({})'.format(self.unit)
-                                               )])
-                                     )
+                                               )]))
         if self.spike_in is not None:
             summary = summary.append(self.spike_in.to_series(verbose=False))
         return summary
@@ -289,6 +313,7 @@ class CountFile(object):
             else:
                 mask = ~self.sequences.index.isin(self.spike_in.members)
                 return self.sequences.loc[mask]['amount']
+
 
 
 class SpikeIn(object):
@@ -530,7 +555,8 @@ class SeqSampleSet(object):
                  spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, unit=None, dna_amount=None,
                  sort_by=None, load_data=False,
                  silent=True, note=None):
-        """Initialize by linking count files under a root folder into :func:`~SeqSample` objects
+        """Initialize by linking count files under a root folder into :func:`~CountFile` objects
+
 
         Args:
             file_root (`str`): directory to the root folder for count files
@@ -563,21 +589,7 @@ class SeqSampleSet(object):
         from pathlib import Path
         from .. import utility
 
-        def get_file_list(file_root, file_list, file_pattern, black_list):
-            """parse a list of file to import"""
-            if file_root is None:
-                if file_list is None:
-                    raise ValueError('Please indicate either file_root or file_list')
-                else:
-                    return file_list
-            else:
-                if file_list is None:
-                    file_list = [str(file) for file in Path(file_root).glob('*{}*'.format(file_pattern))
-                                 if file.name not in black_list]
-                    self._logger.add_log("No sample list is given, samples are collected from root folder:\n\t".format(file_root))
-                else:
-                    file_list = [str(Path(file_root).joinpath(file)) for file in file_list]
-                return file_list
+
 
         self._logger = utility.Logger(silent=silent)
         self._logger.add_log('Dataset initialized{}'.format('' if file_root is None else ' from {}'.format(file_root)))
