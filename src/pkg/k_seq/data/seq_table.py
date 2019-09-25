@@ -31,9 +31,9 @@ class SeqTable(object):
     """This class contains the dataset of valid sequences extracted and aligned from a list of ``SeqSampleSet``
     """
 
-    def __init__(self, data_mtx, data_type='count',
+    def __init__(self, data_mtx, data_unit='count',
                  seq_list=None, sample_list=None, sample_grouper=None,
-                 unit=None, note=None, silent=True):
+                 x_unit=None, note=None, silent=True):
 
         """
         todo:
@@ -43,24 +43,25 @@ class SeqTable(object):
         """
 
         from ..utility.log import Logger
+        from ..utility import allowed_units
         import numpy as np
         import pandas as pd
 
-        allowed_data_type_mapper = {'count': 'count',
+        allowed_data_unit_mapper = {'count': 'count',
                                     'counts': 'count',
                                     'read': 'count',
                                     'reads': 'count',
-                                    'amount': 'amount'}
-        if data_type.lower() not in allowed_data_type_mapper.keys():
-            raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_type_mapper.keys()))
+                                    'amount': 'amount'}.update({unit:unit for unit in allowed_units})
+        if data_unit.lower() not in allowed_data_unit_mapper.keys():
+            raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_unit_mapper.keys()))
 
         from datetime import datetime
         self.metadata = Metadata({
             'dataset': {
                 'time': datetime.now(),
-                'dtype': allowed_data_type_mapper[data_type],
+                'data_unit': allowed_data_unit_mapper[data_unit],
                 'note': note,
-                'unit':unit
+                'x_unit': x_unit
             },
             'logger': Logger(silent=silent),
             'samples': None,
@@ -70,11 +71,16 @@ class SeqTable(object):
         self.metadata.logger.add('SeqTable created')
 
         if isinstance(data_mtx, pd.DataFrame):
-            dtype = pd.SparseDtype(int, fill_value=0) if self.metadata.dataset['dtype'] == 'count' else pd.SparseDtype(
-                float,
-                fill_value=0
-            )
-            self._raw_table = data_mtx.astype(dtype)
+            if not data_mtx.apply(pd.api.types.is_sparse).all():
+                # convert to sparse data
+                if self.metadata.dataset['data_unit'] in ['count']:
+                    dtype = pd.SparseDtype('int', fill_value=0)
+                else:
+                    dtype = pd.SparseDtype('float', fill_value=0.0)
+                self._raw_table = data_mtx.astype(dtype)
+            else:
+                self._raw_table = data_mtx
+
             self.seq_list = self._raw_table.index.to_series()
             self.sample_list = self._raw_table.columns.to_series()
             if sample_list is not None:
@@ -435,6 +441,16 @@ class SeqTable(object):
             metrics=metrics
         )
         self.logger.add('BatchFitting fitter added')
+
+    @classmethod
+    def load_count_files(cls, folder_path, x_values, file_pattern=None, name_pattern=None, file_list=None, black_list=None,
+                         x_unit=None, dna_unit=None,
+                         spike_in_seq=None, spike_in_amount=None, spike_in_dia=None, ):
+        """To accommodate for exploratery needs, this will be a wrapper for `count_file.CountFileSet"""
+        note = f'Loaded from {folder_path}'
+
+
+
 
     def save_as_dill(self, dirc):
         import dill

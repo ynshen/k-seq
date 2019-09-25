@@ -49,7 +49,7 @@ class CountFile(object):
     def __repr__(self):
         return f'Sample {self.name}'
 
-    def __init__(self, file_path, x_value, name_pattern=None,
+    def __init__(self, file_path, x_value=None, name_pattern=None,
                  spike_in_seq=None, spike_in_amount=None, spike_in_dia=2,
                  dna_amount=None, x_unit=None, dna_unit=None, load_data=False,
                  silent=True, metadata=None, **kwargs):
@@ -119,7 +119,7 @@ class CountFile(object):
         file_path = Path(file_path)
         if not file_path.is_file():
             raise ValueError('file_path is not a valid file')
-        self.metadata['file_path'] = str(file_path)
+        self.metadata['file_path'] = file_path
         self.logger.add("Initialize a sample from {}".format(self.metadata['file_path']))
         self.unique_seqs = None
         self.total_counts = None
@@ -139,6 +139,8 @@ class CountFile(object):
             self.name = file_path.name
             self.metadata.update(metadata)
 
+        if x_value is None:
+            x_value = np.nan
         if 'input' in self.name.lower() or 'init' in self.name.lower():
             # Primary: if input or init exist
             self.sample_type = 'input'
@@ -264,7 +266,7 @@ class CountFile(object):
                                 spike_in_dia=spike_in_dia,
                                 unit=unit)
 
-    def seq_counts(self, remove_spike_in=True, seq_list=None):
+    def seq_counts(self, remove_spike_in=True, seq_list=None, sparse=True):
         """Return raw sequence counts
 
         Args:
@@ -274,18 +276,23 @@ class CountFile(object):
         Returns:
             a `pd.Series` with counts as value and seq as index
         """
+        import pandas as pd
+
         if self.sequences is None:
             raise ValueError('No sample data')
         if seq_list is not None:
-            return self.sequences['counts'].reindex(seq_list)
+            counts = self.sequences['counts'].reindex(seq_list)
         else:
             if remove_spike_in:
                 mask = ~self.sequences.index.isin(self.spike_in.members)
-                return self.sequences.loc[mask]['counts']
+                counts = self.sequences.loc[mask]['counts']
             else:
-                return self.sequences['counts']
+                counts = self.sequences['counts']
+        if sparse:
+            counts.astype(pd.SparseDtype(int, fill_value=0))
+        return counts
 
-    def seq_amount(self, remove_spike_in=True, seq_list=None):
+    def seq_amount(self, remove_spike_in=True, seq_list=None, sparse=True):
         """Return absolute amount of sequences, usually not used
 
         Args:
@@ -296,22 +303,25 @@ class CountFile(object):
             a `pd.Series` with amount as value and seq as index
 
         """
+        import pandas as pd
         if self.sequences is None:
             raise ValueError('No sample data')
-
         if 'amount' not in self.sequences.columns:
             if self.norm_factor is not None:
                 self.sequences['amount'] = self.sequences['counts'] * self.norm_factor
             else:
                 raise ValueError('Can not normalize counts')
         if seq_list is not None:
-            return self.sequences['amount'].reindex(seq_list)
+            amounts = self.sequences['amount'].reindex(seq_list)
         else:
             if remove_spike_in:
                 mask = ~self.sequences.index.isin(self.spike_in.members)
-                return self.sequences.loc[mask]['amount']
+                amounts = self.sequences.loc[mask]['amount']
             else:
-                return self.sequences['amount']
+                amounts = self.sequences['amount']
+        if sparse:
+            amounts.astype(pd.SparseDtype(float, fill_value=0))
+        return amounts
 
     def to_series(self, verbose=False):
         """Return a series as summary of the sample, including:
@@ -336,7 +346,7 @@ class CountFile(object):
                               '' if self.metadata['dna_unit'] is None else '({})'.format(self.metadata['dna_unit'])
                           )])
             )
-        if self.spike_in is not None:
+        if self.sequences is not None and self.spike_in is not None:
             summary = summary.append(self.spike_in.to_series(verbose=verbose))
         return summary
 
@@ -495,13 +505,10 @@ class SpikeIn(object):
         """Survey count of sequences around spike up to a given diameter (edit distance).
 
         Args:
-
             diameter (`int`): the maximum distance to survey
-
             accumulate (`bool`): if return the accumulated count to distance i
 
         Returns:
-
             A `pd.Series` of [accumulated] seq counts at different edit distance
         """
 
@@ -609,7 +616,7 @@ def read_count_file(file_path, as_dict=False):
         return unique_seqs, total_counts, pd.DataFrame.from_dict(sequence_counts, orient='index', columns=['counts'])
 
 
-class SeqSampleSet(object):
+class CountFileSet(object):
     """Object to load and store a set of samples
     todo:
       - add to seq table
@@ -617,7 +624,7 @@ class SeqSampleSet(object):
     """
 
     def __repr__(self):
-        return "k-seq samples, {} samples,\n\tNote: {}".format(len(self.samples), self.metadata['note'])
+        return f"Count files from {len(self.samples)} samples\n\tNote: {self.metadata['note']}"
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -629,11 +636,15 @@ class SeqSampleSet(object):
                 return [self._sample_indexer[key] for key in item]
         raise TypeError('Index should be either int, string (sample name), or list of string')
 
-    def __init__(self, x_values, file_root=None, file_list=None, file_pattern=None, black_list=None, name_pattern=None,
-                 spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, unit=None, dna_amount=None,
-                 sort_by=None, load_data=False,
-                 silent=True, note=None):
-        """Initialize by linking count files under a root folder into :func:`~CountFile` objects
+    def __init__(self, file_root, x_values=None, file_list=None, file_pattern=None, black_list=None, name_pattern=None,
+                 spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, x_unit=None, dna_unit=None, dna_amount=None,
+                 sort_by=None, load_data=False, silent=True, metadata=None, note=None):
+        """
+        todo:
+          update this docstring
+          survey files first, add x_values later
+
+        Initialize by linking count files under a root folder into :func:`~CountFile` objects
 
 
         Args:
@@ -664,103 +675,101 @@ class SeqSampleSet(object):
             silent (boolean): don't print process if True
 
         """
-        from pathlib import Path
-        from .. import utility
+        from ..utility.log import Logger
+        from ..utility.file_tools import get_file_list
+        from ..utility.func_tools import param_to_dict
 
+        self.logger = Logger(silent=silent)
+        self.logger.add('Dataset initialized{}'.format('' if file_root is None else ' from {}'.format(file_root)))
+        self.silent = silent
 
-        self._logger = utility.Logger(silent=silent)
-        self._logger.add('Dataset initialized{}'.format('' if file_root is None else ' from {}'.format(file_root)))
-        self._silent = silent
+        file_list = get_file_list(file_root=file_root, file_list=file_list,
+                                  pattern=file_pattern, black_list=black_list, full_path=True)
+        self.file_list = file_list
+        file_names = [file.name for file in file_list]
+
+        if sort_by is not None:
+            # pre-run sample creation to extract sample info and sort samples
+            sample_params = param_to_dict(key_list=file_names,
+                                          file_path=file_list, x_value=x_values, name_pattern=name_pattern,
+                                          spike_in_seq=None, spike_in_amount=None,
+                                          spike_in_dia=None, dna_amount=dna_amount, x_unit=None,
+                                          dna_unit=None, load_data=False, silent=True, metadata=metadata)
+            self.samples = [CountFile(**args) for args in sample_params.values()]
+            self.sort_sample(sort_by=sort_by)
+            file_list = [sample.metadata['file_path'] for sample in self.samples]
+            file_names = [file.name for file in file_list]
+
+        sample_params = param_to_dict(key_list=file_names,
+                                      file_path=file_list, x_value=x_values, name_pattern=name_pattern,
+                                      spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
+                                      spike_in_dia=spike_in_dia, dna_amount=dna_amount, x_unit=x_unit,
+                                      dna_unit=dna_unit, load_data=load_data, silent=silent, metadata=metadata)
+        self.samples = [CountFile(**args) for args in sample_params.values()]
+
+        self._sample_indexer = {sample.name: sample for sample in self.samples}
+        self._sample_indexer.update({sample.metadata['file_path'].name: sample for sample in self.samples})
+        self.logger.add("Samples created")
+
+        if load_data:
+            self.logger.add('Sample data loaded as dataset created')
+
         # todo: clear logic of why need metadata and what to record in metadata, avoiding confusion
+        from datetime import datetime
         self.metadata = {
             'file_root': file_root,
+            'time_created': datetime.now(),
             'note': note,
-            'x_values': x_values,
             'black_list': black_list,
             'file_pattern': file_pattern,
             'name_pattern': name_pattern,
-            'spike_in_seq': spike_in_seq,
-            'spike_in_amount': spike_in_amount,
-            'spike_in_dia': spike_in_dia,
-            'unit': unit,
-            'dna_amount': dna_amount,
+            'x_unit': x_unit,
             'sort_by': sort_by
-        }
-        if black_list is None:
-            black_list = []
-        file_list = get_file_list(file_root=file_root, file_list=file_list,
-                                  file_pattern=file_pattern, black_list=black_list)
-        self.metadata['file_list'] = file_list
+            }
 
-        x_values = self._duplicate_args(x_values, 'x_values', file_list)
-        spike_in_seqs = self._duplicate_args(spike_in_seq, 'spike_in_seq', file_list)
-        spike_in_amounts = self._duplicate_args(spike_in_amount, 'spike_in_amount', file_list)
-        spike_in_dias = self._duplicate_args(spike_in_dia, 'spike_in_dia', file_list)
-        dna_amounts = self._duplicate_args(dna_amount, 'dna_amount', file_list)
+        # from .visualizer import count_file_info_table, count_file_info_plot, spike_in_peak_plot, rep_spike_in_plot, \
+        #     length_dist_plot_all, sample_count_cut_off_plot_all
+        # from ..utility import FunctionWrapper
+        # self.visualizer = FunctionWrapper(data=self,
+        #                                   functions=[
+        #                                       count_file_info_table,
+        #                                       count_file_info_plot,
+        #                                       spike_in_peak_plot,
+        #                                       rep_spike_in_plot,
+        #                                       length_dist_plot_all,
+        #                                       sample_count_cut_off_plot_all
+        #                                   ])
 
-        self.samples = [
-            SeqSample(file_path=file_path, x_value=x_value, name_pattern=name_pattern,
-                      spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
-                      spike_in_dia=spike_in_dia, dna_amount=dna_amount,
-                      unit=unit, load_data=load_data, silent=silent)
-            for file_path, x_value, spike_in_seq, spike_in_amount, spike_in_dia, dna_amount in zip(file_list,
-                                                                                                   x_values,
-                                                                                                   spike_in_seqs,
-                                                                                                   spike_in_amounts,
-                                                                                                   spike_in_dias,
-                                                                                                   dna_amounts)
-        ]
-        self._sample_indexer = {sample.name: sample for sample in self.samples}
-        self._logger.add("Samples created")
+    @property
+    def sample_names(self):
+        return [sample.name for sample in self.samples]
 
-        if load_data:
-            self._logger.add('Sample data loaded as dataset created')
-
-        if sort_by:
-            if isinstance(sort_by, str):
-                def sort_fn(single_file):
+    def sort_sample(self, sort_by):
+        """Sort sample order by attribute name, metadata name, or a callable on `CountFile` object"""
+        if isinstance(sort_by, str):
+            def sort_fn(single_file):
+                if hasattr(single_file, sort_by):
+                    return getattr(single_file, sort_by)
+                else:
                     return single_file.metadata[sort_by]
-            elif callable(sort_by):
-                sort_fn = sort_by
-            else:
-                raise TypeError('sort_by should either be string or callable')
-            self.samples = sorted(self.samples, key=sort_fn)
-
-        from .visualizer import count_file_info_table, count_file_info_plot, spike_in_peak_plot, rep_spike_in_plot, \
-            length_dist_plot_all, sample_count_cut_off_plot_all
-        from ..utility import FunctionWrapper
-        self.visualizer = FunctionWrapper(data=self,
-                                          functions=[
-                                              count_file_info_table,
-                                              count_file_info_plot,
-                                              spike_in_peak_plot,
-                                              rep_spike_in_plot,
-                                              length_dist_plot_all,
-                                              sample_count_cut_off_plot_all
-                                          ])
-
-    @staticmethod
-    def _duplicate_args(arg, arg_name, match_to):
-        if isinstance(arg, list):
-            if len(arg) != len(match_to):
-                raise ValueError("{} is a list, but the length does not match sample files".format(arg_name))
-            else:
-                return arg
+        elif callable(sort_by):
+            sort_fn = sort_by
         else:
-            return [arg for _ in match_to]
+            raise TypeError('sort_by should either be string or callable')
+        self.samples = sorted(self.samples, key=sort_fn)
 
     def load_data(self):
         """Load data after creating the object, suitable for large files"""
         for sample in self.samples:
             sample.load_data()
-        self._logger.add('Sample data loaded')
+        self.logger.add('Sample data loaded')
 
     def add_dna_amount(self, dna_amounts, unit=None):
         if isinstance(dna_amounts, list):
             if len(dna_amounts) == len(self.samples):
                 for sample, dna_amount in zip(self.samples, dna_amounts):
                     sample.dna_amount = dna_amount
-                    sample.unit = unit
+                    sample.metadata['dna_unit'] = unit
                 self.metadata['unit'] = unit
             else:
                 raise ValueError('Length of dna_amounts is different from sample number')
@@ -774,76 +783,40 @@ class SeqSampleSet(object):
         else:
             raise TypeError('dna_amounts should be either list or dictionary')
 
-    def add_spike_in(self, spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, spike_in_config=None, unit=None):
+    def add_spike_in(self, spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, unit=None):
         """
-        todo: update this docstring
-
-        Calculate quantification factors for each sample in `SeqSampleSet`.
-        This method will first survey the spike-in sequence, then calculate the quantification factor for each sample if
-        applies.
-
-        Args:
-            from_spike_in_amounts (list/dict of `float`): optional. Use if using spike in for quantification.
-              A list/dict of absolute amount of spike-in sequence in each sample
-              If `dict`, the key must match the names of samples; if `list`, the length and order much match the `sample_names`
-
-            spike_in_seq (`str`): optional. Spike in sequence if using spike in for quantification.
-
-            max_dist (`int`): optional, maximum edit distance to exact spike-in sequence to be counted as spike-in.
-              Default: 2
-
-            max_dist_to_survey (`int`): optional, survey the spike-in counts with maximum edit distance. If `None`,
-              `max_dist` will be used
-
-            from_total_amounts (list/dict of 'float'): optional. Use if using total DNA amount for quantification. Same
-              as `from_spike_in_amount`, a list/dict of total amount of DNA in each sample. If `dict`, the key must
-              match the names of samples; if `list`, the length and order much match the `sample_names`
-
-            quant_factors (list/dict of `float`): optional, accept a list/dict of manually curated quant_factor. If `dict`,
-              the key must match the names of samples; if `list`, the length and order much match the `sample_names`
-
-            silent (`bool`): don't print process if True
-
+        Add spike-in sequences for all samples, for each parameter, single value or dictionary could be passed,
+        if a dictionary is passed, the key should be sample name and explicitly list parameters for all samples
         """
-
-        if spike_in_config is not None:
-            if spike_in_seq is not None:
-                for config in spike_in_config.items():
-                    if 'spike_in_seq' not in config.keys():
-                        config['spike_in_seq'] = spike_in_seq
-            if spike_in_amount is not None:
-                for config in spike_in_config.items():
-                    if 'spike_in_amount' not in config.keys():
-                        config['spike_in_amount'] = spike_in_amount
-            if spike_in_dia is not None:
-                for config in spike_in_config.items():
-                    if 'spike_in_dia' not in config.keys():
-                        config['spike_in_dia'] = spike_in_dia
-
-            if isinstance(spike_in_config, dict):
-                for key, args in spike_in_config.items():
-                    if key in self.sample_names:
-                        self._sample_indexer[key].add_spike_in(unit=unit, **args)
-                    else:
-                        raise Warning("{} not found in sample set".format(key))
-            else:
-                raise TypeError('spike_in_config should be dictionary')
-        else:
-            spike_in_seqs = self._duplicate_args(spike_in_seq, 'spike_in_seq', self.samples)
-            spike_in_amounts = self._duplicate_args(spike_in_amount, 'spike_in_amount', self.samples)
-            spike_in_dias = self._duplicate_args(spike_in_dia, 'spike_in_dia', self.samples)
-            for sample, spike_in_seq, spike_in_amount, spike_in_dia in zip(self.samples,
-                                                                           spike_in_seqs,
-                                                                           spike_in_amounts,
-                                                                           spike_in_dias):
-                sample.add_spike_in(spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
-                                    spike_in_dia=spike_in_dia, unit=unit)
+        sample_keys = [sample.name for sample in self.samples]
+        from ..utility.func_tools import param_to_dict
+        param_dict = param_to_dict(key_list=sample_keys,
+                                   spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount, spike_in_dia=spike_in_dia,
+                                   unit=unit)
+        for key, args in param_dict.items():
+            self._sample_indexer[key].add_spike_in(**args)
 
     def summary(self):
         import pandas as pd
-        return pd.DataFrame(data=[sample.summary() for sample in self.samples])
+        return pd.DataFrame(data=[sample.to_series() for sample in self.samples])
 
-    def to_dataframe(self, samples=None, seq_list=None, with_spike_in=False, return_counts=False):
+    def to_SeqTable(self, sample_list=None, seq_list=None, remove_spike_in=True, note=None):
+        """Convert to a `SeqTable` object
+        todo: finish this
+        Args:
+            remove_spike_in (`bool`): remove spike in if True. Default True.
+            note (`str`): optional. Note about the sample set
+
+        Returns: `SeqTable` instance
+        """
+        from .seq_table import SeqTable
+        if note is None:
+            note = self.metadata['note']
+
+        return SeqTable.from_SeqSampleSet(self, sample_list=sample_list, seq_list=None,
+                                          remove_spike_in=remove_spike_in, note=note)
+
+    def to_dataframe(self, samples=None, seq_list=None, remove_spike_in=True, return_counts=True, sparse=True):
         """Return a dataframe within index as sequences, columns as samples"""
 
         import pandas as pd
@@ -851,49 +824,55 @@ class SeqSampleSet(object):
         if samples is None:
             samples = self.sample_names
         if return_counts:
+            if sparse:
+                dtype = pd.SparseDtype('int', fill_value=0)
+            else:
+                dtype = int
             return pd.DataFrame({
-                sample: self[sample].seq_counts(with_spike_in=with_spike_in, seq_list=seq_list) for sample in samples
-            }, columns=samples, dtype=int)
+                sample: self[sample].seq_counts(remove_spike_in=remove_spike_in, seq_list=seq_list, sparse=False)
+                for sample in samples
+            }, columns=samples).fillna(0, inplace=False).astype(dtype)
         else:
+            if sparse:
+                dtype = pd.SparseDtype('float', fill_value=0.0)
+            else:
+                dtype = float
             return pd.DataFrame({
-                sample: self[sample].seq_amount(with_spike_in=with_spike_in, seq_list=seq_list) for sample in samples
-            }, columns=samples, dtype=int)
+                sample: self[sample].seq_amount(remove_spike_in=remove_spike_in, seq_list=seq_list, sparse=False)
+                for sample in samples
+            }, columns=samples).fillna(0.0, inplace=False).astype(dtype)
 
-    def to_csv(self, file_path, samples=None, seq_list=None, with_spike_in=False, return_counts=False):
+    def to_csv(self, file_path, samples=None, seq_list=None, remove_spike_in=False, return_counts=False):
         self.to_dataframe(samples=samples, seq_list=seq_list,
-                          with_spike_in=with_spike_in, return_counts=return_counts).to_csv(file_path)
+                          remove_spike_in=remove_spike_in, return_counts=return_counts).to_csv(file_path)
 
-    def filter_sample(self, sample_to_keep=None, sample_to_remove=None, inplace=False):
-        """filter samples in sample set
-
-        Args:
-            sample_to_keep (list of `str`): optional, names of samples to keep
-            sample_to_remove (list of `str`): optional, names of samples to remove
-            inplace (`bool`): return a new `SeqSampleSet` if False
-
-        Returns: None if inplace is True, `SeqSampleSet` if inplace is False
-
-        """
-
-        if sample_to_keep is None and sample_to_remove is not None:
-            sample_to_keep = [sample for sample in self.sample_names if sample not in sample_to_remove]
-
-        if inplace:
-            self.samples = [sample for sample in self.samples if sample.name in sample_to_keep]
-        else:
-            import copy
-            new_set = copy.deepcopy(self)
-            new_set.samples = [sample for sample in new_set.samples if sample.name in sample_to_keep]
-            new_set._logger.add(
-                'Sample is filtered and saved to this new object. Samples kept: {}'.format(
-                    ','.join(sample_to_keep)
-                )
-            )
-            return new_set
-
-    @property
-    def sample_names(self):
-        return [sample.name for sample in self.samples]
+    # def filter_sample(self, sample_to_keep=None, sample_to_remove=None, inplace=False):
+    #     """filter samples in sample set
+    #
+    #     Args:
+    #         sample_to_keep (list of `str`): optional, names of samples to keep
+    #         sample_to_remove (list of `str`): optional, names of samples to remove
+    #         inplace (`bool`): return a new `SeqSampleSet` if False
+    #
+    #     Returns: None if inplace is True, `SeqSampleSet` if inplace is False
+    #
+    #     """
+    #
+    #     if sample_to_keep is None and sample_to_remove is not None:
+    #         sample_to_keep = [sample for sample in self.sample_names if sample not in sample_to_remove]
+    #
+    #     if inplace:
+    #         self.samples = [sample for sample in self.samples if sample.name in sample_to_keep]
+    #     else:
+    #         import copy
+    #         new_set = copy.deepcopy(self)
+    #         new_set.samples = [sample for sample in new_set.samples if sample.name in sample_to_keep]
+    #         new_set._logger.add(
+    #             'Sample is filtered and saved to this new object. Samples kept: {}'.format(
+    #                 ','.join(sample_to_keep)
+    #             )
+    #         )
+    #         return new_set
 
     def to_pickle(self, file_path):
         import pickle
@@ -906,19 +885,54 @@ class SeqSampleSet(object):
         with open(file_path) as handle:
             return pickle.load(handle)
 
-    def to_SeqTable(self, sample_list=None, seq_list=None, remove_spike_in=True, note=None):
-        """Convert to a `SeqTable` object
+    @classmethod
+    def load_default(cls, dataset='byo'):
+        """Load dataset from BYO k-seq or BFO k-seq"""
+        import numpy as np
+        if dataset.lower() in ['byo']:
+            kwargs = {
+                'file_root': '/mnt/storage/projects/k-seq/input/byo_counts/',
+                'x_values': np.repeat([250, 50, 10, 2], repeats=6),
+                'file_list': None,
+                'file_pattern': 'counts-',
+                'black_list': None,
+                'name_pattern': 'counts-[{bfo_group}{exp_rep}.txt]',
+                'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
+                'spike_in_amount': np.repeat([1, 0.4, 0.3, 0.1], repeats=6),
+                'spike_in_dia': 2,
+                'x_unit': 'umol',
+                'dna_unit': 'ng',
+                'dna_amount':None,
+                'sort_by': 'name',
+                'load_data': False,
+                'silent': True,
+                'metadata': None,
+                'note': 'BYO k-seq data by Abe Pressman'
+            }
+        elif dataset.lower() in ['bfo']:
+            kwargs = {
+                'file_root': '/mnt/storage/projects/k-seq/input/bfo_counts/counts/',
+                'x_values': 'byo',
+                'name_pattern': 'R4[{exp_rep}-{byo, float}{seq_rep}]_S{id, int}_counts.txt',
+                'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
+                'file_list': None,
+                'file_pattern': '.txt',
+                'black_list': None,
+                'spike_in_amount': np.tile([4130, 1240, 826, 413, 207, 82.6, 41.3], reps=4),
+                'spike_in_dia': 2,
+                'x_unit': 'umol',
+                'dna_unit': 'fmol',
+                'dna_amount': None,
+                'sort_by': 'id',
+                'load_data': False,
+                'silent': True,
+                'metadata': None,
+                'note': 'BFO k-seq data by Evan Jensen'
+            }
+        else:
+            raise NotImplementedError(f'dataset {dataset} is not implemented')
+        return cls(**kwargs)
 
-        Args:
-            remove_spike_in (`bool`): remove spike in if True. Default True.
-            note (`str`): optional. Note about the sample set
 
-        Returns: `SeqTable` instance
-        """
-        from .seq_table import SeqTable
-        if note is None:
-            note = self.metadata['note']
-        return SeqTable.from_SeqSampleSet(self, sample_list=sample_list, seq_list=None,
-                                          remove_spike_in=remove_spike_in, note=note)
 
 

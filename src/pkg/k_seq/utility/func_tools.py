@@ -1,4 +1,32 @@
 
+def param_to_dict(key_list, **kwargs):
+    """Assign kwargs to the dictionary with key from key_list"""
+    import numpy as np
+    import pandas as pd
+
+    def parse_args(kwargs, key, ix):
+        arg_dict = {}
+        for arg_name, arg in kwargs.items():
+            if isinstance(arg, (list, np.ndarray, pd.Series)):
+                if len(arg) == len(key_list):
+                    arg_dict[arg_name] = arg[ix]
+                else:
+                    raise ValueError(f"{arg_name} is a list, but the length does not match sample files")
+            elif isinstance(arg, dict):
+                if key in arg.keys():
+                    arg_dict[arg_name] = arg[key]
+                else:
+                    raise KeyError(f'Sample {key} not found in {arg_name}')
+            else:
+                arg_dict[arg_name] = arg
+        return arg_dict
+
+    if isinstance(key_list, dict):
+        key_list = list(key_list.keys())
+
+    return {key:parse_args(kwargs, key, ix) for ix,key in enumerate(key_list)}
+
+
 def get_func_params(func, exclude_x=True):
     """
     Utility function to get the number of arguments for a function (callable)
