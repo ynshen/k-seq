@@ -4,28 +4,42 @@ class CountFile(object):
     """This class stores and handles count files get from upstream analysis in k-seq exp.
 
     Attributes:
+        name (`str`): sample name, extracted from the file name
 
-            name (`str`): sample name, extracted from the file name
+        unique_seqs (`int`): number of unique sequences in the sample
 
-            unique_seqs (`int`): number of unique sequences in the sample
+        total_counts (`int`): number of total reads in the sample
 
-            total_counts (`int`): number of total reads in the sample
+        dna_amount (`int`): absolute amount of DNA in the sample, for quantification
 
-            dna_amount (`int`): absolute amount of DNA in the sample, for quantification
+        sequences (`pd.DataFrame`): Table for each unique sequences
 
-            sequences (`pd.DataFrame`): Table for each unique sequences
+        sample_type (`str`, 'input' or 'reacted'): 'input' if sample is from initial pool;
+            'reacted' if sample is reacted pool
 
-            sample_type (`str`, 'input' or 'reacted'): 'input' if sample is from initial pool;
-                'reacted' if sample is reacted pool
+        x_value (`float`): the value of time or concentration point for the sample
 
-            x_value (`float`): the value of time or concentration point for the sample
+        metadata (`dict`): a dictionary contains metadata of the sample:
 
-            metadata (`dict`): a dictionary contains metadata of the sample:
+            - file_path (`str`): path to the count file
 
-                - file_path (`str`): path to the count file
+            - Other metadata extracted from the file name, or added later
 
-                - Other metadata extracted from the file name, or added later
-
+    Candidates:
+            self.metadata = {}
+        self.logger = Logger(silent=silent)
+        file_path = Path(file_path)
+        if not file_path.is_file():
+            raise ValueError('file_path is not a valid file')
+        self.metadata['file_path'] = str(file_path)
+        self.logger.add("Initialize a sample from {}".format(self.metadata['file_path']))
+        self.unique_seqs = None
+        self.total_counts = None
+        self.unit = unit
+        self.silent = silent
+        self.sequences = None
+        self.dna_amount = None
+        self.norm_factor = None
 
     TODO:
      - update docstrings (attributes, method docstrings)
@@ -33,27 +47,26 @@ class CountFile(object):
     """
 
     def __repr__(self):
-        return 'Sample {}'.format(self.name)
+        return f'Sample {self.name}'
 
     def __init__(self, file_path, x_value, name_pattern=None,
                  spike_in_seq=None, spike_in_amount=None, spike_in_dia=2,
-                 dna_amount=None, unit=None, load_data=False,
-                 silent=True, metadata=None):
+                 dna_amount=None, x_unit=None, dna_unit=None, load_data=False,
+                 silent=True, metadata=None, **kwargs):
         """
-        todo: review docstring
-        `SeqSample` instance store the sequencing reads data for each sample in k-seq experiments,
-        Initialize a `SeqSample` instance by linking to a read file
-
-        **Currently only from count file is implemented**
+        Initialize a `CountFile` instance by linking it to a read file
 
         Args:
-            file_path (`str`): directory to the read file of sample
+            file_path (`str`): full path to the read file of sample
 
-            x_value (`float` or `str`): time/concentration/etc point value for the sample for parameter estimation.
-                If `str`, it will extract value from the domain indicated by `name_pattern`
+            x_value (`float` or `str`): Controlled variable in the k-seq experiments,
+                e.g. time/concentration/etc. Will be used as independent variable in parameter estimation
+                If `str`, it is the name of domain indicated by `name_pattern` for automatic extraction value
+                Note that only single variable is implemented
 
             name_pattern (`str`): optional. Pattern to automatically extract metadata using
-                :func:`~k_seq.utility.extract_metadata` (click to see details). Briefly,
+                :func:`~k_seq.utility.file_tools.extract_metadata` (click to see details).
+                Briefly,
 
                 - Use ``[...]`` to include the region of sample name (required),
 
@@ -62,39 +75,39 @@ class CountFile(object):
                 including ``[,int/float]`` will convert the domain value to int/float if applicable, otherwise, string.
 
             load_data (`bool`): if load data from file during initializing. Recommend to set False for large files.
-              Default False.
+                Default False
 
             silent (`bool`): Print progress to std out if False. Default False
 
         Example:
 
-                .. code-block:: python
+            .. code-block:: python
 
-                   sample = SeqSample{
-                       file_path = "path/to/count/file/R4B-1250A_S16_counts.txt",
-                       x_value = 'concentration',
-                       name_pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}]_S{id, int}_counts.txt"
-                       load_data = False,
-                       silent = False
-                    }
+               sample = CountFile{
+                   file_path = "path/to/count/file/R4B-1250A_S16_counts.txt",
+                   x_value = 'byo',
+                   name_pattern = "R4[{exp_rep}-{byo, float}{seq_rep}]_S{id, int}_counts.txt"
+                   load_data = False,
+                   silent = False
+                }
 
-            will return a ``SeqSample`` instance ``sample`` that
+            will return a `CountFile` instance `sample` that
 
                 .. code-block:: python
 
                     > sample.name
                     'B-1250A'
+                    > sample.x_value
+                    1250.0
                     > sample.metadata
                     {
                         'exp_rep': 'B',
-                        'concentration': 1250.0,
+                        'byo': 1250.0,
                         'seq_rep': 'A',
                         'id': 16
                     }
                     > sample.sequences
                     Error # as data is not load yet
-
-
         """
 
         from ..utility.log import Logger
@@ -104,11 +117,14 @@ class CountFile(object):
         self.metadata = {}
         self.logger = Logger(silent=silent)
         file_path = Path(file_path)
+        if not file_path.is_file():
+            raise ValueError('file_path is not a valid file')
         self.metadata['file_path'] = str(file_path)
         self.logger.add("Initialize a sample from {}".format(self.metadata['file_path']))
         self.unique_seqs = None
         self.total_counts = None
-        self.unit = unit
+        self.metadata['x_unit'] = x_unit
+        self.metadata['dna_unit'] = dna_unit
         self.silent = silent
         self.sequences = None
         self.dna_amount = None
@@ -160,7 +176,7 @@ class CountFile(object):
             if isinstance(spike_in_seq, str):
                 self.add_spike_in(spike_in_seq=spike_in_seq,
                                   spike_in_amount=spike_in_amount,
-                                  unit=unit,
+                                  unit=dna_unit,
                                   spike_in_dia=spike_in_dia)
             else:
                 raise ValueError('spike_in_seq needs to be a string')
@@ -173,6 +189,7 @@ class CountFile(object):
 
     @classmethod
     def load_test_sample(cls, dataset='byo'):
+        """Load test single files from BYO k-seq or BFO k-seq"""
         if dataset.lower() in ['byo']:
             kwargs = {
                 'file_path': '/mnt/storage/projects/k-seq/input/byo_counts/counts-1A.txt',
@@ -180,7 +197,8 @@ class CountFile(object):
                 'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
                 'spike_in_amount': 1,
                 'spike_in_dia': 2,
-                'unit': 'ng',
+                'x_unit': 'umol',
+                'dna_unit': 'ng',
                 'metadata': {}
             }
         elif dataset.lower() in ['bfo']:
@@ -190,7 +208,8 @@ class CountFile(object):
                 'name_pattern': 'R4[{exp_rep}-{byo, float}{seq_rep}]_S{id, int}_counts.txt',
                 'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
                 'spike_in_amount': 4130,
-                'unit': 'fmol'
+                'x_unit': 'umol',
+                'dna_unit': 'fmol'
             }
         else:
             raise NotImplementedError(f'dataset {dataset} is not implemented')
@@ -198,27 +217,34 @@ class CountFile(object):
 
     @property
     def dna_amount(self):
+        """Total DNA amount, inferred from spike-in if not assigned"""
         if self._dna_amount is None:
             if isinstance(self.spike_in, SpikeIn):
                 return self.spike_in.dna_amount
             else:
-                raise ValueError('dna amount is not assigned and can not infer from spike in')
+                raise ValueError('No DNA amount or spike-in assigned')
         else:
             return self._dna_amount
 
     @dna_amount.setter
     def dna_amount(self, value):
-        self._dna_amount = value
-        self.norm_factor = value/self.total_counts
+        if value is not None:
+            self._dna_amount = value
+            self.norm_factor = value/self.total_counts
+        else:
+            self._dna_amount = None
         self.logger.add('Manually assign dna amount as {}'.format(value))
 
     @property
     def norm_factor(self):
+        """Normalization factor for sequences, seqs DNA amount should be norm_factor * seq_counts,
+        invariant for seq filtering
+        """
         if self._norm_factor is None:
             if isinstance(self.spike_in, SpikeIn):
                 return self.spike_in.norm_factor
             else:
-                raise ValueError('norm factor is not assigned and can not infer from spike in')
+                raise ValueError('No DNA amount or spike-in assigned')
         else:
             return self._norm_factor
 
@@ -228,7 +254,6 @@ class CountFile(object):
 
     def load_data(self):
         """Load data from file with path in ``self.matadata['file_path']``"""
-
         self.logger.add("Load count data from file {}".format(self.metadata['file_path']))
         self.unique_seqs, self.total_counts, self.sequences = read_count_file(self.metadata['file_path'])
 
@@ -239,67 +264,41 @@ class CountFile(object):
                                 spike_in_dia=spike_in_dia,
                                 unit=unit)
 
-    def to_series(self):
-        """Return a series as summary of the sample, including:
-          - sample type
-          - name
-          - unique seqs
-          - total counts
-          - x value
-          - dna amount (if applicable)
-          - spike in percent (if applicable)
-        """
-        import pandas as pd
-        summary = pd.Series(data=[self.sample_type, self.name, self.unique_seqs, self.total_counts, self.x_value],
-                            index=['sample type', 'name', 'unique seqs', 'total counts', 'x value'])
-        if self._dna_amount is not None:
-            summary = summary.append(pd.Series(data=[self._dna_amount],
-                                               index=['dna amount{}'.format(
-                                                   '' if self.unit is None else '({})'.format(self.unit)
-                                               )]))
-        if self.spike_in is not None:
-            summary = summary.append(self.spike_in.to_series(verbose=False))
-        return summary
+    def seq_counts(self, remove_spike_in=True, seq_list=None):
+        """Return raw sequence counts
 
-    def to_dict(self, verbose=False):
-        """Return a dictionary as metadata of the sample, including:
-          - name
-          - file_path
-          - unique_seqs
-          - total_counts
-          - sample_type
-          - x_value
-          - dna_amount
-          - norm_factor
-          - spike in (dict, if applicable, return members if verbose)
-          - other metadata
-        """
-        return {
-            'name': self.name,
-            'unique_seqs': self.unique_seqs,
-            'total_counts': self.total_counts,
-            'sample_type': self.sample_type,
-            'x_value': self.x_value,
-            'dna_amount': self.dna_amount,
-            'norm_factor': self.norm_factor,
-            'spike_in': None if self.spike_in is None else self.spike_in.to_dict(verbose=verbose)
-        }.update(self.metadata)
+        Args:
+            remove_spike_in (`bool`): if remove spike-in before return data
+            seq_list (list of `str`): if only return data for given sequences
 
-    def seq_counts(self, with_spike_in=True, seq_list=None):
+        Returns:
+            a `pd.Series` with counts as value and seq as index
+        """
         if self.sequences is None:
             raise ValueError('No sample data')
         if seq_list is not None:
             return self.sequences['counts'].reindex(seq_list)
         else:
-            if with_spike_in:
-                return self.sequences['counts']
-            else:
+            if remove_spike_in:
                 mask = ~self.sequences.index.isin(self.spike_in.members)
                 return self.sequences.loc[mask]['counts']
+            else:
+                return self.sequences['counts']
 
-    def seq_amount(self, with_spike_in=True, seq_list=None):
+    def seq_amount(self, remove_spike_in=True, seq_list=None):
+        """Return absolute amount of sequences, usually not used
+
+        Args:
+            remove_spike_in (`bool`): if remove spike-in before return data
+            seq_list (list of `str`): if only return data for given sequences
+
+        Returns:
+            a `pd.Series` with amount as value and seq as index
+
+        """
         if self.sequences is None:
             raise ValueError('No sample data')
+
         if 'amount' not in self.sequences.columns:
             if self.norm_factor is not None:
                 self.sequences['amount'] = self.sequences['counts'] * self.norm_factor
@@ -308,12 +307,69 @@ class CountFile(object):
         if seq_list is not None:
             return self.sequences['amount'].reindex(seq_list)
         else:
-            if with_spike_in:
-                return self.sequences['amount']
-            else:
+            if remove_spike_in:
                 mask = ~self.sequences.index.isin(self.spike_in.members)
                 return self.sequences.loc[mask]['amount']
+            else:
+                return self.sequences['amount']
 
+    def to_series(self, verbose=False):
+        """Return a series as summary of the sample, including:
+          - sample type
+          - name
+          - x value
+          - unique seqs
+          - total counts
+          - dna amount (if applicable)
+          - *information from spike-in (if applicable, verbose choice)
+
+        Args:
+            verbose (`bool`): if return extra information in spike-in
+        """
+        import pandas as pd
+        summary = pd.Series(data=[self.sample_type, self.name, self.x_value, self.unique_seqs, self.total_counts],
+                            index=['sample type', 'name', 'x value', 'unique seqs', 'total counts'])
+        if self._dna_amount is not None:
+            summary = summary.append(
+                pd.Series(data=[self._dna_amount],
+                          index=['dna amount{}'.format(
+                              '' if self.metadata['dna_unit'] is None else '({})'.format(self.metadata['dna_unit'])
+                          )])
+            )
+        if self.spike_in is not None:
+            summary = summary.append(self.spike_in.to_series(verbose=verbose))
+        return summary
+
+    def to_dict(self, verbose=False):
+        """Return a dictionary as metadata of the sample, including:
+            - name
+            - file_path
+            - unique_seqs
+            - total_counts
+            - sample_type
+            - x_value
+            - dna_amount
+            - norm_factor
+            - spike in (dict, if applicable, return members if verbose)
+            - other metadata
+        """
+        info = {
+            'name': self.name,
+            'unique_seqs': self.unique_seqs,
+            'total_counts': self.total_counts,
+            'sample_type': self.sample_type,
+            'x_value': self.x_value,
+            'dna_amount_total': self.dna_amount,
+            'norm_factor': self.norm_factor,
+        }.update(self.metadata)
+
+        if self.spike_in is None:
+            info['spike-in'] = None
+            info['dna_amount_no_spike_in'] = info['dna_amount_total']
+        else:
+            info['spike-in'] = self.spike_in.to_dict(verbose=verbose)
+            info['dna_amount_no_spike_in'] = info['dna_amount_total'] - self.spike_in.spike_in_amount
+        return info
 
 
 class SpikeIn(object):
@@ -325,27 +381,25 @@ class SpikeIn(object):
 
         sample (`SeqSample`): link to corresponding sample object
 
-        diameter (`int`): diameter of spike-in peak accounting for synthesis/sequencing error
+        diameter (`int`): diameter of spike-in peak, accounting for synthesis/sequencing error
 
-        dna_amount (`float`): total DNA amount for the sample (based on current DNA total counts)
+        spike_in_amount (`float`): DNA amount of spike-in sequences added
 
-        norm_factor (`float`): DNA amount for a single read, amount will be norm_factor * read num
+        dna_amount (`float`): Total DNA amount in the sample, based on current sequences
 
         unit (`str`): unit of amount, e.g. ng
 
-        dist_to_center (`pd.Series`): a series storing edit distance for sequence to spike-in peak center
+        norm_factor (`float`): DNA amount for a single read, amount for given read will be norm_factor * read num
+
+        dist_to_center (`pd.Series`): edit distances for sequence to spike-in peak center
 
         members (list of `str`): list of spike-in peak members
     """
 
     def __repr__(self):
-        return 'Spike-in peak for {}\n\tcenter:{}\n\tamount:{}, dia:\n\t{}, unit\n\t{}'.format(
-            self.sample.__repr__(),
-            self.center,
-            self.spike_in_amount,
-            self.diameter,
-            self.unit
-        )
+        return f'Spike-in peak for {self.sample!r}' \
+               f'\n\tcenter:{self.center}' \
+               f'\n\tamount: {self.spike_in_amount}, dia: {self.diameter:d}, unit: {self.unit}'
 
     def __init__(self, spike_in_seq, sample, spike_in_amount, unit, spike_in_dia=2):
         self.center = spike_in_seq
@@ -357,7 +411,7 @@ class SpikeIn(object):
         self.dist_to_center = None
         self.members = None
         self.spike_in_counts = None
-        self.sample.logger.add_log("Spike-in ({}) added, spike-in amount {}, dia {}, unit {}".format(
+        self.sample.logger.add("Spike-in ({}) added, spike-in amount {}, dia {}, unit {}".format(
             spike_in_seq,
             spike_in_amount,
             spike_in_dia,
@@ -365,7 +419,7 @@ class SpikeIn(object):
         ))
 
     def _get_edit_distance(self, seq):
-        """return edit distance of seq to the center"""
+        """use `python-levenshtein` to calculate edit distances of seqs to the center"""
         import pandas as pd
         from Levenshtein import distance
         if isinstance(seq, pd.Series):
@@ -374,28 +428,33 @@ class SpikeIn(object):
 
     @property
     def dist_to_center(self):
+        """edit distances for sequence to spike-in peak center, only calculate once"""
         if self._dist_to_center is None:
-            self._dist_to_center = self.sample.seq_counts().index.to_series().map(self._get_edit_distance)
+            self._dist_to_center = self.sample.sequences.index.to_series().map(self._get_edit_distance)
         return self._dist_to_center
 
     @dist_to_center.setter
     def dist_to_center(self, value):
+        """Should not assign manual except for release memory"""
         self._dist_to_center = value
 
     @property
     def members(self):
+        """A list of sequences considered as in the peak, change as diameter change"""
         if self._members is None:
             self._members = self.dist_to_center[self.dist_to_center <= self.diameter].index.to_series().values
         return self._members
 
     @members.setter
     def members(self, value):
+        """it can be manually set"""
         self._members = value
 
     @property
     def spike_in_counts(self):
+        """Total counts of sequences in `self.members`, updated as diameter change"""
         if self._spike_in_counts is None:
-            self._spike_in_counts = self.sample.seq_counts().loc[self.members].sum()
+            self._spike_in_counts = self.sample.sequences.loc[self.members]['counts'].sum()
         return self._spike_in_counts
 
     @spike_in_counts.setter
@@ -409,35 +468,41 @@ class SpikeIn(object):
     @diameter.setter
     def diameter(self, spike_in_dia):
         """Update members and spike_in_counts when updating diameter"""
-        if spike_in_dia != self._diameter:
+        if not hasattr(self, '_diameter'):
             self._diameter = spike_in_dia
-            self.members = self.dist_to_center[self.dist_to_center <= spike_in_dia].index.to_series().values
-            self.spike_in_counts = self.sample.seq_counts().loc[self.members].sum()
-            self.sample.logger.add('Set spike-in diameter to {}'.format(spike_in_dia))
+        else:
+            if spike_in_dia != self._diameter:
+                self._diameter = spike_in_dia
+                self.members = self.dist_to_center[self.dist_to_center <= spike_in_dia].index.to_series().values
+                self.spike_in_counts = self.sample.sequences.loc[self.members]['counts'].sum()
+                self.sample.logger.add('Set spike-in diameter to {}'.format(spike_in_dia))
 
     @property
     def norm_factor(self):
         """
         norm_factor (`float`): defined as
-        :math:`\\frac{\\text{spike-in amount}}{\\text{spike-in counts}`
+          :math:`\\frac{\\text{spike-in amount}}{\\text{spike-in counts}`
         """
         return self.spike_in_amount/self.spike_in_counts
 
     @property
     def dna_amount(self):
-        """Total DNA amount in the sample, based on current sequences
+        """Total DNA amount in the sample, calculated on current sequences in the sample
         """
         return self.norm_factor * self.sample.total_counts
 
     def survey_peak(self, diameter=2, accumulate=False):
         """Survey count of sequences around spike up to a given diameter (edit distance).
-        Return a list of sequences within the edit distance with maximal diameter
 
         Args:
 
             diameter (`int`): the maximum distance to survey
 
             accumulate (`bool`): if return the accumulated count to distance i
+
+        Returns:
+
+            A `pd.Series` of [accumulated] seq counts at different edit distance
         """
 
         import numpy as np
@@ -452,17 +517,19 @@ class SpikeIn(object):
             else:
                 return self.dist_to_center[self.dist_to_center == dist].sum()
         dist_list = np.linspace(0, diameter, diameter + 1, dtype=int)
-
         return pd.Series([get_total_counts(dist) for dist in dist_list], index=dist_list)
 
     def to_series(self, verbose=False):
-        """return a series of spike in info, include:
-          - dna amount
-          - diameter
-          - spike in percent
-          - seq (verbose)
+        """return a series of spike in info, including:
+          - dna amount (from spike-in, [unit])
+          - spike-in dia: diameter
+          - spike-in pct: percent
+          - spike-in seq (verbose)
           - spike-in amount (verbose)
           - spike-in counts (verbose)
+
+          Args:
+              verbose (`bool`): if include extra information
         """
         import pandas as pd
         if not verbose:
@@ -480,8 +547,19 @@ class SpikeIn(object):
                              ])
 
     def to_dict(self, verbose=False):
+        """Return necessary info of spike-in as a dictionary, including:
+          - seq: spike-in seq
+          - diameter:
+          - dna_amount: DNA amount of sample pool calculated by spike-in
+          - norm_factor
+          - unit
+          - members (verbose): list
+
+        Args:
+            verbose (`bool`): if return extra info (members)
+        """
         info = {
-            'center': self.center,
+            'seq': self.center,
             'diameter': self.diameter,
             'dna_amount': self.dna_amount,
             'norm_factor': self.norm_factor,
@@ -590,9 +668,8 @@ class SeqSampleSet(object):
         from .. import utility
 
 
-
         self._logger = utility.Logger(silent=silent)
-        self._logger.add_log('Dataset initialized{}'.format('' if file_root is None else ' from {}'.format(file_root)))
+        self._logger.add('Dataset initialized{}'.format('' if file_root is None else ' from {}'.format(file_root)))
         self._silent = silent
         # todo: clear logic of why need metadata and what to record in metadata, avoiding confusion
         self.metadata = {
@@ -634,10 +711,10 @@ class SeqSampleSet(object):
                                                                                                    dna_amounts)
         ]
         self._sample_indexer = {sample.name: sample for sample in self.samples}
-        self._logger.add_log("Samples created")
+        self._logger.add("Samples created")
 
         if load_data:
-            self._logger.add_log('Sample data loaded as dataset created')
+            self._logger.add('Sample data loaded as dataset created')
 
         if sort_by:
             if isinstance(sort_by, str):
@@ -676,7 +753,7 @@ class SeqSampleSet(object):
         """Load data after creating the object, suitable for large files"""
         for sample in self.samples:
             sample.load_data()
-        self._logger.add_log('Sample data loaded')
+        self._logger.add('Sample data loaded')
 
     def add_dna_amount(self, dna_amounts, unit=None):
         if isinstance(dna_amounts, list):
@@ -807,7 +884,7 @@ class SeqSampleSet(object):
             import copy
             new_set = copy.deepcopy(self)
             new_set.samples = [sample for sample in new_set.samples if sample.name in sample_to_keep]
-            new_set._logger.add_log(
+            new_set._logger.add(
                 'Sample is filtered and saved to this new object. Samples kept: {}'.format(
                     ','.join(sample_to_keep)
                 )
