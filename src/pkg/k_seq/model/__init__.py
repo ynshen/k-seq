@@ -12,30 +12,16 @@ class ModelBase(object):
       - random variable generator, need params, seed, func
     """
 
-    def __init__(self, X=None, y=None, seed=23, **params):
-        self.params = params    # a dictionary of parameters
-        self.seed = seed    # fix seed for repeatability
-        self.result = None    # space holder for mle estimation results
-        self.X = X
-        self.y = y
+    def __init__(self, **params):
+        pass
 
-    def data(self, y, X=None):
-        self.X = X
-        self.y = y
-
-    def func(self):
+    def func(self, **params):
         """model function: params --> prediction"""
         pass
 
     def predict(self, **params):
-        """use given parameter or predicted parameter
-        todo: to fill
-        """
-        if params == {}:
-            if self.result is None:
-                return ValueError('No estimated parameters, please indicate parameter')
-            else:
-                pass
+        """Function to predict model output"""
+        pass
 
     def nloglikelihood(self):
         """negative log-likelihood value for each observation, parameter --> nloglikelihood"""

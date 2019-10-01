@@ -1,6 +1,10 @@
 
 def param_to_dict(key_list, **kwargs):
-    """Assign kwargs to the dictionary with key from key_list"""
+    """Assign kwargs to the dictionary with key from key_list
+    - if the arg is a single value, it will be assigned to all keys
+    - if the arg is a list, it will should have same length as key_list
+    - if the arg is a dict, it should contain all members in the key
+    """
     import numpy as np
     import pandas as pd
 

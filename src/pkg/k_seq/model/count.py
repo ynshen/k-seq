@@ -17,14 +17,15 @@ def _get_mle_estimator(model, nll_func):
     return CustomizedEstimator
 
 
-class MultiNomial(object):
+class MultiNomial(ModelBase):
 
-    def __init__(self, y=None, p=None, N=None):
+    def __init__(self, y=None, p=None, N=None, **params):
         """MultiNomial model of pool counts
         if y is given, it is saved as data
         if p and N are given, they are used for simulation
         """
 
+        super().__init__(y, **params)
         import numpy as np
 
         self.y = np.array(y)
@@ -79,7 +80,12 @@ class MultiNomial(object):
     @staticmethod
     def func(p, N):
         from scipy.stats import multinomial
-        return multinomial.rvs(n=N, p=p)
+        try:
+            return multinomial.rvs(n=N, p=p)
+        except ValueError:
+            print('ValueError observed for:')
+            print(N)
+            print(p)
 
     @staticmethod
     def negloglikelihood(y, N, p):

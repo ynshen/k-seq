@@ -1,38 +1,79 @@
+from ..model import ModelBase
 
 
-def pool_count_models(init_p, k_model, k_param, c_model, c_param):
-    import numpy as np
+class PoolModel(ModelBase):
 
-    if not isinstance(init_p, np.ndarray):
-        init_p = np.array(init_p)
+    def __init__(self, kinetic_model, count_model, **params):
+        from ..utility.func_tools import get_func_params
 
-    if np.sum(init_p) != 1:
-        init_p = init_p / np.sum(init_p)
-
-    if isinstance(k_model, str):
-        from . import kinetic
-
-        if k_model in kinetic.__dict__.keys():
-            k_model = kinetic.__dict__[k_model]
+        super().__init__()
+        if issubclass(kinetic_model, ModelBase):
+            self.kinetic_model = kinetic_model.func
+        elif callable(kinetic_model):
+            self.kinetic_model = kinetic_model
         else:
-            raise ValueError('Model {} not implemented'.format(k_model))
-    elif not callable(k_model):
-        raise TypeError('Custom model should be a callable')
-
-    if isinstance(c_model, str):
-        from . import count
-
-        if c_model in count.__dict__.keys():
-            c_model = count.__dict__[c_model]
+            raise TypeError('model should be a ModelBase subclass or a callable')
+        if issubclass(count_model, ModelBase):
+            self.count_model = count_model.func
+        elif callable(count_model):
+            self.count_model = count_model
         else:
-            raise ValueError('Model {} not implemented'.format(c_model))
-    elif not callable(c_model):
-        raise TypeError('Custom model should be a callable')
+            raise TypeError('model should be a ModelBase subclass or a callable')
 
-    reacted_frac = k_model(**k_param)
-    post_p = init_p * reacted_frac
+        self.kinetic_params = get_func_params(self.kinetic_model, exclude_x=False)
+        self.count_params = get_func_params(self.count_model, exclude_x=False)
+        if params != {}:
+            self.params = params
 
-    return c_model(post_p, **c_param)
+    def func(self, **params):
+        import numpy as np
+
+        kinetic_params = {key: item for key, item in params.items() if key in self.kinetic_params}
+        count_params = {key: item for key, item in params.items() if key in self.count_params}
+
+        pt = self.kinetic_model(**kinetic_params)
+        if np.sum(pt) != 1:
+            pt = pt / np.sum(pt)
+        return self.count_model(pt, **count_params)
+
+    def predict(self, **params):
+        params = {**self.params, **params}
+        return self.func(**params)
+
+
+# def pool_count_models(p, k_model, k_param, c_model, c_param):
+#     import numpy as np
+#
+#     if not isinstance(p, np.ndarray):
+#         init_p = np.array(p)
+#
+#     if np.sum(init_p) != 1:
+#         init_p = init_p / np.sum(init_p)
+#
+#     if isinstance(k_model, str):
+#         from . import kinetic
+#
+#         if k_model in kinetic.__dict__.keys():
+#             k_model = kinetic.__dict__[k_model]
+#         else:
+#             raise ValueError('Model {} not implemented'.format(k_model))
+#     elif not callable(k_model):
+#         raise TypeError('Custom model should be a callable')
+#
+#     if isinstance(c_model, str):
+#         from . import count
+#
+#         if c_model in count.__dict__.keys():
+#             c_model = count.__dict__[c_model]
+#         else:
+#             raise ValueError('Model {} not implemented'.format(c_model))
+#     elif not callable(c_model):
+#         raise TypeError('Custom model should be a callable')
+#
+#     reacted_frac = k_model(**k_param)
+#     post_p = init_p * reacted_frac
+#
+#     return c_model(post_p, **c_param)
 
 
 # class PoolModel(object):
