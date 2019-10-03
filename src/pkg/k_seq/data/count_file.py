@@ -26,11 +26,16 @@ class CountFile(object):
             - Other metadata extracted from the file name, or added later
 
     Candidates:
-            self.metadata = {}
+
+        self.metadata = {}
+
         self.logger = Logger(silent=silent)
+
         file_path = Path(file_path)
+
         if not file_path.is_file():
             raise ValueError('file_path is not a valid file')
+
         self.metadata['file_path'] = str(file_path)
         self.logger.add("Initialize a sample from {}".format(self.metadata['file_path']))
         self.unique_seqs = None
@@ -42,14 +47,14 @@ class CountFile(object):
         self.norm_factor = None
 
     TODO:
-     - update docstrings (attributes, method docstrings)
+      - update docstrings (attributes, method docstrings)
 
     """
 
     def __repr__(self):
         return f'Sample {self.name}'
 
-    def __init__(self, file_path, x_value=None, name_pattern=None,
+    def __init__(self, file_path, x_value=None, name_pattern=None, input_sample=None,
                  spike_in_seq=None, spike_in_amount=None, spike_in_dia=2,
                  dna_amount=None, x_unit=None, dna_unit=None, load_data=False,
                  silent=True, metadata=None, **kwargs):
@@ -141,7 +146,10 @@ class CountFile(object):
 
         if x_value is None:
             x_value = np.nan
-        if 'input' in self.name.lower() or 'init' in self.name.lower():
+        if input_sample is True:
+            self.sample_type = 'input'
+            self.x_value = np.nan
+        elif 'input' in self.name.lower() or 'init' in self.name.lower():
             # Primary: if input or init exist
             self.sample_type = 'input'
             self.x_value = np.nan
@@ -355,10 +363,13 @@ class CountFile(object):
             - name
             - file_path
             - unique_seqs
+            - unique_seqs_no_spike_in (if remove_spike_in is True)
             - total_counts
+            - total_counts_no_spike_in (if remove_spike_in is True)
             - sample_type
             - x_value
             - dna_amount
+            - dna_amount_no_spike_in (if remove_spike_in is True)
             - norm_factor
             - spike in (dict, if applicable, return members if verbose)
             - other metadata
@@ -371,14 +382,16 @@ class CountFile(object):
             'x_value': self.x_value,
             'dna_amount_total': self.dna_amount,
             'norm_factor': self.norm_factor,
-        }.update(self.metadata)
+        }
+        info.update(self.metadata)
 
         if self.spike_in is None:
             info['spike-in'] = None
-            info['dna_amount_no_spike_in'] = info['dna_amount_total']
         else:
             info['spike-in'] = self.spike_in.to_dict(verbose=verbose)
             info['dna_amount_no_spike_in'] = info['dna_amount_total'] - self.spike_in.spike_in_amount
+            info['unique_seqs_no_spike_in'] = info['unique_seqs'] - len(self.spike_in.members)
+            info['total_counts_no_spike_in'] = info['total_counts'] - self.spike_in.spike_in_counts
         return info
 
 
@@ -411,7 +424,7 @@ class SpikeIn(object):
                f'\n\tcenter:{self.center}' \
                f'\n\tamount: {self.spike_in_amount}, dia: {self.diameter:d}, unit: {self.unit}'
 
-    def __init__(self, spike_in_seq, sample, spike_in_amount, unit, spike_in_dia=2):
+    def __init__(self, spike_in_seq, sample, spike_in_amount=None, unit=None, spike_in_dia=2):
         self.center = spike_in_seq
         self.sample = sample
         self.spike_in_amount = spike_in_amount
@@ -520,9 +533,9 @@ class SpikeIn(object):
 
         def get_total_counts(dist):
             if accumulate:
-                return self.dist_to_center[self.dist_to_center <= dist].sum()
+                return self.sample.sequences['counts'][self.dist_to_center <= dist].sum()
             else:
-                return self.dist_to_center[self.dist_to_center == dist].sum()
+                return self.sample.sequences['counts'][self.dist_to_center == dist].sum()
         dist_list = np.linspace(0, diameter, diameter + 1, dtype=int)
         return pd.Series([get_total_counts(dist) for dist in dist_list], index=dist_list)
 
@@ -573,9 +586,9 @@ class SpikeIn(object):
             'unit': self.unit
         }
         if verbose:
-            return info.update({'members': self.members})
-        else:
-            return info
+            info.update({'members': self.members})
+
+        return info
 
 
 def read_count_file(file_path, as_dict=False):
@@ -636,7 +649,8 @@ class CountFileSet(object):
                 return [self._sample_indexer[key] for key in item]
         raise TypeError('Index should be either int, string (sample name), or list of string')
 
-    def __init__(self, file_root, x_values=None, file_list=None, file_pattern=None, black_list=None, name_pattern=None,
+    def __init__(self, file_root, x_values=None, input_samples=None, file_list=None, file_pattern=None,
+                 black_list=None, name_pattern=None,
                  spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, x_unit=None, dna_unit=None, dna_amount=None,
                  sort_by=None, load_data=False, silent=True, metadata=None, note=None):
         """
@@ -705,6 +719,11 @@ class CountFileSet(object):
                                       spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
                                       spike_in_dia=spike_in_dia, dna_amount=dna_amount, x_unit=x_unit,
                                       dna_unit=dna_unit, load_data=load_data, silent=silent, metadata=metadata)
+
+        if input_samples is not None:
+            for sample, params in sample_params.items():
+                params['input_sample'] = sample in input_samples
+
         self.samples = [CountFile(**args) for args in sample_params.values()]
 
         self._sample_indexer = {sample.name: sample for sample in self.samples}
@@ -743,6 +762,14 @@ class CountFileSet(object):
     @property
     def sample_names(self):
         return [sample.name for sample in self.samples]
+
+    @staticmethod
+    def check_file_list(file_root, file_list=None, file_pattern=None, black_list=None, full_path=True, **kwargs):
+        """Utility function to list the files will be imported"""
+        from ..utility.file_tools import get_file_list
+        file_list = get_file_list(file_root=file_root, file_list=file_list,
+                                  pattern=file_pattern, black_list=black_list, full_path=full_path)
+        return file_list
 
     def sort_sample(self, sort_by):
         """Sort sample order by attribute name, metadata name, or a callable on `CountFile` object"""
@@ -800,7 +827,8 @@ class CountFileSet(object):
         import pandas as pd
         return pd.DataFrame(data=[sample.to_series() for sample in self.samples])
 
-    def to_SeqTable(self, sample_list=None, seq_list=None, remove_spike_in=True, note=None):
+    def to_SeqTable(self, sample_list=None, black_list=None, seq_list=None,
+                    remove_spike_in=True, return_counts=True, note=None):
         """Convert to a `SeqTable` object
         todo: finish this
         Args:
@@ -810,11 +838,36 @@ class CountFileSet(object):
         Returns: `SeqTable` instance
         """
         from .seq_table import SeqTable
+
+        if sample_list is None:
+            sample_list = self.sample_names
+
+        if black_list is not None:
+            sample_list = [sample for sample in sample_list if sample not in black_list]
+
+        if seq_list is None:
+            seq_table = self.to_dataframe(samples=sample_list,
+                                          remove_spike_in=remove_spike_in,
+                                          return_counts=return_counts)
+        else:
+            seq_table = self.to_dataframe(samples=sample_list,
+                                          seq_list=seq_list,
+                                          remove_spike_in=remove_spike_in,
+                                          return_counts=return_counts)
+
+        # Collect metadata
+        sample_meta = self.sample_into_to_dict(sample_list=sample_list, verbose=False)
+
+        # Init Grouper
+        grouper = {'input': [sample for sample in sample_list if self[sample].sample_type == 'input'],
+                   'reacted': [sample for sample in sample_list if self[sample].sample_type == 'reacted']}
         if note is None:
             note = self.metadata['note']
 
-        return SeqTable.from_SeqSampleSet(self, sample_list=sample_list, seq_list=None,
-                                          remove_spike_in=remove_spike_in, note=note)
+        from .seq_table import SeqTable
+        return SeqTable(data_mtx=seq_table, data_unit='count', grouper=grouper,
+                        seq_metadata=None, sample_metadata=sample_meta, x_unit=self.metadata['x_unit'],
+                        dataset_metadata=None, note=note)
 
     def to_dataframe(self, samples=None, seq_list=None, remove_spike_in=True, return_counts=True, sparse=True):
         """Return a dataframe within index as sequences, columns as samples"""
@@ -841,6 +894,11 @@ class CountFileSet(object):
                 sample: self[sample].seq_amount(remove_spike_in=remove_spike_in, seq_list=seq_list, sparse=False)
                 for sample in samples
             }, columns=samples).fillna(0.0, inplace=False).astype(dtype)
+
+    def sample_into_to_dict(self, sample_list=None, exclude_spike_in=False, verbose=False):
+        if sample_list is None:
+            sample_list = self.sample_names
+        return {self[sample].name: self[sample].to_dict(verbose=verbose) for sample in sample_list}
 
     def to_csv(self, file_path, samples=None, seq_list=None, remove_spike_in=False, return_counts=False):
         self.to_dataframe(samples=samples, seq_list=seq_list,
@@ -928,6 +986,33 @@ class CountFileSet(object):
                 'silent': True,
                 'metadata': None,
                 'note': 'BFO k-seq data by Evan Jensen'
+            }
+        elif dataset.lower() in ['byo-doped']:
+            kwargs = {
+                'file_root': '/mnt/storage/projects/k-seq/input/byo_doped/counts',
+                'x_values': np.concatenate((
+                    np.repeat([1250, 250, 50, 10, 2], repeats=3) * 1e-6,
+                    np.array([np.nan])), axis=0
+                ),
+                'file_list': None,
+                'file_pattern': 'counts-',
+                'black_list': None,
+                'input_samples': 'counts-d-R0.txt',
+                'name_pattern': 'counts-d-[{byo}{exp_rep}].txt',
+                'spike_in_seq': 'AAAAACAAAAACAAAAACAAA',
+                'spike_in_amount': np.concatenate((
+                    np.repeat([2, 2, 1, 0.2, .04], repeats=3),
+                    np.array([10])), axis=0
+                ),
+                'spike_in_dia': 2,
+                'x_unit': 'mol',
+                'dna_unit': 'ng',
+                'dna_amount': None,
+                'sort_by': 'name',
+                'load_data': False,
+                'silent': True,
+                'metadata': None,
+                'note': 'BYO doped-pool k-seq data by Abe Pressman'
             }
         else:
             raise NotImplementedError(f'dataset {dataset} is not implemented')

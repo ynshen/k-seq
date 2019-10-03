@@ -74,6 +74,9 @@ class FuncToMethod(object):
 class DictToAttr(object):
     """Convert a dictionary to a group of attributes"""
 
+    def __repr__(self):
+        return f"An attribute class with keys: {list(self.__dict__.keys())}"
+
     def __init__(self, attr_dict):
         if isinstance(attr_dict, dict):
             self.__dict__.update(attr_dict)

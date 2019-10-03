@@ -54,7 +54,7 @@ def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full
 
 def extract_metadata(target, pattern):
     """Function to extract metadata info from target given pattern
-
+    todo: update method to account for missing metadata situation. e.g. matching -A- to -{d1}{d2}-
     Args:
 
         target (str): string to extract info from, e.g. sample file name

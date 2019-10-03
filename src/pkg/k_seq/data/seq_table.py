@@ -17,14 +17,87 @@ class Metadata(DictToAttr):
         super().__init__(attr_dict)
 
 
-class Grouper(DictToAttr):
+class Group(object):
 
-    def __init__(self, attr_dict):
-        super().__init__(attr_dict=attr_dict)
+    def __repr__(self):
+        if self._type == 0:
+            return f'Group: {self.group}'
+        else:
+            return f'Groups on:\n' + '\n'.join(f'{key}: {list(value)}' for key,value in self.group.items())
 
-    def get_table(self, group):
-        """todo: implement the methods to directly get table"""
-        pass
+    def __getitem__(self, item):
+        return self.group[item]
+
+    def __iter__(self):
+        if self._type == 0:
+            return self.group.__iter__()
+        else:
+            return ((key, value) for key,value in self.group.items())
+
+    def __init__(self, group, target=None, axis=1):
+        import numpy as np
+        import pandas as pd
+
+        if isinstance(group, (list, np.ndarray, pd.Series)):
+            self._type = 0
+            self.group = list(group)
+        elif isinstance(group, dict):
+            self._type = 1
+            self.group = group
+        else:
+            TypeError('Unaccepted group type')
+        self.target = target
+        self.axis = axis
+
+    def get_table(self, target=None, remove_zero=False):
+        if target is None:
+            target = self.target
+        if self._type == 0:
+            return slice_table(table=target, keys=self.group, axis=self.axis, remove_zero=remove_zero)
+        else:
+            return ((key, slice_table(table=target, keys=members, axis=self.axis, remove_zero=remove_zero))
+                    for key, members in self.group.items())
+
+
+def slice_table(table, keys, axis, remove_zero):
+    if axis == 0:
+        sub_table = table.loc[keys]
+        if remove_zero:
+            return sub_table.loc[:, (sub_table != 0).any(axis=0)]
+        else:
+            return sub_table
+    else:
+        sub_table = table[keys]
+        if remove_zero:
+            return sub_table.loc[(sub_table != 0).any(axis=1)]
+        else:
+            return sub_table
+
+
+class Grouper(object):
+
+    def __repr__(self):
+        groupings = [grouping for grouping in self.__dict__.keys() if grouping != '_target']
+        return f"Grouper contains {len(groupings)} groupings:\n" + '\n'.join(groupings)
+
+    def __init__(self, groupers, target):
+        self._target = target
+        self.add(groupers, target)
+
+    def add(self, groupers, target=None):
+        if target is None:
+            target = self._target
+        for key, members in groupers.items():
+            if isinstance(members, dict):
+                if 'axis' in members.keys():
+                    if len(members) !=2:
+                        raise TypeError(f'Wrong dictionary format for group {key}')
+                    else:
+                        self.__setattr__(key, Group(members['group'], axis=members['axis'], target=target))
+                else:
+                    self.__setattr__(key, Group(members, axis=1, target=target))
+            elif isinstance(members, list):
+                self.__setattr__(key, Group(members, axis=1, target=target))
 
 
 class SeqTable(object):
@@ -32,9 +105,9 @@ class SeqTable(object):
     """
 
     def __init__(self, data_mtx, data_unit='count',
-                 seq_list=None, sample_list=None, sample_grouper=None,
-                 x_unit=None, note=None, silent=True):
-
+                 seq_list=None, sample_list=None, grouper=None,
+                 seq_metadata=None, sample_metadata=None,
+                 x_unit=None, note=None, dataset_metadata=None, silent=True):
         """
         todo:
           - use hidden variable and seq/sample list for masking count table, amount table, dna amount
@@ -43,94 +116,108 @@ class SeqTable(object):
         """
 
         from ..utility.log import Logger
-        from ..utility import allowed_units
         import numpy as np
         import pandas as pd
 
+        # check input data unit type
         allowed_data_unit_mapper = {'count': 'count',
                                     'counts': 'count',
                                     'read': 'count',
                                     'reads': 'count',
-                                    'amount': 'amount'}.update({unit:unit for unit in allowed_units})
+                                    'amount': 'amount'}
+        from ..utility import allowed_units
+        allowed_data_unit_mapper.update({unit:unit for unit in allowed_units})
         if data_unit.lower() not in allowed_data_unit_mapper.keys():
             raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_unit_mapper.keys()))
 
+        # initialize metadata
         from datetime import datetime
         self.metadata = Metadata({
-            'dataset': {
+            'dataset': DictToAttr({
                 'time': datetime.now(),
                 'data_unit': allowed_data_unit_mapper[data_unit],
                 'note': note,
                 'x_unit': x_unit
-            },
+            }),
             'logger': Logger(silent=silent),
-            'samples': None,
-            'sequences': None
         })
-
+        if dataset_metadata is not None:
+            self.metadata.dataset.add(dataset_metadata)
+        if sample_metadata is not None:
+            self.metadata.samples = DictToAttr(sample_metadata)
+        if seq_metadata is not None:
+            self.metadata.sequences = DictToAttr(seq_metadata)
         self.metadata.logger.add('SeqTable created')
 
+        # import table
+        self.table = None
         if isinstance(data_mtx, pd.DataFrame):
             if not data_mtx.apply(pd.api.types.is_sparse).all():
-                # convert to sparse data
+                # not sparse, convert to sparse data
                 if self.metadata.dataset['data_unit'] in ['count']:
                     dtype = pd.SparseDtype('int', fill_value=0)
                 else:
                     dtype = pd.SparseDtype('float', fill_value=0.0)
                 self._raw_table = data_mtx.astype(dtype)
+                self.metadata.logger.add('Import type pd.Dataframe, not sparse, convert to sparse table')
             else:
                 self._raw_table = data_mtx
-
+                self.metadata.logger.add('Import type pd.Dataframe, sparse')
             self.seq_list = self._raw_table.index.to_series()
             self.sample_list = self._raw_table.columns.to_series()
+
             if sample_list is not None:
-                if isinstance(sample_list, dict):
-                    self.metadata.samples = sample_list
-                elif isinstance(sample_list, list):
-                    pass
+                # if sample list/seq list is also provided, it needs to be the subset of the Dataframe samples
+                if False in list(pd.Series(sample_list).isin(list(self._sample_list))):
+                    raise ValueError('Some samples are not found in data_mtx')
                 else:
-                    raise TypeError('sample_list needs to be a list of sample names or a dictionary of sample metadata')
+                    self.sample_list = sample_list
 
             if seq_list is not None:
-                if isinstance(seq_list, dict):
-                    self.metadata.sequences = seq_list
-                elif isinstance(seq_list, list):
-                    pass
+                if False in list(pd.Series(seq_list).isin(list(self._seq_list))):
+                    raise ValueError('Some seq are not found in data_mtx')
                 else:
-                    raise TypeError('seq_list needs to be a list of sample names or a dictionary of sample metadata')
+                    self.seq_list = seq_list
             self.metadata.logger.add('Data value imported from Pandas DataFrame, dtype={}'.format(
-                self.metadata.dataset['dtype']
+                self.metadata.dataset['data_unit']
             ))
         elif isinstance(data_mtx, np.ndarray):
             if (seq_list is None) or (sample_list is None):
                 raise ValueError('seq_list and sample_list must be indicated if using Numpy array')
             else:
-                if isinstance(sample_list, dict):
-                    self.metadata.samples = sample_list
-                    sample_list = sample_list.keys()
-                elif isinstance(sample_list, list):
-                    pass
+                if len(sample_list) != data_mtx.shape[1]:
+                    raise ValueError('Length of sample_list does not match with data_mtx')
                 else:
-                    raise TypeError('sample_list needs to be a list of sample names or a dict of sample metadata')
+                    self.sample_list = sample_list
 
-                if isinstance(seq_list, dict):
-                    self.metadata.sequences = seq_list
-                    seq_list = seq_list.keys()
-                elif isinstance(seq_list, list):
-                    pass
+                if len(seq_list) != data_mtx.shape[0]:
+                    raise ValueError('Length of seq_list does not match with data_mtx')
                 else:
-                    raise TypeError('seq_list needs to be a list of sample names or a dict of sample metadata')
+                    self.seq_list = seq_list
+
                 self._raw_table = pd.DataFrame(pd.SparseArray(data_mtx, fill_value=0),
                                                columns=sample_list,
                                                index=seq_list)
                 self.metadata.logger.add('Data value imported from Numpy array, dtype={}'.format(
-                    self.metadata.dataset['dtype']
+                    self.metadata.dataset['data_unit']
                 ))
-
-        if isinstance(sample_grouper, Grouper):
-            self.grouper = sample_grouper
         else:
-            self.grouper = Grouper(sample_grouper)
+            raise TypeError('data_mtx type is not supported')
+
+        self.table = self._raw_table.loc[self.seq_list][self.sample_list]
+
+        # import grouper
+        if grouper is not None:
+            if isinstance(grouper, Grouper):
+                self.grouper = grouper
+            else:
+                print('grouper set..')
+                print(grouper)
+                self.grouper = Grouper(grouper, target=self.table)
+        else:
+            self.grouper = None
+
+
 
         # from .visualizer import seq_occurrence_plot, rep_variability_plot
         # from ..utility.func_tools import FuncToMethod
@@ -140,12 +227,39 @@ class SeqTable(object):
         #                                    rep_variability_plot
         #                                ])
 
+    # @property
+    # def table(self):
+    #     """Deprecated because of slicing performance"""
+    #     return self._raw_table.loc[self.seq_list][self.sample_list]
+
     @property
-    def table(self):
-        return self._raw_table.loc[self.seq_list][self.sample_list]
+    def sample_list(self):
+        return self._sample_list
+
+    @sample_list.setter
+    def sample_list(self, sample_list):
+        if hasattr(self, '_sample_list'):
+            if set(sample_list) != set(self._sample_list):
+                self._sample_list = sample_list
+                self.table = self._raw_table.loc[self.seq_list][sample_list]
+        else:
+            self._sample_list = sample_list
+
+    @property
+    def seq_list(self):
+        return self._seq_list
+
+    @seq_list.setter
+    def seq_list(self, seq_list):
+        if hasattr(self, '_seq_list'):
+            if set(seq_list) != set(self._seq_list):
+                self._seq_list = seq_list
+                self.table = self._raw_table.loc[seq_list][self.sample_list]
+        else:
+            self._seq_list = seq_list
 
     def add_norm_table(self, norm_fn, table_name, axis=0):
-        self.__dict__[table_name] = self.table.apply(norm_fn, axis=axis)
+        setattr(self, table_name, self.table.apply(norm_fn, axis=axis))
 
     def filter_value(self, filter_fn, axis=0, inplace=True):
         "implement the elementwise filter for values, axis=-1 for elementwise, "
@@ -234,78 +348,7 @@ class SeqTable(object):
             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples"""
         import pandas as pd
 
-        if sample_list is None:
-            sample_list = sample_set.sample_names
-        if black_list is not None:
-            sample_list = [sample for sample in sample_list if sample not in black_list]
 
-        input_samples = [sample for sample in sample_list if sample_set[sample].sample_type == 'input']
-        reacted_samples = [sample for sample in sample_list if sample_set[sample].sample_type == 'reacted']
-
-        if seq_list is None:
-            if keep_all_seqs:
-                seq_table = sample_set.to_dataframe(samples=sample_list,
-                                                    with_spike_in=with_spike_in,
-                                                    return_counts=use_count)
-            else:
-                seq_table = pd.merge(
-                    sample_set.to_dataframe(samples=input_samples,
-                                            with_spike_in=with_spike_in,
-                                            return_counts=use_count),
-                    sample_set.to_dataframe(samples=reacted_samples,
-                                            with_spike_in=with_spike_in,
-                                            return_counts=use_count),
-                    left_index=True, right_index=True, how='inner'
-                )
-        else:
-            seq_table = sample_set.to_dataframe(samples=sample_list,
-                                                seq_list=seq_list,
-                                                with_spike_in=with_spike_in,
-                                                return_counts=use_count)
-
-        if note is None:
-            note = sample_set.metadata['note']
-        # if return raw counts, need to get  dna amount (corrected) as well
-        if use_count:
-
-            return cls(count_table=seq_table, input_samples=input_samples, reacted_samples=reacted_samples,
-                       metadata=sample_set.metadata.update(
-                           {'source_sample_set_summary': sample_set.summary().loc[sample_list]}
-                       ), note=note)
-        else:
-            return cls(amount_table=seq_table, input_samples=input_samples, reacted_samples=reacted_samples,
-                       metadata=sample_set.metadata.update(
-                           {'source_sample_set_summary': sample_set.summary().loc[sample_list]}
-                       ), note=note)
-
-
-        # find valid sequence set
-        self.metadata['remove_spike_in'] = remove_spike_in
-        input_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'input',
-                                           with_spike_in=not remove_spike_in)
-        reacted_set = sample_set.get_samples(sample_id=lambda sample: sample.sample_type == 'reacted',
-                                            with_spike_in=not remove_spike_in)
-        valid_set = set(input_set.index) & set(reacted_set.index)
-        self.metadata['seq_nums'] = {
-            'input_seq_num': input_set.shape[0],
-            'reacted_seq_num': reacted_set.shape[0],
-            'valid_seq_num': len(valid_set)
-        }
-
-        self.count_table_reacted = reacted_set.loc[valid_set]
-        self.count_table_input = input_set.loc[valid_set]
-
-        # preserve sample info
-        self.sample_info = {}
-        for sample in sample_set.sample_set:
-            sample_info_dict = sample.__dict__.copy()
-            _ = sample_info_dict.pop('visualizer')
-            sequences = sample_info_dict.pop('_sequences', None)
-            self.sample_info[sample.name] = {
-                'valid_seqs_num': len(set(sequences.index.values) & valid_set),
-                'valid_seqs_counts': np.sum(sequences.loc[list(set(sequences.index.values) & valid_set)]['counts'])
-            }
-            self.sample_info[sample.name].update(sample_info_dict)
 
 
     def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
