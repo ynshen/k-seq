@@ -404,7 +404,7 @@ class SpikeIn(object):
 
         sample (`SeqSample`): link to corresponding sample object
 
-        diameter (`int`): diameter of spike-in peak, accounting for synthesis/sequencing error
+        radius (`int`): radius of spike-in peak, accounting for synthesis/sequencing error
 
         spike_in_amount (`float`): DNA amount of spike-in sequences added
 
@@ -422,19 +422,19 @@ class SpikeIn(object):
     def __repr__(self):
         return f'Spike-in peak for {self.sample!r}' \
                f'\n\tcenter:{self.center}' \
-               f'\n\tamount: {self.spike_in_amount}, dia: {self.diameter:d}, unit: {self.unit}'
+               f'\n\tamount: {self.spike_in_amount}, rad: {self.radius:d}, unit: {self.unit}'
 
     def __init__(self, spike_in_seq, sample, spike_in_amount=None, unit=None, spike_in_dia=2):
         self.center = spike_in_seq
         self.sample = sample
         self.spike_in_amount = spike_in_amount
         self._silent = self.sample.silent
-        self.diameter = spike_in_dia
+        self.radius = spike_in_dia
         self.unit = unit
         self.dist_to_center = None
         self.members = None
         self.spike_in_counts = None
-        self.sample.logger.add("Spike-in ({}) added, spike-in amount {}, dia {}, unit {}".format(
+        self.sample.logger.add("Spike-in ({}) added, spike-in amount {}, rad {}, unit {}".format(
             spike_in_seq,
             spike_in_amount,
             spike_in_dia,
@@ -463,9 +463,9 @@ class SpikeIn(object):
 
     @property
     def members(self):
-        """A list of sequences considered as in the peak, change as diameter change"""
+        """A list of sequences considered as in the peak, change as radius change"""
         if self._members is None:
-            self._members = self.dist_to_center[self.dist_to_center <= self.diameter].index.to_series().values
+            self._members = self.dist_to_center[self.dist_to_center <= self.radius].index.to_series().values
         return self._members
 
     @members.setter
@@ -475,7 +475,7 @@ class SpikeIn(object):
 
     @property
     def spike_in_counts(self):
-        """Total counts of sequences in `self.members`, updated as diameter change"""
+        """Total counts of sequences in `self.members`, updated as radius change"""
         if self._spike_in_counts is None:
             self._spike_in_counts = self.sample.sequences.loc[self.members]['counts'].sum()
         return self._spike_in_counts
@@ -485,12 +485,12 @@ class SpikeIn(object):
         self._spike_in_counts = value
 
     @property
-    def diameter(self):
+    def radius(self):
         return self._diameter
 
-    @diameter.setter
-    def diameter(self, spike_in_dia):
-        """Update members and spike_in_counts when updating diameter"""
+    @radius.setter
+    def radius(self, spike_in_dia):
+        """Update members and spike_in_counts when updating radius"""
         if not hasattr(self, '_diameter'):
             self._diameter = spike_in_dia
         else:
@@ -498,7 +498,7 @@ class SpikeIn(object):
                 self._diameter = spike_in_dia
                 self.members = self.dist_to_center[self.dist_to_center <= spike_in_dia].index.to_series().values
                 self.spike_in_counts = self.sample.sequences.loc[self.members]['counts'].sum()
-                self.sample.logger.add('Set spike-in diameter to {}'.format(spike_in_dia))
+                self.sample.logger.add('Set spike-in radius to {}'.format(spike_in_dia))
 
     @property
     def norm_factor(self):
@@ -514,11 +514,11 @@ class SpikeIn(object):
         """
         return self.norm_factor * self.sample.total_counts
 
-    def survey_peak(self, diameter=2, accumulate=False):
-        """Survey count of sequences around spike up to a given diameter (edit distance).
+    def survey_peak(self, radius=2, accumulate=False):
+        """Survey count of sequences around spike up to a given radius (edit distance).
 
         Args:
-            diameter (`int`): the maximum distance to survey
+            radius (`int`): the maximum distance to survey
             accumulate (`bool`): if return the accumulated count to distance i
 
         Returns:
@@ -536,13 +536,13 @@ class SpikeIn(object):
                 return self.sample.sequences['counts'][self.dist_to_center <= dist].sum()
             else:
                 return self.sample.sequences['counts'][self.dist_to_center == dist].sum()
-        dist_list = np.linspace(0, diameter, diameter + 1, dtype=int)
+        dist_list = np.linspace(0, radius, radius + 1, dtype=int)
         return pd.Series([get_total_counts(dist) for dist in dist_list], index=dist_list)
 
     def to_series(self, verbose=False):
         """return a series of spike in info, including:
           - dna amount (from spike-in, [unit])
-          - spike-in dia: diameter
+          - spike-in rad: radius
           - spike-in pct: percent
           - spike-in seq (verbose)
           - spike-in amount (verbose)
@@ -553,23 +553,23 @@ class SpikeIn(object):
         """
         import pandas as pd
         if not verbose:
-            return pd.Series(data=[self.dna_amount, self.diameter, self.spike_in_counts/self.sample.total_counts],
+            return pd.Series(data=[self.dna_amount, self.radius, self.spike_in_counts / self.sample.total_counts],
                              index=[
                                  'dna amount (from spike-in{})'.format('' if self.unit is None else ', {}'.format(self.unit)),
-                                 'spike-in dia', 'spike-in pct'
+                                 'spike-in rad', 'spike-in pct'
                              ])
         else:
-            return pd.Series(data=[self.dna_amount, self.diameter, self.spike_in_counts/self.sample.total_counts,
+            return pd.Series(data=[self.dna_amount, self.radius, self.spike_in_counts / self.sample.total_counts,
                                    self.center, self.spike_in_amount, self.spike_in_counts],
                              index=[
                                  'dna amount (from spike-in{})'.format('' if self.unit is None else ', {}'.format(self.unit)),
-                                 'spike-in dia', 'spike-in pct', 'spike-in seq', 'spike-in amount', 'spike-in counts'
+                                 'spike-in rad', 'spike-in pct', 'spike-in seq', 'spike-in amount', 'spike-in counts'
                              ])
 
     def to_dict(self, verbose=False):
         """Return necessary info of spike-in as a dictionary, including:
           - seq: spike-in seq
-          - diameter:
+          - radius:
           - dna_amount: DNA amount of sample pool calculated by spike-in
           - norm_factor
           - unit
@@ -580,7 +580,7 @@ class SpikeIn(object):
         """
         info = {
             'seq': self.center,
-            'diameter': self.diameter,
+            'radius': self.radius,
             'dna_amount': self.dna_amount,
             'norm_factor': self.norm_factor,
             'unit': self.unit
@@ -859,8 +859,16 @@ class CountFileSet(object):
         sample_meta = self.sample_into_to_dict(sample_list=sample_list, verbose=False)
 
         # Init Grouper
+        spike_in_seqs = []
+        for sample in self.samples:
+            if sample.spike_in is not None:
+                spike_in_seqs += list(sample.spike_in.members)
+        spike_in_seqs = list(set(spike_in_seqs))
         grouper = {'input': [sample for sample in sample_list if self[sample].sample_type == 'input'],
                    'reacted': [sample for sample in sample_list if self[sample].sample_type == 'reacted']}
+        if spike_in_seqs != []:
+            grouper['spike_in_seqs'] = {'axis':0, 'group': spike_in_seqs}
+
         if note is None:
             note = self.metadata['note']
 
@@ -1004,7 +1012,7 @@ class CountFileSet(object):
                     np.repeat([2, 2, 1, 0.2, .04], repeats=3),
                     np.array([10])), axis=0
                 ),
-                'spike_in_dia': 2,
+                'spike_in_dia': 4,
                 'x_unit': 'mol',
                 'dna_unit': 'ng',
                 'dna_amount': None,

@@ -49,7 +49,17 @@ def blue_header(header):
     print(color.BOLD + color.BLUE + header + color.END)
 
 
+def barplot(series, ax, label=None, yticklabels=None, barplot_kwargs=None):
+    """General barplot for single series"""
+    import numpy as np
+    import pandas as pd
 
-
-
+    pos = np.arange(len(series))
+    if label is None and 'label' not in barplot_kwargs.keys() and isinstance(series, pd.Series):
+        label = series.name
+    if yticklabels is None and isinstance(series, pd.Series):
+        yticklabels = series.index
+    ax.barplot(pos, series, label=label, **barplot_kwargs)
+    ax.set_xticks(pos)
+    ax.set_xticklabels(pos, yticklabels, fontsize=12, rotation=90)
 
