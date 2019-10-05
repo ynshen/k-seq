@@ -1,4 +1,10 @@
 
+"""
+todo:
+  - convert spike-in vis to the spike-in normalizer?
+
+"""
+
 from .seq_table import SeqTable
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -141,7 +147,7 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
     sample_num = len([sample for sample in seq_table.sample_list if sample not in black_list])
 
     fig, axes = plt.subplots(plot_num, 1, figsize=[sample_num * 0.5, 3 * plot_num], sharex=True)
-    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.subplots_adjust(wspace=0, hspace=0.01)
     axes_itr = (ax for ax in axes)
     if plot_unique_seq:
         ax = next(axes_itr)
@@ -156,3 +162,80 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
 
     if save_fig_to:
         fig.savefig(save_fig_to, dpi=300)
+
+
+def sample_rel_abun_hist(seq_table, black_list=None, bins=None, x_log=True, y_log=False,
+                         ncol=None, nrow=None, figsize=None, hist_kwargs=None, save_fig_to=None):
+    """todo: add pool counts composition curve for straight forward visualization"""
+    import numpy as np
+
+    if hist_kwargs is None:
+        hist_kwargs = {}
+    sample_list = seq_table.sample_list
+    if black_list is not None:
+        sample_list = [sample for sample in sample_list if sample not in black_list]
+    rel_abun = seq_table.table[sample_list] / seq_table.table[sample_list].sum(axis=0)
+    if ncol is None:
+        ncol = 3
+    if nrow is None:
+        nrow = int((len(sample_list) - 1) / ncol) + 1
+    if figsize is None:
+        figsize = [3 * ncol, 2 * nrow]
+    fig, axes = plt.subplots(nrow, ncol, figsize=figsize)
+    axes = np.reshape(axes, -1)
+    axes_ir = (ax for ax in axes)
+
+    if bins is None:
+        if x_log:
+            min_dig = int(np.log10(rel_abun[rel_abun > 0].min().min())) - 1
+            bins = np.logspace(min_dig, 0, -min_dig * 2)
+        else:
+            min_dig = rel_abun[rel_abun > 0].min().min()
+            bins = np.linspace(min_dig, 1, 20)
+
+    for sample in sample_list:
+        ax = next(axes_ir)
+        ax.hist(rel_abun[sample], bins=bins, **hist_kwargs)
+        if x_log:
+            ax.set_xscale('log')
+        if y_log:
+            ax.set_yscale('log')
+        ax.tick_params(axis='both', labelsize=12)
+        ax.set_title(sample, fontsize=12)
+
+    for ax in axes_ir:
+        ax.axis('off')
+    fig.text(s='Relative abundance', x=0.5, y=0, ha='center', va='top', fontsize=14)
+    plt.tight_layout()
+
+
+def sample_entropy_scatterplot(seq_table, black_list=None, normalize=False, base=2, figsize=None, scatter_kwargs=None):
+    import numpy as np
+    import pandas as pd
+
+    def get_entropy(smpl_col):
+        valid = smpl_col[smpl_col > 0]
+        if pd.api.types.is_sparse(valid):
+            valid = valid.sparse.to_dense()
+        valid = valid / np.sum(valid)
+        if normalize:
+            return -np.sum(valid * np.log(valid)) / np.log(len(valid))
+        else:
+            return -np.sum(valid * np.log(valid)) / np.log(base)
+
+    sample_list = seq_table.sample_list
+    if black_list is not None:
+        sample_list = [sample for sample in sample_list if sample not in black_list]
+
+    entropy = seq_table.table[sample_list].apply(get_entropy, axis=0)
+
+    if figsize is None:
+        figsize = [len(entropy)/2, 4]
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    pos = np.arange(len(entropy))
+    ax.scatter(pos, entropy, marker='x', **scatter_kwargs)
+    ax.set_xticks(pos)
+    ax.set_xticklabels(sample_list, fontsize=12, rotation=90)
+    ax.tick_params(axis='both', labelsize=12)
+    ax.set_ylabel('Entropy efficiency' if normalize else f'Entropy (base {base})', fontsize=14)
+    ax.set_ylim([0, ax.get_ylim()[1]])
