@@ -320,8 +320,6 @@ class SeqTable(object):
         pass
 
     def sample_overview(self):
-        # todo: add sample overview for per sample
-        # By convention
         import numpy as np
         import pandas as pd
 
@@ -364,20 +362,36 @@ class SeqTable(object):
                         for sample_name in self.sample_list}
         return pd.DataFrame.from_dict(sample_info, orient='index')
 
+    def seq_overview(self):
+        """
+        todo: finish seq_table
+        columns to include:
+        - length
+        - occurrence / occurrence in input/reacted
+        - rel abun / mean rel in input/reacted
+        Returns:
 
-    #     # @property
-    #     # def x_values(self): todo: revive this
-    #     #     """Return x values corresponding to each column in `reacted_frac_table` (or `count_table_reacted`)
-    #     #     as pd.Series
-    #     #     """
-    #     #     import pandas as pd
-    #     #
-    #     #     if hasattr(self, 'reacted_frac_table'):
-    #     #         table = self.reacted_frac_table
-    #     #     else:
-    #     #         table = self.count_table_reacted
-    #     #     return pd.Series(data=[self.sample_info[sample]['x_value'] for sample in table.columns],
-    #     #                      index=table.columns)
+        """
+        pass
+
+    @classmethod
+    def load_default_dataset(cls, dataset, from_count_file=False):
+        """Load default dataset
+        Available dataset:
+          - BYO-doped: 'byo-doped'
+          - BYO: not implemented
+          - BFO: not implemented
+        """
+        if dataset.lower() in ['byo_doped', 'doped']:
+            return cls._load_byo_doped(from_count_file=from_count_file)
+        else:
+            raise NotImplementedError(f'Dataset {dataset} is not implemented')
+
+    @classmethod
+    def _load_byo_doped(cls, from_count_file=False):
+        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/working/new_pkg_dev_2019_10/byo_doped_test.pkl'
+        
+
     #     #
     #     # @property
     #     # def seq_info(self): todo: revive this

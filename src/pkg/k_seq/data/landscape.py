@@ -11,9 +11,11 @@ class Peaks(object):
         self.radius = radius
         self.name = name
         if isinstance(self.target, pd.DataFrame):
-            self.dist_to_center = self.target.apply(self._edit_dist_to_seq, axis=1)
+            self.dist_to_center = self.target.index.to_series().map(self._edit_dist_to_seq)
+            self.rel_abun_table = self.target.divide(self.target.sum(axis=0), axis=1)
         elif hasattr(self.target, 'table'):
-            self.dist_to_center = self.target.table.apply(self._edit_dist_to_seq, axis=1)
+            self.dist_to_center = self.target.table.index.to_series().map(self._edit_dist_to_seq)
+            self.rel_abun_table = self.target.table.divide(self.target.table.sum(axis=0), axis=1)
 
     def _edit_dist_to_seq(self, seq):
         from Levenshtein import distance
@@ -30,11 +32,9 @@ class Peaks(object):
         def seq_counter(dist):
             return np.sum(self.dist_to_center == dist)
 
-        dist_counter = pd.Series(data =[seq_counter(dist) for dist in np.arange(max_radius + 1)],
-                                 index = np.arange(max_radius + 1))
-
+        dist_counter = pd.Series(data=[seq_counter(dist) for dist in np.arange(max_radius + 1)],
+                                 index=np.arange(max_radius + 1))
         seq_len = len(self.center_seq)
-
         poss_seqs = None
         for dist in np.arange(max_radius + 1):
             if dist == 0:
@@ -50,10 +50,7 @@ class Peaks(object):
 
         dist_list = pd.Series(data=np.arange(max_radius + 1), index=np.arange(max_radius + 1))
         if rel_abun_table is None:
-            if isinstance(self.target, pd.DataFrame):
-                rel_abun_table = self.target.divide(self.target.sum(axis=0), axis=1)
-            else:
-                rel_abun_table = self.target.table.divide(self.target.tabl.sum(axis=0), axis=1)
+            rel_abun_table = self.rel_abun_table
 
         def get_rel_abun(dist):
             seqs = self.dist_to_center[self.dist_to_center <= dist].index.values
@@ -61,4 +58,21 @@ class Peaks(object):
 
         peak_abun = dist_list.apply(get_rel_abun)
         return peak_abun
+
+    @staticmethod
+    def from_peak_list(peak_list):
+        """Create a mega peak of a list of peaks, distance to peak center will be the minimal distance to either
+        of the center"""
+
+        import copy
+
+        mega_peak = copy.deepcopy(peak_list[0])
+        mega_peak.name = f"Merged peak ({','.join([peak.name for peak in peak_list])})"
+        mega_peak.center_seq = {peak.name: peak.center_seq for peak in peak_list}
+        mega_peak.dist_to_center = pd.DataFrame({peak.name: peak.dist_to_center for peak in peak_list}).min(axis=1)
+        mega_peak.peak_coverage = None
+
+        return mega_peak
+
+
 
