@@ -17,333 +17,333 @@ class TransformerBase(object):
         self.target = target
         pass
 
-    def func(self, target):
-        """input an `SeqTable` or `pd.Dataframe`, output an transformed `pd.Dataframe`"""
-        pass
+    @staticmethod
+    def func(target):
+        """core function, input an `pd.Dataframe`, output an transformed `pd.Dataframe`. Should NOT be used alone"""
+        raise NotImplementedError()
 
-    def apply(self, target=None, add_to_SeqTable_as=None):
-        """Run the transformation"""
+    def apply(self, target=None):
+        """Run the transformation, with class attributes or arguments
+        Logic and preprocessing of data and arguments should be done here
+        """
         if target is None:
             target = self.target
         if target is None:
             raise ValueError('No valid target found')
-        if add_to_SeqTable_as is None:
-            return self.func(target=target)
-        else:
-            setattr(self.target, add_to_SeqTable_as, self.func(target=target))
+
+        return self.func(target=target)
 
 
 class SpikeInNormalizer(TransformerBase):
-    """this is the temporary version of spike-in normalizer, depending on CountFileSet info"""
+    """
+    Normalizer using spike-in information
+    """
 
-    def __init__(self, spike_in_seq, spike_in_amount, target, radius=2, unit='ng', blacklist=None):
-        if not isinstance(target, (SeqTable, pd.DataFrame)):
-            raise TypeError('target for SpikeInNormalizer needs to be either `SeqTable` or `pd.Dataframe`')
+    def __repr__(self):
+        return f"Spike-in normalizer (seq: {self.spike_in_seq}, radius= {self.radius})"
+
+    def __init__(self, spike_in_seq, spike_in_amount, target, radius=None, unit='ng', blacklist=None):
         super().__init__(target)
         self.spike_in_seq = spike_in_seq
-        self.radius = radius
         self.unit = unit
-        if isinstance(spike_in_amount, (list, np.ndarray)):
-            if isinstance(target, pd.DataFrame):
-                sample_list = target.columns
-            else:
-                sample_list = target.sample_list
-            if blacklist is not None:
-                sample_list = [sample for sample in sample_list if sample not in blacklist]
-            self.spike_in_amount = {key: value for key, value in zip(sample_list, spike_in_amount)}
-        elif isinstance(spike_in_amount, dict):
-            self.spike_in_amount = spike_in_amount
-        else:
-            raise TypeError('spike_in_amount needs to be list or dict')
+        self.target = target
+        self.blacklist = blacklist
+        self.spike_in_amount = spike_in_amount
         if isinstance(self.target, pd.DataFrame):
             self.dist_to_center = pd.Series(self.target.index.map(self._get_edit_dist), index=self.target.index)
         else:
-            self.dist_to_center = pd.Series(self.target.table.index.map(self._get_edit_dist),
-                                            index=self.target.table.index)
+            try:
+                self.dist_to_center = pd.Series(self.target.table.index.map(self._get_edit_dist),
+                                                index=self.target.table.index)
+            except AttributeError:
+                raise AttributeError('target for SpikeInNormalizer needs to be either `SeqTable` or `pd.Dataframe`')
+
+        self.spike_in_members = None
+        self.norm_factor = None
+        self.radius = None
+        self.radius = radius
+
+    @property
+    def spike_in_amount(self):
+        return self._spike_in_amount
+
+    @spike_in_amount.setter
+    def spike_in_amount(self, spike_in_amount):
+        if isinstance(spike_in_amount, (list, np.ndarray)):
+            if isinstance(self.target, pd.DataFrame):
+                sample_list = self.target.columns
+            else:
+                sample_list = self.target.sample_list
+            if self.blacklist is not None:
+                sample_list = [sample for sample in sample_list if sample not in self.blacklist]
+            self._spike_in_amount = {key: value for key, value in zip(sample_list, spike_in_amount)}
+        elif isinstance(spike_in_amount, dict):
+            self._spike_in_amount = spike_in_amount
+        else:
+            raise TypeError('spike_in_amount needs to be list or dict')
 
     def _get_edit_dist(self, seq):
         from Levenshtein import distance
         return distance(self.spike_in_seq, seq)
 
+    def _get_norm_factor(self, sample):
+        """Calculate norm factor from a sample column"""
+        return self.spike_in_amount[sample.name] / sample[self.spike_in_members].sparse.to_dense().sum()
+
     @property
-    def spike_in_members(self):
-        return self.dist_to_center[self.dist_to_center <= self.radius].index.values
+    def radius(self):
+        return self._radius
 
-    def _sample_normalize(self, sample):
-        if sample.name in self.spike_in_amount.keys():
-            norm_factor = self.spike_in_amount[sample.name] / sample[self.spike_in_members].sparse.to_dense().sum()
-            return sample * norm_factor
+    @radius.setter
+    def radius(self, value):
+        if value is not None:
+            if value != self.radius:
+                self._radius = value
+                self.spike_in_members = self.dist_to_center[self.dist_to_center <= value].index.values
+                if isinstance(self.target, pd.DataFrame):
+                    self.norm_factor = self.target.apply(self._get_norm_factor, axis=0)
+                else:
+                    self.norm_factor = self.target.table.apply(self._get_norm_factor, axis=0)
         else:
-            import warnings
-            warnings.warn(f'Sample {sample.name} if not found in the normalizer, normalization is not performed')
-            return sample
+            self._radius = None
+            self.spike_in_members = None
+            self.norm_factor = None
 
-    def func(self, target):
-        if isinstance(target, pd.DataFrame):
-            table = target
-        elif hasattr(target, 'table'):
-            table = target.table
-        else:
-            raise TypeError('table is not a recognized type')
+    @staticmethod
+    def func(target, norm_factor, **kwargs):
 
-        return table.apply(self._sample_normalize, axis=0)
+        def sample_normalize_wrapper(norm_factor):
 
-    # def spike_in_peak_plot(seq_table, black_list=None, max_dist=15,
-    #                        norm_on_center=True, log_y=True, accumulate=False,
-    #                        marker_list=None, color_list=None, guild_lines=None,
-    #                        legend_off=False, ax=None, save_fig_to=None):
-    #     """Plot the distribution of spike_in peak
-    #     Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
-    #
-    #     Args:
-    #         sample_set (`SeqSampleSet`): dataset to plot
-    #         black_list (list of `str`): to exclude some samples if not `None`
-    #         max_dist (`int`): maximal edit distance to survey. Default 15
-    #         norm_on_center (`bool`): if the counts/abundance are normalized to then center (exact spike in)
-    #         log_y (`bool`): if set the y scale as log
-    #         accumulate (`bool`): if show the accumulated abundance within i edit distance instead
-    #         marker_list (list of `str`): overwrite default marker scheme if not `None`, same length and order as valid samples
-    #         color_list (list of `str`): overwrite default color scheme if not `None`, same length and order as valid samples
-    #         guild_lines (list of `float`): add a series of guild lines indicate the distribution only from given error rate,
-    #           if not `None`
-    #         legend_off (`bool`): do not show the legend if True
-    #         ax (`matplotlib.Axis`): if use external ax object to plot. Create a new figure if `None`
-    #         fig_save_to (`str`): save the figure as ``.jpeg`` file if not `None`
-    #
-    #     """
-    #
-    #     from k_seq.utility import PlotPreset
-    #     import numpy as np
-    #
-    #     if black_list is None:
-    #         black_list = []
-    #     samples_to_plot = [sample for sample in sample_set.sample_set if sample.name not in black_list]
-    #     if marker_list is None:
-    #         marker_list = PlotPreset.markers(num=len(samples_to_plot), with_line=True)
-    #     elif len(marker_list) != len(samples_to_plot):
-    #         raise Exception('Error: length of marker_list does not align with the number of valid samples to plot')
-    #
-    #     if color_list is None:
-    #         color_list = PlotPreset.colors(num=len(samples_to_plot))
-    #     elif len(color_list) != len(samples_to_plot):
-    #         raise Exception('Error: length of color_list does not align with the number of valid samples to plot')
-    #
-    #     if ax is None:
-    #         if legend_off:
-    #             fig = plt.figure(figsize=[10, 8])
-    #         else:
-    #             fig = plt.figure(figsize=[16, 8])
-    #         ax = fig.add_subplot(111)
-    #         show_ax = True
-    #     else:
-    #         show_ax = False
-    #
-    #     for sample, color, marker in zip(samples_to_plot, color_list, marker_list):
-    #         if not hasattr(sample, 'spike_in'):
-    #             raise Exception('Error: please survey the spike-in counts before plot')
-    #         elif len(sample.spike_in['spike_in_peak']['total_counts'] < max_dist + 1):
-    #             spike_in = sample.survey_spike_in_peak(spike_in_seq=sample.spike_in['spike_in_seq'],
-    #                                                    max_dist_to_survey=max_dist,
-    #                                                    silent=True, inplace=False)
-    #         else:
-    #             spike_in = sample.spike_in
-    #
-    #         if accumulate:
-    #             counts = np.array(
-    #                 [np.sum(spike_in['spike_in_peak']['total_counts'][:i + 1]) for i in range(max_dist + 1)])
-    #         else:
-    #             counts = np.array(spike_in['spike_in_peak']['total_counts'][:max_dist + 1])
-    #         if norm_on_center:
-    #             counts = counts / counts[0]
-    #         ax.plot([i for i in range(max_dist + 1)], counts, marker, color=color,
-    #                 label=sample.name, alpha=0.5)
-    #     if guild_lines:
-    #         from scipy.stats import binom
-    #         for ix, p in enumerate(guild_lines):
-    #             rv = binom(len(spike_in['spike_in_seq']), p)
-    #             pmfs = np.array([rv.pmf(x) for x in range(max_dist)])
-    #             pmfs_normed = pmfs / pmfs[0]
-    #             ax.plot([i for i in range(max_dist)], pmfs_normed,
-    #                     color='k', ls='--', alpha=(ix + 1) / len(guild_lines), label='p={}'.format(p))
-    #     if log_y:
-    #         ax.set_yscale('log')
-    #     y_label = ''
-    #     if norm_on_center:
-    #         y_label += ' normed'
-    #
-    #     if accumulate:
-    #         y_label += ' accumulated'
-    #
-    #     y_label += ' counts'
-    #     ax.set_ylabel(y_label.title(), fontsize=14)
-    #     ax.set_xlabel('Edit Distance to Spike-in Center', fontsize=14)
-    #     if not legend_off:
-    #         ax.legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
-    #     plt.tight_layout()
-    #
-    #     if save_fig_to:
-    #         plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-    #     if show_ax:
-    #         plt.show()
-    #
-    # def rep_spike_in_plot(sample_set, group_by, plot_spike_in_frac=True, plot_entropy_eff=True,
-    #                       ax=None, save_fig_to=None):
-    #     """Scatter plot to show the variability (outliers) for each group of sample on
-    #         - spike in fraction if applicable
-    #         - entropy efficiency of the pool
-    #
-    #     Args:
-    #         sample_set (`SeqSampleSet`): sample_set to plot
-    #         group_by (`list` of `list`, `dict` of `list`, or `str`): indicate the grouping of samples. `list` of `list` to
-    #           to contain sample names in each group as a nested `list`, or named group as a `dict`, or group on attribute
-    #           using `str`, e.g. 'byo'
-    #         plot_spike_in_frac (`bool`): if plot the fraction of spike-in seq in each sample
-    #         plot_entropy_eff (`bool`): if plot the entropy efficiency for each sample
-    #         ax (`matplotlib.Axes`): plot in a given axis is not None
-    #         save_fig_to (`str`): directory to save the figure
-    #
-    #     Returns:
-    #
-    #     """
-    #
-    #     from k_seq.utility import PlotPreset
-    #
-    #     tagged_sample_set = {sample.name: sample for sample in sample_set.sample_set}
-    #     groups = {}
-    #     if isinstance(group_by, list):
-    #         for ix, group in enumerate(group_by):
-    #             if not isinstance(group, list):
-    #                 raise Exception('Error: if use list, group by should be a 2-D list of sample names')
-    #             else:
-    #                 groups['Set_{}'.format(ix)] = [tagged_sample_set[sample_name] for sample_name in group]
-    #     elif isinstance(group_by, dict):
-    #         for group in group_by.values():
-    #             if not isinstance(group, list):
-    #                 raise Exception('Error: if use dict, all values should be a 1-D list of sample names')
-    #         groups = {
-    #             group_name: [tagged_sample_set[sample_name] for sample_name in group]
-    #             for group_name, group in group_by.items()
-    #         }
-    #     elif isinstance(group_by, str):
-    #         groups = {}
-    #         for sample in sample_set.sample_set:
-    #             if group_by not in sample.metadata.keys():
-    #                 raise Exception('Error: sample {} does not have attribute {}'.format(sample.name, group_by))
-    #             else:
-    #                 if sample.metadata[group_by] in groups:
-    #                     groups[sample.metadata[group_by]].append(sample)
-    #                 else:
-    #                     groups[sample.metadata[group_by]] = [sample]
-    #
-    #     if plot_spike_in_frac + plot_entropy_eff == 2:
-    #         if ax is None:
-    #             fig, axes = plt.subplots(2, 1, figsize=[12, 12], sharex=True)
-    #             fig.subplots_adjust(wspace=0, hspace=0)
-    #             ax_show = True
-    #         else:
-    #             ax_show = False
-    #     elif plot_spike_in_frac + plot_entropy_eff == 1:
-    #         if ax is None:
-    #             fig = plt.figure(figsize=[12, 6])
-    #             ax = fig.add_subplot(111)
-    #             ax_show = True
-    #         else:
-    #             ax_show = False
-    #         axes = [ax, ax]
-    #
-    #     def get_spike_in_frac(sample):
-    #         return np.sum(sample.spike_in['spike_in_peak']['total_counts'][
-    #                       :sample.spike_in['quant_factor_max_dist']]) / sample.total_counts
-    #
-    #     def get_entropy_eff(sample):
-    #         sequences = sample.sequences(with_spike_in=False)['counts']
-    #         seq_rel_abun = sequences / sequences.sum()
-    #         return -np.sum(np.multiply(seq_rel_abun, np.log2(seq_rel_abun))) / np.log2(len(seq_rel_abun))
-    #
-    #     # texts1 = []
-    #     # texts2 = []
-    #     markers = PlotPreset.markers(num=len(groups))
-    #     for ix, (samples, marker) in enumerate(zip(groups.values(), markers)):
-    #         for sample, color in zip(samples, PlotPreset.colors(num=len(samples))):
-    #             if plot_spike_in_frac:
-    #                 axes[0].scatter([ix], [get_spike_in_frac(sample)], marker=marker, color=color)
-    #                 tx = axes[0].text(s=sample.name, x=ix + 0.1, y=get_spike_in_frac(sample), va='center', ha='left',
-    #                                   fontsize=10)
-    #                 # texts1.append(tx)
-    #
-    #             if plot_entropy_eff:
-    #                 axes[1].scatter([ix], [get_entropy_eff(sample)], marker=marker, color=color)
-    #                 tx = axes[1].text(s=sample.name, x=ix + 0.1, y=get_entropy_eff(sample), va='center', ha='left',
-    #                                   fontsize=10)
-    #                 # texts2.append(tx)
-    #     # from adjustText import adjust_text
-    #     # adjust_text(texts1, arrowprops=dict(arrowstyle='->', color='#151515'))
-    #     # adjust_text(texts2, arrowprops=dict(arrowstyle='->', color='#151515'))
-    #     axes[0].set_ylabel('Spike in fraction', fontsize=14)
-    #     axes[1].set_ylabel('Entropy Efficiency', fontsize=14)
-    #     axes[1].set_xlim([-0.5, len(groups)])
-    #     axes[1].set_xticks([ix for ix in range(len(groups))])
-    #     axes[1].set_xticklabels(groups.keys())
-    #
-    #     if save_fig_to:
-    #         fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
-    #     if ax_show:
-    #         plt.show()
+            def sample_normalizer(sample):
+                if sample.name in norm_factor.keys():
+                    return sample * norm_factor[sample.name]
+                else:
+                    import warnings
+                    warnings.warn(
+                        f'Sample {sample.name} is not found in the normalizer, normalization is not performed')
+                    return sample
+
+            return sample_normalizer
+
+        import pandas as pd
+        if not isinstance(target, pd.DataFrame):
+            raise TypeError('target needs to be pd.DataFrame')
+        return target.apply(sample_normalize_wrapper(norm_factor=norm_factor), axis=0)
+
+    def apply(self, target=None, norm_factor=None):
+        if target is None:
+            target = self.target
+        if target is None:
+            raise ValueError('No valid target found')
+        if norm_factor is None:
+            norm_factor = norm_factor
+        if norm_factor is None:
+            raise ValueError('No valid norm_factor found')
+
+        if isinstance(target, SeqTable):
+            target = target.table
+
+        return self.func(target=target, norm_factor=norm_factor)
+
+    def spike_in_peak_plot(self, target=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
+                           marker_list=None, color_list=None, err_guild_lines=None,
+                           legend_off=False, ax=None, figsize=None, save_fig_to=None):
+        """Plot the distribution of spike_in peak
+        Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
+
+        Args:
+            target (`SeqTable` or `pd.DataFrame`): dataset to plot
+            sample_list (list of `str`): samples to show. All samples will show if None
+            max_dist (`int`): maximal edit distance to survey. Default 15
+            norm_on_center (`bool`): if the counts/abundance are normalized to then center (exact spike in)
+            log_y (`bool`): if set the y scale as log
+            marker_list (list of `str`): overwrite default marker scheme if not `None`, same length and order as valid samples
+            color_list (list of `str`): overwrite default color scheme if not `None`, same length and order as valid samples
+            err_guild_lines (list of `float`): add a series of guild lines indicate the distribution only from given error rate,
+              if not `None`
+            legend_off (`bool`): do not show the legend if True
+            ax (`matplotlib.Axis`): if use external ax object to plot. Create a new figure if `None`
+            save_fig_to (`str`): save the figure to file if not None
+
+        """
+
+        from ..utility.plot_tools import PlotPreset
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        if target is None:
+            target = self.target
+
+        if sample_list is None:
+            sample_list = target.columns.values
+        if marker_list is None:
+            marker_list = PlotPreset.markers(num=len(sample_list), with_line=True)
+        elif len(marker_list) != len(sample_list):
+            raise Exception('Error: length of marker_list does not align with the number of valid samples to plot')
+        if color_list is None:
+            color_list = PlotPreset.colors(num=len(sample_list))
+        elif len(color_list) != len(sample_list):
+            raise Exception('Error: length of color_list does not align with the number of valid samples to plot')
+
+        if ax is None:
+            if figsize is None:
+                figsize = (max_dist / 2, 6) if legend_off else (max_dist / 2 + 5, 6)
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        dist_series = pd.Series(data=np.arange(max_dist + 1), index=np.arange(max_dist + 1))
+
+        def get_sample_counts(dist):
+            seqs = self.dist_to_center[self.dist_to_center == dist].index
+            return target.loc[seqs].sum(axis=0)
+
+        peak_counts = dist_series.apply(get_sample_counts)
+        if norm_on_center:
+            peak_counts = peak_counts / peak_counts.loc[0]
+
+        for sample, color, marker in zip(sample_list, color_list, marker_list):
+            ax.plot(dist_series, peak_counts[sample], marker, color=color, label=sample, alpha=0.5, markeredgewidth=2)
+        if log_y:
+            ax.set_yscale('log')
+        ylim = ax.get_ylim()
+        if err_guild_lines is not None:
+            if not norm_on_center:
+                raise ValueError('Can only add guidelines if peaks are normed on center')
+            # assuming a fix error rate per nt, iid on binom
+            from scipy.stats import binom
+            if isinstance(err_guild_lines, (float, int)):
+                err_guild_lines = [err_guild_lines]
+            colors = PlotPreset.colors(num=len(err_guild_lines))
+            for ix, (p, color) in enumerate(zip(err_guild_lines, colors)):
+                rv = binom(len(self.spike_in_seq), p)
+                pmfs = np.array([rv.pmf(x) for x in dist_series])
+                pmfs_normed = pmfs / pmfs[0]
+                ax.plot(dist_series, pmfs_normed,
+                        color=color, ls='--', alpha=(ix + 1) / len(err_guild_lines), label=f'p = {p}')
+        ax.set_ylim(ylim)
+        y_label = ''
+        if norm_on_center:
+            y_label += ' normed'
+        y_label += ' counts'
+        ax.set_ylabel(y_label.title(), fontsize=14)
+        ax.set_xlabel('Edit Distance to Spike-in Center', fontsize=14)
+        if not legend_off:
+            ax.legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
+        plt.tight_layout()
+
+        if save_fig_to:
+            plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+        return ax
 
 
-class TotalAmountNormalizer(TransformerBase):
-    """this is the temporary version of spike-in normalizer, depending on CountFileSet info"""
+class DnaAmountNormalizer(TransformerBase):
+    """"""
 
-    def __init__(self, target=None):
+    def __init__(self, target, dna_amount, exclude_spike_in=True, spike_in_members=None):
         super().__init__(target)
+        self.target = target
+        self.dna_amount = dna_amount
+        self.exclude_spike_in = exclude_spike_in
+        self.spike_in_members = spike_in_members
 
-    def func(self, target):
-        if isinstance(target, pd.DataFrame):
-            raise TypeError('`pd.DataFrame` is not supported for SpikeInNormalizer')
+    @staticmethod
+    def func(target, norm_factor):
+        """Norm factor here should be per seq amount calculated from total DNA amount"""
 
         def sample_normalize(sample):
-            norm_factor = target.metadata.samples[sample]['spike-in']['norm_factor']
-            return sample * norm_factor
+            return sample * norm_factor[sample.name]
 
-        return target.table.apply(sample_normalize, axis=0)
+        return target.apply(sample_normalize, axis=0)
+
+    @staticmethod
+    def _get_norm_factor(count_table, dna_amount, exclude_spike_in=True, spike_in_members=None):
+        """Calculate the norm factor for per seq amount
+
+        Args:
+            count_table (`pd.DataFrame`): contains count info
+            dna_amount (`dict`): a dictionary {sample_name: dna_amount}
+            exclude_spike_in (`bool`): don't include spike-in sequences in total amount if True
+            spike_in_members (list of `str`): list of spike_in sequences
+
+        Returns:
+            a `dict`: {sample_name: norm_factor}
+        """
+
+        if exclude_spike_in is True:
+            if spike_in_members is None:
+                raise ValueError('spike_in_members is None')
+            else:
+                count_table = count_table[~count_table.index.isin(spike_in_members)]
+
+        return {sample: dna_am/count_table[sample].sum() for sample, dna_am in dna_amount.items()}
+
+    def apply(self, target=None, dna_amount=None, exclude_spike_in=True, spike_in_members=None):
+        if target is None:
+            target = self.target
+        if target is None:
+            raise ValueError('No valid target found')
+        if dna_amount is None:
+            dna_amount = self.dna_amount
+        if dna_amount is None:
+            raise ValueError('No valid dna_amount found')
+        if spike_in_members is None:
+            spike_in_members = self.spike_in_members
+        if spike_in_members is None:
+            # try to extract if still None
+            try:
+                spike_in_members = target.spike_in.spike_in_members
+            except:
+                raise ValueError('No valid spike_in_members found')
+        if isinstance(target, pd.DataFrame):
+            pass
+        else:
+            target = target.table
+        self.func(target=target.table,
+                  norm_factor=self._get_norm_factor(target, dna_amount=dna_amount, exclude_spike_in=exclude_spike_in,
+                                                    spike_in_members=spike_in_members))
 
 
 class ReactedFractionNormalizer(TransformerBase):
-    """Get the reacted fraction from table"""
+    """Get the reacted fraction from an absolute amount table"""
 
+    def __init__(self, target, input_pools, reduce_method='median'):
+        super().__init__()
+        self.target = target
+        self.input_pools = input_pools
+        self.reduce_method = reduce_method
 
-# class SpikeInNormalizer(TransformerBase):
-#
-#     def __init__(self, target, spike_in_info=None, spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, unit=None):
-#         """
-#         Add spike-in sequences for all samples, for each parameter, single value or dictionary could be passed,
-#         if a dictionary is passed, the key should be sample name and explicitly list parameters for all samples
-#         """
-#         from .count_file import SpikeIn
-#
-#         super().__init__(target)
-#         from ..utility.func_tools import param_to_dict
-#         if hasattr(target, 'sample_list'):
-#             sample_keys = target.sample_list
-#         elif hasattr(target, 'columns'):
-#             sample_keys = target.columns.to_series()
-#         else:
-#             raise TypeError('Can\'t identify target type, it should be `SeqTable` or `pd.Dataframe`')
-#
-#         spike_in_config = param_to_dict(key_list=sample_keys,
-#                                    spike_in_info=spike_in_info, spike_in_seq=spike_in_seq,
-#                                    spike_in_amount=spike_in_amount, spike_in_dia=spike_in_dia,
-#                                    unit=unit)
-#         self.spike_in
-#         for key, args in param_dict.items():
-#             self._sample_indexer[key].add_spike_in(**args)
-#
-#     def _get_edit_distance(self, seq):
-#         """use `python-levenshtein` to calculate edit distances of seqs to the center"""
-#         import pandas as pd
-#         from Levenshtein import distance
-#         if isinstance(seq, pd.Series):
-#             seq = seq.name
-#         return distance(seq, self.center)
-#
-#     def func(self, target=None):
+    @staticmethod
+    def func(target, input_pools, reduce_method='median'):
+        if not isinstance(target, pd.DataFrame):
+            raise TypeError('target is not a pd.DataFrame')
+        method_mapper = {
+            'med': np.nanmedian,
+            'median': np.nanmedian,
+            'mean': np.nanmean,
+            'avg': np.nanmean
+        }
+        if not callable(reduce_method):
+            if reduce_method not in method_mapper.keys():
+                raise ValueError('Unknown reduce_method')
+            else:
+                reduce_method = method_mapper[reduce_method]
+        base = reduce_method(target[input_pools], axis=1)
+        return target[~target.columns.isin(input_pools)].divide(base, axis=0)
+
+    def apply(self, target=None, input_pools=None, reduce_method=None):
+        if target is None:
+            target = self.target
+        if target is None:
+           raise ValueError('No valid target found')
+        if input_pools is None:
+            input_pools = self.input_pools
+        if input_pools is None:
+            # try to extract from target
+            try:
+                input_pools = target.grouper.input.group
+            except:
+                raise ValueError('No input_pools found')
+        if reduce_method is None:
+            reduce_method = self.reduce_method
+        if not isinstance(target, pd.DataFrame):
+            target = target.table
+        return self.func(target=target, input_pools=input_pools, reduce_method=reduce_method)

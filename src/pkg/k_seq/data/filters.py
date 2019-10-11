@@ -12,18 +12,18 @@ class FilterBase(object):
 
     @staticmethod
     def func(**kwargs):
-        """Standard along static methods need """
+        """Standalone static methods that return a boolean pd.Series as mask"""
         pass
 
     def apply(self, **kwargs):
         """Wrapper over func that can run with class/optional info"""
-        self.func(self, **kwargs)
+        self.func(**kwargs)
 
-    def get_passed_item(self, target=None):
+    def get_passed_item(self, target=None, **kwargs):
         if target is None:
             target = self.target
-        mask = self.func(target)
-        if self.axis == 0:
+        mask = self.apply(target)
+        if self.axis == 1:
             return target.columns[mask]
         else:
             return target.index[mask]
@@ -33,7 +33,7 @@ class FilterBase(object):
         if target is None:
             target = self.target
         mask = self.apply(target, **kwargs)
-        if self.axis == 0:
+        if self.axis == 1:
             summary = pd.DataFrame(index=target.columns)
             summary['unique'] = (target > 0).sum(0)
             summary['unique_passed'] = (target.loc[mask] > 0).sum(0)
@@ -53,13 +53,21 @@ class FilterBase(object):
             target = self.target
         if hasattr(target, 'table'):
             target = target.table
-        return slice_table(table=target, keys=self.get_passed_item(), axis=self.axis, remove_zero=remove_zero)
+        return slice_table(table=target,
+                           keys=self.get_passed_item(target=target),
+                           axis=self.axis,
+                           remove_zero=remove_zero)
 
     @classmethod
     def from_func(cls, func, target=None, axis=0):
         inst = cls(target=target, axis=axis)
         inst.filter_fn = func
         return inst
+
+
+class FilterCollection(object):
+    """Applies a collection of filters to the object in sequence, with sev"""
+    pass
 
 
 class SpikeInFilter(FilterBase):
@@ -83,22 +91,31 @@ class SpikeInFilter(FilterBase):
             self.target = target.table
             if center_seq is None:
                 try:
-                    self.center_seq = target.metadata.spike_in.spike_in_seq
-                    self.dist_to_center = target.metadata.spike_in.dist_to_center
+                    self.center_seq = target.spike_in.spike_in_seq
+                    self.dist_to_center = target.spike_in.dist_to_center
+                    if radius is None:
+                        self.radius = target.spike_in.radius
+                    else:
+                        self.radius = radius
                 except:
                     raise ValueError('No spike-in information found')
             else:
-                if hasattr(target.metadata, 'spike_in'):
-                    if center_seq == target.metadata.spike_in.spike_in_seq:
+                if hasattr(target, 'spike_in'):
+                    if center_seq == target.spike_in.spike_in_seq:
                         self.center_seq = center_seq
-                        self.dist_to_center = target.metadata.spike_in.dist_to_center
+                        self.dist_to_center = target.spike_in.dist_to_center
+                        if radius is None:
+                            self.radius = target.spike_in.radius
+                        else:
+                            self.radius = radius
                     else:
                         self.center_seq = center_seq
                         self.dist_to_center = target.index.to_series().apply(self._edit_dist)
+                        self.radius = radius
                 else:
                     self.center_seq = center_seq
                     self.dist_to_center = target.index.to_series().apply(self._edit_dist)
-            self.radius = radius
+                    self.radius = radius
         self.reverse = reverse
 
     def _edit_dist(self, seq):
@@ -136,7 +153,7 @@ class SpikeInFilter(FilterBase):
 
 class SeqLengthFilter(FilterBase):
 
-    def __init__(self, target, min_len=None, max_len=None):
+    def __init__(self, target, min_len=None, max_len=None, axis=0):
         import pandas as pd
 
         super().__init__(target)
@@ -146,6 +163,7 @@ class SeqLengthFilter(FilterBase):
             self.target = target.table
         self.min_len = min_len
         self.max_len = max_len
+        self.axis = axis
 
     @staticmethod
     def func(target, min_len, max_len):
@@ -170,7 +188,7 @@ class SeqLengthFilter(FilterBase):
 
 class SingletonFilter(FilterBase):
 
-    def __init__(self, target, reverse=True):
+    def __init__(self, target, axis=0, reverse=True):
         import pandas as pd
 
         super().__init__(target)
@@ -179,6 +197,7 @@ class SingletonFilter(FilterBase):
         else:
             self.target = target.table
         self.reverse = reverse
+        self.axis = axis
 
     @staticmethod
     def func(target, reverse=True):
@@ -196,111 +215,111 @@ class SingletonFilter(FilterBase):
         return self.func(target, reverse)
 
 
-class SeqFilter:
-
-    class Filter:
-        def __init__(self, func, value):
-            self.func = func
-            self.value = value
-
-    def __init__(self, seq_table, seq_length_range=None, max_edit_dist_to_seqs=None,
-                 min_occur_input=None, min_occur_reacted=None,
-                 min_counts_input=None, min_counts_reacted=None,
-                 min_rel_abun_input=None, min_rel_abun_reacted=None):
-        """
-        Filter object with some built-in filter options
-
-        Use `SeqFilter.filter_fn` to get the `callable` function
-
-        Use `SeqFilter.seq_to_keep` to get a list of sequences passed the filters
-
-        Args:
-            seq_table (`SeqTable`): the `SeqTable` instance to apply filters on
-            seq_length_range ([min, max]): only keep sequences within range [min, max]
-            max_edit_dist_to_seqs (`int`):
-            min_counts_input (`int`):
-            min_counts_reacted (`int`):
-            min_rel_abun_input (`float`): relative abundance is only based on valid sequences
-            min_rel_abun_reacted (`float`): relative abundance is only based on valid sequences
-        """
-
-        import numpy as np
-        import pandas as pd
-
-        self.seq_table = seq_table
-
-        if seq_length_range is not None:
-            self.seq_length_range = self.Filter(
-                func=lambda seq: seq_length_range[0] <= len(seq) <= seq_length_range[1],
-                value = seq_length_range)
-
-        if max_edit_dist_to_seqs is not None:
-            if isinstance(max_edit_dist_to_seqs, list) or isinstance(max_edit_dist_to_seqs, tuple):
-                max_edit_dist_to_seqs = {seq[0]: int(seq[1]) for seq in max_edit_dist_to_seqs}
-
-            def edit_dist_filter_fn(seq):
-                import Levenshtein
-                flag = True
-                for target, max_dist in max_edit_dist_to_seqs.items():
-                    flag = flag and Levenshtein.distance(seq, target) <= max_dist
-                return flag
-
-            self.max_edit_dist_to_seqs = self.Filter(
-                func=edit_dist_filter_fn,
-                value=max_edit_dist_to_seqs
-            )
-
-        if min_occur_input is not None:
-            self.min_occur_input = self.Filter(
-                func=lambda seq: np.sum(self.seq_table.count_table_input.loc[seq] > 0) >= min_occur_input,
-                value=min_occur_input
-            )
-        if min_occur_reacted is not None:
-            self.min_occur_reacted = self.Filter(
-                func=lambda seq: np.sum(self.seq_table.count_table_reacted.loc[seq] > 0) >= min_occur_reacted,
-                value=min_occur_reacted
-            )
-
-
-        if min_counts_input is not None:
-            self.min_counts_input = self.Filter(
-                func=lambda seq: self.seq_table.count_table_input.loc[seq].mean() >= min_counts_input,
-                value=min_counts_input
-            )
-
-        if min_counts_reacted is not None:
-            self.min_counts_reacted = self.Filter(
-                func=lambda seq: self.seq_table.count_table_reacted.loc[seq].mean() >= min_counts_reacted,
-                value=min_counts_reacted
-            )
-
-        if min_rel_abun_input is not None:
-            self.min_rel_abun_input = self.Filter(
-                func=lambda seq: (self.seq_table.count_table_input.loc[seq]/self.seq_table.count_table_input.sum(axis=0)).mean() >= min_rel_abun_input,
-                value=min_rel_abun_input
-            )
-
-        if min_rel_abun_reacted is not None:
-            self.min_rel_abun_reacted = self.Filter(
-                func=lambda seq: (self.seq_table.count_table_reacted.loc[seq]/self.seq_table.count_table_reacted.sum(axis=0)).mean() >= min_rel_abun_reacted,
-                value=min_rel_abun_reacted
-            )
-
-    def print_filters(self):
-        print('Following filter added:')
-        for filter,content in self.__dict__.items():
-            if isinstance(content, self.Filter):
-                print('\t{}:{}'.format(filter, content.value))
-
-    def apply_filters(self):
-        seq_to_keep = self.seq_table.count_table_reacted.index
-        self.seq_to_keep = seq_to_keep[seq_to_keep.map(self.filter_fn)]
-
-    @property
-    def filter_fn(self):
-        def _filter_fn(seq):
-            import numpy as np
-            flags = [filter.func(seq) for filter in self.__dict__.values()
-                     if isinstance(filter, self.Filter)]
-            return np.all(flags)
-        return _filter_fn
+# class SeqFilter:
+#
+#     class Filter:
+#         def __init__(self, func, value):
+#             self.func = func
+#             self.value = value
+#
+#     def __init__(self, seq_table, seq_length_range=None, max_edit_dist_to_seqs=None,
+#                  min_occur_input=None, min_occur_reacted=None,
+#                  min_counts_input=None, min_counts_reacted=None,
+#                  min_rel_abun_input=None, min_rel_abun_reacted=None):
+#         """
+#         Filter object with some built-in filter options
+#
+#         Use `SeqFilter.filter_fn` to get the `callable` function
+#
+#         Use `SeqFilter.seq_to_keep` to get a list of sequences passed the filters
+#
+#         Args:
+#             seq_table (`SeqTable`): the `SeqTable` instance to apply filters on
+#             seq_length_range ([min, max]): only keep sequences within range [min, max]
+#             max_edit_dist_to_seqs (`int`):
+#             min_counts_input (`int`):
+#             min_counts_reacted (`int`):
+#             min_rel_abun_input (`float`): relative abundance is only based on valid sequences
+#             min_rel_abun_reacted (`float`): relative abundance is only based on valid sequences
+#         """
+#
+#         import numpy as np
+#         import pandas as pd
+#
+#         self.seq_table = seq_table
+#
+#         if seq_length_range is not None:
+#             self.seq_length_range = self.Filter(
+#                 func=lambda seq: seq_length_range[0] <= len(seq) <= seq_length_range[1],
+#                 value = seq_length_range)
+#
+#         if max_edit_dist_to_seqs is not None:
+#             if isinstance(max_edit_dist_to_seqs, list) or isinstance(max_edit_dist_to_seqs, tuple):
+#                 max_edit_dist_to_seqs = {seq[0]: int(seq[1]) for seq in max_edit_dist_to_seqs}
+#
+#             def edit_dist_filter_fn(seq):
+#                 import Levenshtein
+#                 flag = True
+#                 for target, max_dist in max_edit_dist_to_seqs.items():
+#                     flag = flag and Levenshtein.distance(seq, target) <= max_dist
+#                 return flag
+#
+#             self.max_edit_dist_to_seqs = self.Filter(
+#                 func=edit_dist_filter_fn,
+#                 value=max_edit_dist_to_seqs
+#             )
+#
+#         if min_occur_input is not None:
+#             self.min_occur_input = self.Filter(
+#                 func=lambda seq: np.sum(self.seq_table.count_table_input.loc[seq] > 0) >= min_occur_input,
+#                 value=min_occur_input
+#             )
+#         if min_occur_reacted is not None:
+#             self.min_occur_reacted = self.Filter(
+#                 func=lambda seq: np.sum(self.seq_table.count_table_reacted.loc[seq] > 0) >= min_occur_reacted,
+#                 value=min_occur_reacted
+#             )
+#
+#
+#         if min_counts_input is not None:
+#             self.min_counts_input = self.Filter(
+#                 func=lambda seq: self.seq_table.count_table_input.loc[seq].mean() >= min_counts_input,
+#                 value=min_counts_input
+#             )
+#
+#         if min_counts_reacted is not None:
+#             self.min_counts_reacted = self.Filter(
+#                 func=lambda seq: self.seq_table.count_table_reacted.loc[seq].mean() >= min_counts_reacted,
+#                 value=min_counts_reacted
+#             )
+#
+#         if min_rel_abun_input is not None:
+#             self.min_rel_abun_input = self.Filter(
+#                 func=lambda seq: (self.seq_table.count_table_input.loc[seq]/self.seq_table.count_table_input.sum(axis=0)).mean() >= min_rel_abun_input,
+#                 value=min_rel_abun_input
+#             )
+#
+#         if min_rel_abun_reacted is not None:
+#             self.min_rel_abun_reacted = self.Filter(
+#                 func=lambda seq: (self.seq_table.count_table_reacted.loc[seq]/self.seq_table.count_table_reacted.sum(axis=0)).mean() >= min_rel_abun_reacted,
+#                 value=min_rel_abun_reacted
+#             )
+#
+#     def print_filters(self):
+#         print('Following filter added:')
+#         for filter,content in self.__dict__.items():
+#             if isinstance(content, self.Filter):
+#                 print('\t{}:{}'.format(filter, content.value))
+#
+#     def apply_filters(self):
+#         seq_to_keep = self.seq_table.count_table_reacted.index
+#         self.seq_to_keep = seq_to_keep[seq_to_keep.map(self.filter_fn)]
+#
+#     @property
+#     def filter_fn(self):
+#         def _filter_fn(seq):
+#             import numpy as np
+#             flags = [filter.func(seq) for filter in self.__dict__.values()
+#                      if isinstance(filter, self.Filter)]
+#             return np.all(flags)
+#         return _filter_fn

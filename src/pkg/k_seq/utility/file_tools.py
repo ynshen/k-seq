@@ -16,7 +16,7 @@ def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full
 
     Returns:
 
-        list of `str`: list of file names/full directory
+        list of `str` or `path.Path`: list of file names/full directory
     """
 
     from pathlib import Path
@@ -57,9 +57,9 @@ def extract_metadata(target, pattern):
     todo: update method to account for missing metadata situation. e.g. matching -A- to -{d1}{d2}-
     Args:
 
-        target (str): string to extract info from, e.g. sample file name
+        target (`str`): string to extract info from, e.g. sample file name
 
-        pattern (str): string indicate the method to extract metadata. Use ``[...]`` to include the region of sample_name,
+        pattern (`str`): string indicate the method to extract metadata. Use ``[...]`` to include the region of sample_name,
           use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata, including
           ``[,int/float]`` will convert the domain value to float in applicable, otherwise, string
 

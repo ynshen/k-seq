@@ -5,7 +5,7 @@ TODO:
 """
 
 from ..utility.func_tools import DictToAttr
-from .grouper import Grouper
+
 
 class Metadata(DictToAttr):
 
@@ -17,15 +17,21 @@ class Metadata(DictToAttr):
         super().__init__(attr_dict)
 
 
-def slice_table(table, keys, axis, remove_zero):
+def slice_table(table, axis, remove_zero, keys=None, mask=None):
     if axis == 0:
-        sub_table = table.loc[keys]
+        if keys is not None:
+            sub_table = table.loc[keys]
+        if mask is not None:
+            sub_table = table.loc[mask]
         if remove_zero:
             return sub_table.loc[:, (sub_table != 0).any(axis=0)]
         else:
             return sub_table
     else:
-        sub_table = table[keys]
+        if keys is not None:
+            sub_table = table[keys]
+        if mask is not None:
+            sub_table = table[mask]
         if remove_zero:
             return sub_table.loc[(sub_table != 0).any(axis=1)]
         else:
@@ -149,6 +155,7 @@ class SeqTable(object):
             raise TypeError('Unknown type for x_values')
 
         # import grouper
+        from .grouper import Grouper
         if grouper is not None:
             if isinstance(grouper, Grouper):
                 self.grouper = grouper
@@ -167,7 +174,7 @@ class SeqTable(object):
 
     # @property
     # def table(self):
-    #     """Deprecated because of slicing performance"""
+    #     """Deprecated due to poor slicing performance on larget table"""
     #     return self._raw_table.loc[self.seq_list][self.sample_list]
 
     @property
@@ -239,34 +246,157 @@ class SeqTable(object):
 #             obj.seq_list = handle
 #         if not inplace:
 #             return obj
-#
+
     @classmethod
-    def from_count_files(cls, file_root, file_list=None, file_pattern=None, black_list=None, name_pattern=None, sort_by=None,
-                         x_values=None, input_sample_name=None,
-                         spike_in_seq=None, spike_in_amount=None, spike_in_dia=2, x_unit=None, dna_unit=None,
-                         dna_amount=None, silent=True, metadata=None, note=None, dry_run=False):
+    def from_count_files(cls,
+                         file_root, file_list=None, pattern_filter=None, black_list=None, name_pattern=None, sort_by=None,
+                         x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
+                         silent=True, dry_run=False, **kwargs):
         """todo: implement the method to generate directly from count files"""
         from ..utility.file_tools import get_file_list, extract_metadata
-        from ..utility.func_tools import param_to_dict
+        import numpy as np
+        import pandas as pd
 
+        # parse file metadata
         file_list = get_file_list(file_root=file_root, file_list=file_list,
-                                  pattern=file_pattern, black_list=black_list, full_path=True)
-        file_names = [file.name for file in file_list]
-        if sort_by is not None:
-            # pre-run sample creation to extract sample info and sort samples
-            sample_params = param_to_dict(key_list=file_names,
-                                          file_path=file_list, x_value=x_values, name_pattern=name_pattern,
-                                          spike_in_seq=None, spike_in_amount=None,
-                                          spike_in_dia=None, dna_amount=dna_amount, x_unit=None,
-                                          dna_unit=None, load_data=False, silent=True, metadata=metadata)
-            self.samples = [CountFile(**args) for args in sample_params.values()]
-            self.sort_sample(sort_by=sort_by)
-            file_list = [sample.metadata['file_path'] for sample in self.samples]
-        file_names = [file.name for file in file_list]
+                                  pattern=pattern_filter, black_list=black_list, full_path=True)
+        if name_pattern is None:
+            samples = {file.name: {'file_path': str(file), 'name':file.name} for file in file_list}
+        else:
+            samples = {}
+            for file in file_list:
+                f_meta = extract_metadata(target=file.name, pattern=name_pattern)
+                samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
+        if sample_metadata is not None:
+            for file_name, f_meta in sample_metadata.items():
+                samples[file_name].udpate(f_meta)
 
-        file_list = file_list
-        file_names = [file.name for file in file_list]
-#
+        # sort file order if applicable
+        sample_names = list(samples.keys())
+        if sort_by is not None:
+            if isinstance(sort_by, str):
+                def sort_fn(sample_name):
+                    return samples[sample_name].get(sort_by, np.nan)
+            elif callable(sort_by):
+                sort_fn = sort_by
+            else:
+                raise TypeError('Unknown sort_by format')
+            sample_names = sorted(sample_names, key=sort_fn)
+
+        if dry_run:
+            return pd.DataFrame(samples)[sample_names].transpose()
+
+        from ..data.count_file import read_count_file
+        data_mtx = {sample: read_count_file(file_path=samples[sample]['file_path'], as_dict=True)[2]
+                    for sample in sample_names}
+        data_mtx = pd.DataFrame.from_dict(data_mtx).fillna(0, inplace=False).astype(pd.SparseDtype(dtype='int'))
+        if input_sample_name is not None:
+            grouper = {'input': [name for name in sample_names if name in input_sample_name],
+                       'reacted': [name for name in sample_names if name not in input_sample_name]}
+        else:
+            grouper = None
+
+        seq_table = cls(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
+                        x_values=x_values, x_unit=x_unit, note=note, silent=silent)
+
+        if 'spike_in_seq' in kwargs.keys():
+            seq_table.add_spike_in(**kwargs)
+
+        # todo: add total dna amount normalizer if applicable
+        if 'dna_amount' in kwargs.keys():
+            seq_table.add_total_dna_amount(**kwargs)
+
+        return seq_table
+
+    def add_spike_in(self, spike_in_seq, spike_in_amount, radius=2, dna_unit=None, black_list=None):
+        """Add spike in """
+        from .transform import SpikeInNormalizer
+        setattr(self, 'spike_in',
+                SpikeInNormalizer(target=self, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
+                                  radius=radius, unit=dna_unit, blacklist=black_list))
+
+    def add_total_dna_amount(self, dna_amount, dna_unit=None):
+        """todo: add total DNA normalizer"""
+        pass
+
+    def sample_overview(self):
+        # todo: add sample overview for per sample
+        # By convention
+        import numpy as np
+        import pandas as pd
+
+        def get_sample_info(self, sample_name):
+            info = {'name': sample_name}
+            try:
+                if sample_name in self.grouper.input:
+                    info['sample type'] = 'input'
+                elif sample_name in self.grouper.reacted:
+                    info['sample type'] = 'reacted'
+                else:
+                    pass
+            except AttributeError:
+                pass
+            try:
+                info['x value'] = self.x_values[sample_name]
+            except AttributeError:
+                pass
+            try:
+                info['unique seqs'] = np.sum((self.table[sample_name] > 0).sparse.to_dense())
+            except KeyError:
+                pass
+            try:
+                info['total counts'] = np.sum(self.table[sample_name].sparse.to_dense())
+            except KeyError:
+                pass
+            try:
+                info[f"dna amount (from spike-in{'' if self.spike_in is None else ', ' + self.spike_in.unit})"] = \
+                    self.spike_in.norm_factor[sample_name] * info['total counts']
+                info['spike-in rad'] = self.spike_in.radius
+                info['spike-in pct'] = np.sum((self.table[sample_name][self.spike_in.spike_in_members]).sparse.to_dense()) /\
+                                       info['total counts']
+            except AttributeError:
+                pass
+            except KeyError:
+                pass
+            return info
+
+        sample_info = {sample_name: get_sample_info(self=self, sample_name=sample_name)
+                        for sample_name in self.sample_list}
+        return pd.DataFrame.from_dict(sample_info, orient='index')
+
+
+    #     # @property
+    #     # def x_values(self): todo: revive this
+    #     #     """Return x values corresponding to each column in `reacted_frac_table` (or `count_table_reacted`)
+    #     #     as pd.Series
+    #     #     """
+    #     #     import pandas as pd
+    #     #
+    #     #     if hasattr(self, 'reacted_frac_table'):
+    #     #         table = self.reacted_frac_table
+    #     #     else:
+    #     #         table = self.count_table_reacted
+    #     #     return pd.Series(data=[self.sample_info[sample]['x_value'] for sample in table.columns],
+    #     #                      index=table.columns)
+    #     #
+    #     # @property
+    #     # def seq_info(self): todo: revive this
+    #     #     import pandas as pd
+    #     #     import numpy as np
+    #     #
+    #     #     seq_info = pd.DataFrame(index=self.count_table_input.index)
+    #     #     seq_info['occurred_in_inputs'] = pd.Series(np.sum(self.count_table_input > 0, axis=1))
+    #     #     seq_info['occurred_in_reacted'] = pd.Series(np.sum(self.count_table_reacted > 0, axis=1))
+    #     #     get_rel_abun = lambda series: series/series.sum()
+    #     #     seq_info['avg_rel_abun_in_inputs'] = pd.Series(
+    #     #         self.count_table_input.apply(get_rel_abun, axis=0).mean(axis=1)
+    #     #     )
+    #     #     seq_info['avg_rel_abun_in_reacted'] = pd.Series(
+    #     #         self.count_table_reacted.apply(get_rel_abun, axis=0).mean(axis=1)
+    #     #     )
+    #     #     return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
+
+
 #     @classmethod
 #     def from_SeqSampleSet(cls, sample_set,  sample_list=None, black_list=None, seq_list=None, with_spike_in=True,
 #                           keep_all_seqs=False, use_count=False, note=None):
@@ -364,36 +494,7 @@ class SeqTable(object):
 #     #     else:
 #     #         return reacted_frac_table
 #     #
-#     # @property
-#     # def x_values(self):
-#     #     """Return x values corresponding to each column in `reacted_frac_table` (or `count_table_reacted`)
-#     #     as pd.Series
-#     #     """
-#     #     import pandas as pd
-#     #
-#     #     if hasattr(self, 'reacted_frac_table'):
-#     #         table = self.reacted_frac_table
-#     #     else:
-#     #         table = self.count_table_reacted
-#     #     return pd.Series(data=[self.sample_info[sample]['x_value'] for sample in table.columns],
-#     #                      index=table.columns)
-#     #
-#     # @property
-#     # def seq_info(self):
-#     #     import pandas as pd
-#     #     import numpy as np
-#     #
-#     #     seq_info = pd.DataFrame(index=self.count_table_input.index)
-#     #     seq_info['occurred_in_inputs'] = pd.Series(np.sum(self.count_table_input > 0, axis=1))
-#     #     seq_info['occurred_in_reacted'] = pd.Series(np.sum(self.count_table_reacted > 0, axis=1))
-#     #     get_rel_abun = lambda series: series/series.sum()
-#     #     seq_info['avg_rel_abun_in_inputs'] = pd.Series(
-#     #         self.count_table_input.apply(get_rel_abun, axis=0).mean(axis=1)
-#     #     )
-#     #     seq_info['avg_rel_abun_in_reacted'] = pd.Series(
-#     #         self.count_table_reacted.apply(get_rel_abun, axis=0).mean(axis=1)
-#     #     )
-#     #     return seq_info.sort_values(by='avg_rel_abun_in_inputs', ascending=False)
+
 #     #
 #     #
 #     # def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
@@ -453,11 +554,11 @@ class SeqTable(object):
 
     def to_pickle(self, path):
         import pickle
-        with open(path, 'w') as handle:
+        with open(path, 'wb') as handle:
             pickle.dump(self, handle, protocol=-1)
 
     @staticmethod
     def from_pickle(path):
         import pickle
-        with open(path, 'r') as handle:
+        with open(path, 'rb') as handle:
             return pickle.load(handle)

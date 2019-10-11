@@ -89,8 +89,10 @@ def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_
         samples = [sample for sample in samples if sample not in black_list]
 
     def get_spike_in_ratio(sample_id):
-        sample_meta = seq_table.metadata.samples[sample_id]
-        return 1 - (sample_meta['total_counts_no_spike_in'] / sample_meta['total_counts'])
+        spike_in_members = seq_table.spike_in.spike_in_members
+        sample_series = seq_table.table[sample_id].sparse.to_dense()
+
+        return sample_series[spike_in_members].sum() / sample_series.sum()
 
     spike_in_ratio = pd.Series(data=[get_spike_in_ratio(sample_id) for sample_id in samples], index=samples)
 
