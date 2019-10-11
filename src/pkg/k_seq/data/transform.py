@@ -136,7 +136,7 @@ class SpikeInNormalizer(TransformerBase):
         if target is None:
             raise ValueError('No valid target found')
         if norm_factor is None:
-            norm_factor = norm_factor
+            norm_factor = self.norm_factor
         if norm_factor is None:
             raise ValueError('No valid norm_factor found')
 
@@ -236,7 +236,7 @@ class SpikeInNormalizer(TransformerBase):
 
 
 class DnaAmountNormalizer(TransformerBase):
-    """"""
+    """todo: check if finished"""
 
     def __init__(self, target, dna_amount, exclude_spike_in=True, spike_in_members=None):
         super().__init__(target)
@@ -303,16 +303,28 @@ class DnaAmountNormalizer(TransformerBase):
 
 
 class ReactedFractionNormalizer(TransformerBase):
-    """Get the reacted fraction from an absolute amount table"""
+    """Get reacted fraction of each sequence from an absolute amount table"""
 
-    def __init__(self, target, input_pools, reduce_method='median'):
+    def __init__(self, target, input_pools, abs_amnt_table=None, reduce_method='median', remove_zero=True):
         super().__init__()
         self.target = target
         self.input_pools = input_pools
+        self.abs_amnt_table = abs_amnt_table
         self.reduce_method = reduce_method
+        self.remove_zero = True
 
     @staticmethod
     def func(target, input_pools, reduce_method='median'):
+        """Convert absolute amount to reacted fraction
+
+        Args:
+            target (`pd.DataFrame`): the table of absolute amount, including input pools
+            input_pools (list of `str`): list of indices of input pools
+            reduce_method (str or callable):
+
+        Returns:
+
+        """
         if not isinstance(target, pd.DataFrame):
             raise TypeError('target is not a pd.DataFrame')
         method_mapper = {
@@ -322,18 +334,21 @@ class ReactedFractionNormalizer(TransformerBase):
             'avg': np.nanmean
         }
         if not callable(reduce_method):
-            if reduce_method not in method_mapper.keys():
+            if reduce_method.lower() not in method_mapper.keys():
                 raise ValueError('Unknown reduce_method')
             else:
                 reduce_method = method_mapper[reduce_method]
         base = reduce_method(target[input_pools], axis=1)
-        return target[~target.columns.isin(input_pools)].divide(base, axis=0)
 
-    def apply(self, target=None, input_pools=None, reduce_method=None):
+        return target.loc[:, ~target.columns.isin(input_pools)].divide(base, axis=0)
+
+    def apply(self, target=None, abs_amnt_table=None, input_pools=None, reduce_method=None, remove_zero=None):
         if target is None:
             target = self.target
         if target is None:
-           raise ValueError('No valid target found')
+            raise ValueError('No valid target found')
+        if abs_amnt_table is None:
+            abs_amnt_table = self.abs_amnt_table
         if input_pools is None:
             input_pools = self.input_pools
         if input_pools is None:
@@ -344,6 +359,18 @@ class ReactedFractionNormalizer(TransformerBase):
                 raise ValueError('No input_pools found')
         if reduce_method is None:
             reduce_method = self.reduce_method
+
         if not isinstance(target, pd.DataFrame):
-            target = target.table
-        return self.func(target=target, input_pools=input_pools, reduce_method=reduce_method)
+            if abs_amnt_table is None:
+                target = getattr(target, 'table')
+            else:
+                target = getattr(target, abs_amnt_table)
+
+        if remove_zero is None:
+            remove_zero = self.remove_zero
+
+        frac_table = self.func(target=target, input_pools=input_pools, reduce_method=reduce_method)
+        if remove_zero:
+            return frac_table[frac_table.sum(axis=1) > 0]
+        else:
+            return frac_table

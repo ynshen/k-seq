@@ -362,16 +362,27 @@ class SeqTable(object):
                         for sample_name in self.sample_list}
         return pd.DataFrame.from_dict(sample_info, orient='index')
 
-    def seq_overview(self):
+    def seq_overview(self, target=None):
         """
         todo: finish seq_table
         columns to include:
         - length
         - occurrence / occurrence in input/reacted
         - rel abun / mean rel in input/reacted
+
         Returns:
+            A `pd.DataFrame` show the summary for sequences
 
         """
+        if target is None:
+            target = self.table
+        elif isinstance(target, str):
+            try:
+                target = getattr(self, target)
+            except AttributeError:
+                raise AttributeError(f'Table {target} not found')
+        else:
+            target = target
         pass
 
     @classmethod
@@ -382,7 +393,7 @@ class SeqTable(object):
           - BYO: not implemented
           - BFO: not implemented
         """
-        if dataset.lower() in ['byo_doped', 'doped']:
+        if dataset.lower() in ['byo_doped', 'byo-doped', 'doped']:
             return cls._load_byo_doped(from_count_file=from_count_file)
         else:
             raise NotImplementedError(f'Dataset {dataset} is not implemented')
@@ -390,7 +401,76 @@ class SeqTable(object):
     @classmethod
     def _load_byo_doped(cls, from_count_file=False):
         BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/working/new_pkg_dev_2019_10/byo_doped_test.pkl'
-        
+        BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts'
+        if from_count_file:
+            import numpy as np
+
+            print('Generate SeqTable instance for BYO-doped pool...')
+            print(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
+
+            byo_doped = cls.from_count_files(
+                file_root=BYO_DOPED_COUNT_FILE,
+                pattern_filter='counts-',
+                name_pattern='counts-d-[{byo}{exp_rep}].txt',
+                dry_run=False,
+                sort_by='name',
+                x_values=np.concatenate((
+                    np.repeat([1250, 250, 50, 10, 2], repeats=3) * 1e-6,
+                    np.array([np.nan])), axis=0
+                ),
+                x_unit='mol',
+                spike_in_seq='AAAAACAAAAACAAAAACAAA',
+                spike_in_amount=np.concatenate((
+                    np.repeat([2, 2, 1, 0.2, .04], repeats=3),
+                    np.array([10])), axis=0    # input pool sequenced is 3-times of actual initial pool
+                ),
+                radius=4,
+                dna_unit='ng',
+                input_sample_name=['R0']
+            )
+
+            # Add standard filters
+            from . import filters
+            spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
+            seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove
+            singleton_filter = filters.SingletonFilter(target=byo_doped)
+
+            byo_doped.filtered_table = singleton_filter.get_filtered_table(
+                target=seq_length_filter.get_filtered_table(
+                    target=spike_in_filter.get_filtered_table()
+                )
+            )
+
+            # Add replicate grouper
+            byo_doped.grouper.add({'byo': {
+                1250: ['A1', 'A2', 'A3'],
+                250: ['B1', 'B2', 'B3'],
+                50: ['C1', 'C2', 'C3'],
+                10: ['D1', 'D2', 'D3'],
+                2: ['E1', 'E2', 'E3']
+            }}, target=byo_doped.filtered_table)
+
+            # normalized using spike-in
+            byo_doped.abs_amnt_filtered = byo_doped.spike_in.apply(target=byo_doped.filtered_table)
+
+            # calculate reacted faction
+            from .transform import ReactedFractionNormalizer
+            reacted_frac = ReactedFractionNormalizer(target=byo_doped,
+                                                     input_pools=['R0'],
+                                                     abs_amnt_table='abs_amnt_filtered',
+                                                     reduce_method='median',
+                                                     remove_zero=True)
+            byo_doped.reacted_frac_filtered = reacted_frac.apply()
+            print('Finished!')
+        else:
+            print(f'Load BYO-doped pool data from pickled record at {BYO_DOPED_PKL}')
+            import pickle
+            with open(BYO_DOPED_PKL, 'rb') as handle:
+                byo_doped = pickle.load(handle)
+            print('Imported!')
+        # print('Following pre-processing has been applied')
+        return byo_doped
+
 
     #     #
     #     # @property
