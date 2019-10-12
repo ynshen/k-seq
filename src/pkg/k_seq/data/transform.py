@@ -339,8 +339,8 @@ class ReactedFractionNormalizer(TransformerBase):
             else:
                 reduce_method = method_mapper[reduce_method]
         base = reduce_method(target[input_pools], axis=1)
-
-        return target.loc[:, ~target.columns.isin(input_pools)].divide(base, axis=0)
+        mask = base > 0
+        return target.loc[mask, ~target.columns.isin(input_pools)].divide(base[mask], axis=0)
 
     def apply(self, target=None, abs_amnt_table=None, input_pools=None, reduce_method=None, remove_zero=None):
         if target is None:

@@ -400,7 +400,8 @@ class SeqTable(object):
 
     @classmethod
     def _load_byo_doped(cls, from_count_file=False):
-        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/working/new_pkg_dev_2019_10/byo_doped_test.pkl'
+        """todo: add dataset description"""
+        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl'
         BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts'
         if from_count_file:
             import numpy as np

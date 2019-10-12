@@ -1,5 +1,14 @@
 """
-Methods needed for estimator
+This sub-module contains the classic fitting each sequence individually to the kinetic model,
+  using absolute amount or reacted fraction
+
+Several functions are included:
+  - point estimation using `scipy.optimize.curve_fit`
+  - option to exclude zero in fitting
+  - option to initialize values
+  - weighted fitting depends on the customized weights
+  - confidence interval estimation using bootstrap
+
 """
 
 
