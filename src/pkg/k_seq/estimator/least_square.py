@@ -15,85 +15,112 @@ Several functions are included:
 class Bootstrap:
     """Class to perform bootstrap in fitting"""
 
-    def __init__(self, fitter, bootstrap_num, return_num, method, **kwargs):
-        from scipy.optimize import curve_fit
-        import numpy as np
-        import pandas as pd
+    def __repr__(self):
+        return f"Bootstrap method using {self.method} (n = {self.bootstrap_num})"
 
-        self.fitter = fitter
-        self.bootstrap_num = bootstrap_num
-        self.return_num = return_num
-        implemented_methods_map = {
+    def __init__(self, fitter, bootstrap_num, return_num, method, **kwargs):
+
+        implemented_methods = {
             'pct_res': 'pct_res',
             'resample percent residues': 'pct_res',
             'resample data points': 'data',
             'data': 'data',
             'stratified': 'stratified',
         }
-        if method in implemented_methods_map.keys():
+        if method in implemented_methods.keys():
             self.method = method
+            if method == 'stratified':
+                try:
+                    grouper = kwargs['grouper']
+                    from ..data.grouper import Group
+                    if isinstance(grouper, Group):
+                        grouper = grouper.group
+                    if isinstance(grouper, dict):
+                        self.grouper = grouper
+                    else:
+                        raise TypeError('Unsupported grouper type for stratified bootstrap')
+                except KeyError:
+                    raise Exception('Please indicate grouper when using stratified bootstrapping')
         else:
             raise NotImplementedError(f'Bootstrap method {method} is not implemented')
 
+        self.fitter = fitter
+        self.bootstrap_num = bootstrap_num
+        self.return_num = return_num
+        self.record = None
 
-
-    @staticmethod
-    def _bs_sample_generator(single_fitting):
+    def _percent_residue(self):
         import numpy as np
+        try:
+            y_hat = self.fitter.model(self.fitter.x_data, *self.fitter.results.point_estimation.params.values())
+        except AttributeError:
+            params = self.fitter._fit()['params']
+            y_hat = self.fitter.model(self.fitter.x_data, *params)
+        pct_res = (self.fitter.y_data - y_hat) / y_hat
+        for _ in range(self.bootstrap_num):
+            pct_res_resample = np.random.choice(pct_res, size=len(pct_res), replace=True)
+            yield self.fitter.x_data, y_hat * (1 + pct_res_resample)
 
-        if single_fitting.config['bs_method'] == 'Resample percent residue':
-            y_hat = single_fitting.model(single_fitting.x_data, *single_fitting.point_est.params.values())
-            pct_res = (single_fitting.y_data - y_hat) / y_hat
-            for _ in range(single_fitting.config['bs_depth']):
-                pct_res_resampled = np.random.choice(pct_res, replace=True, size=len(pct_res))
-                yield single_fitting.x_data, y_hat * (1 + pct_res_resampled)
+    def _data(self):
+        import numpy as np
+        indices = np.arange(len(self.fitter.x_data))
+        for _ in range(self.bootstrap_num):
+            indices_resample = np.random.choice(indices, size=len(indices), replace=True)
+            yield self.fitter.x_data[indices_resample], self.fitter.y_data[indices_resample]
+
+    def _stratified(self):
+        import numpy as np
+        for _ in range(self.bootstrap_num):
+            ix_resample = []
+            for member_ix in self.grouper.values():
+                ix_resample += np.random.choice(member_ix, size=len(member_ix), replace=True)
+            yield self.fitter.x_data[ix_resample], self.fitter.y_data[ix_resample]
+
+    def _bs_sample_generator(self):
+        if self.method == 'pct_res':
+            return self._percent_residue()
+        elif self.method == 'data':
+            return self._data()
+        elif self.method == 'stratified':
+            return self._stratified()
         else:
-            indices = np.linspace(0, len(single_fitting.x_data) - 1, len(single_fitting.x_data), dtype=np.int)
-            for _ in range(single_fitting.config['bs_depth']):
-                bs_indeces = np.random.choice(a=indices, size=len(single_fitting.x_data), replace=True)
-                yield single_fitting.x_data[bs_indeces], single_fitting.y_data[bs_indeces]
+            return None
 
     def run(self):
         """Perform bootstrap"""
-        pass
+        import numpy as np
+        import pandas as pd
 
-    param_list = pd.DataFrame(index=np.linspace(0, single_fitting.config['bs_depth'] - 1,
-                                                single_fitting.config['bs_depth'], dtype=np.int),
-                              columns=single_fitting.config['parameters'],
-                              dtype=np.float64)
-    for ix, (x_data, y_data) in enumerate(_bs_sample_generator(single_fitting)):
-        try:
-            if single_fitting.config['random_init']:
-                init_guess = [np.random.random() for _ in single_fitting.config['parameters']]
-                params, _ = curve_fit(single_fitting.model,
-                                      xdata=x_data, ydata=y_data,
-                                      method='trf', bounds=single_fitting.config['bounds'], p0=init_guess)
-            else:
-                params, _ = curve_fit(single_fitting.model,
-                                      xdata=x_data, ydata=y_data,
-                                      method='trf', bounds=single_fitting.config['bounds'])
-        except:
-            params = np.repeat(np.nan, len(single_fitting.config['parameters']))
-        param_list.loc[ix] = params
+        bs_sample_gen = self._bs_sample_generator()
+        ix_list = pd.Series(np.arange(self.bootstrap_num))
 
-    if hasattr(single_fitting, 'metrics'):
-        for name, fn in single_fitting.metrics.items():
-            param_list[name] = param_list.apply(fn, axis=1)
+        def fitting_runner(_):
+            x_data, y_data = next(bs_sample_gen)
+            result = self.fitter._fit(x_data=x_data, y_data=y_data)
+            res_series = pd.Series(data=result['params'], index=self.fitter.parameters)
+            if result['metrics'] is not None:
+                for key, value in results['metrics'].items():
+                    res_series[key] = value
+            res_series['x_data'] = x_data
+            res_series['y_data'] = y_data
+            return res_series
 
-    self.summary = param_list.describe(percentiles=[0.025, 0.5, 0.975], include='all')
-    if single_fitting.config['bs_return_size'] == 0:
-        self.records = None
-    elif single_fitting.config['bs_return_size'] < single_fitting.config['bs_depth']:
-        self.records = param_list.sample(n=single_fitting.config['bs_return_size'], replace=False, axis=0)
-    else:
-        self.records = param_list
+        results = ix_list.apply(fitting_runner)
+        self.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include='all')
+        self.fitter.results.uncertainty = self
+        if self.return_num == self.bootstrap_num:
+            self.records = results
+        else:
+            self.records = results.sample(n=self.return_num, replace=False, axis=0)
 
 
 class FitResults:
 
-    pass
-    @property
-    def summary(self):
+    def __init__(self):
+        self.point_estimation = None
+        self.uncertainty = None
+
+    def to_series(self):
         import numpy as np
         import pandas as pd
 
@@ -117,6 +144,7 @@ class FitResults:
         else:
             return pd.Series(data=list(res.values()), index=list(res.keys()))
 
+
 # noinspection PyUnresolvedReferences
 class SingleFitter:
     """Class to fit a single kinetic curve"""
@@ -124,6 +152,25 @@ class SingleFitter:
     def __init__(self, x_data, y_data, model, name=None, weights=None, bounds=None, opt_method='trf',
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
                  exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+        """
+
+        Args:
+            x_data (list, np.ndarray, pd.Series): list object will convert to np.ndarray
+            y_data (list, np.ndarray, pd.Series):
+            model:
+            name:
+            weights:
+            bounds:
+            opt_method:
+            bootstrap_num:
+            bs_return_num:
+            bs_method:
+            exclude_zero:
+            init_guess:
+            metrics:
+            rnd_seed:
+            **kwargs:
+        """
         import numpy as np
         from ..utility.func_tools import DictToAttr, get_func_params
 
@@ -141,8 +188,10 @@ class SingleFitter:
             'rnd_seed': rnd_seed
         })
 
-        x_data = np.array(x_data)
-        y_data = np.array(y_data)
+        if isinstance(x_data, list):
+            x_data = np.array(x_data)
+        if isinstance(y_data, list):
+            y_data = np.array(y_data)
         if exclude_zero is True:
             mask = y_data != 0
         else:
@@ -161,9 +210,14 @@ class SingleFitter:
             self.config.bounds = bounds
 
         if bootstrap_num > 0 and len(self.x_data) > 1:
-            self.config.bootstrap = _Bootstrap(fitter=self, bootstrap_num=bootstrap_num,
-                                               return_num=0 if bs_return_num is None else bs_return_num,
-                                               method = bs_method)
+            if bs_return_num is None:
+                bs_return_num = 0
+            elif bs_return_num < 0:
+                bs_return_num = bootstrap_num
+            else:
+                bs_return_num = bs_return_num
+            self.config.bootstrap = _Bootstrap(fitter=self, bootstrap_num=bootstrap_num, return_num=bs_return_num,
+                                               method=bs_method, **kwargs)
         else:
             self.config.bootstrap = None
 
@@ -230,14 +284,13 @@ class SingleFitter:
                 'metrics': None
             }
 
-    def fit(self, model=None, x_data=None, y_data=None, weights=None, parameters=None, bounds=None, metric=None, init_guess=None, method=None):
+    def fit(self):
         """Wrapper on _fit method"""
 
         import numpy as np
         import pandas as pd
 
-        self.results = point_est = self._fit(model, x_data, y_data, weights=None, parameters=None, bounds=None,
-             metrics=None, init_guess=None, method='trf')
+        point_est = self._fit()
         if self.bootstrap is None:
             pass
         else:
