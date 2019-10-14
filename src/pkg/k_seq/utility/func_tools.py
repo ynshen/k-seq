@@ -41,8 +41,14 @@ def get_func_params(func, exclude_x=True):
     Returns: a tuple of arguments name in order
 
     """
-    from inspect import signature
-    arg_tuple = tuple(signature(func).parameters.keys())
+    from inspect import signature, isfunction, isclass
+
+    if isclass(func):
+        arg_tuple = tuple(signature(func.func).parameters.keys())
+    elif isfunction(func):
+        arg_tuple = tuple(signature(func).parameters.keys())
+    else:
+        raise TypeError('Unidentified func passed')
     if exclude_x:
         return arg_tuple[1:]
     else:

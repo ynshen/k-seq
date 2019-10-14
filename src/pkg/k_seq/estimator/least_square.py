@@ -12,193 +12,86 @@ Several functions are included:
 """
 
 
-class _PointEstimation:
+class Bootstrap:
+    """Class to perform bootstrap in fitting"""
 
-    def __init__(self, single_fitting):
+    def __init__(self, fitter, bootstrap_num, return_num, method, **kwargs):
         from scipy.optimize import curve_fit
         import numpy as np
         import pandas as pd
 
+        self.fitter = fitter
+        self.bootstrap_num = bootstrap_num
+        self.return_num = return_num
+        implemented_methods_map = {
+            'pct_res': 'pct_res',
+            'resample percent residues': 'pct_res',
+            'resample data points': 'data',
+            'data': 'data',
+            'stratified': 'stratified',
+        }
+        if method in implemented_methods_map.keys():
+            self.method = method
+        else:
+            raise NotImplementedError(f'Bootstrap method {method} is not implemented')
+
+
+
+    @staticmethod
+    def _bs_sample_generator(single_fitting):
+        import numpy as np
+
+        if single_fitting.config['bs_method'] == 'Resample percent residue':
+            y_hat = single_fitting.model(single_fitting.x_data, *single_fitting.point_est.params.values())
+            pct_res = (single_fitting.y_data - y_hat) / y_hat
+            for _ in range(single_fitting.config['bs_depth']):
+                pct_res_resampled = np.random.choice(pct_res, replace=True, size=len(pct_res))
+                yield single_fitting.x_data, y_hat * (1 + pct_res_resampled)
+        else:
+            indices = np.linspace(0, len(single_fitting.x_data) - 1, len(single_fitting.x_data), dtype=np.int)
+            for _ in range(single_fitting.config['bs_depth']):
+                bs_indeces = np.random.choice(a=indices, size=len(single_fitting.x_data), replace=True)
+                yield single_fitting.x_data[bs_indeces], single_fitting.y_data[bs_indeces]
+
+    def run(self):
+        """Perform bootstrap"""
+        pass
+
+    param_list = pd.DataFrame(index=np.linspace(0, single_fitting.config['bs_depth'] - 1,
+                                                single_fitting.config['bs_depth'], dtype=np.int),
+                              columns=single_fitting.config['parameters'],
+                              dtype=np.float64)
+    for ix, (x_data, y_data) in enumerate(_bs_sample_generator(single_fitting)):
         try:
             if single_fitting.config['random_init']:
                 init_guess = [np.random.random() for _ in single_fitting.config['parameters']]
-                params, pcov = curve_fit(single_fitting.model,
-                                         xdata=single_fitting.x_data, ydata=single_fitting.y_data,
-                                         sigma=single_fitting.weights, method='trf',
-                                         bounds=single_fitting.config['bounds'], p0=init_guess)
+                params, _ = curve_fit(single_fitting.model,
+                                      xdata=x_data, ydata=y_data,
+                                      method='trf', bounds=single_fitting.config['bounds'], p0=init_guess)
             else:
-                params, pcov = curve_fit(single_fitting.model,
-                                         xdata=single_fitting.x_data, ydata=single_fitting.y_data,
-                                         sigma=single_fitting.weights, method='trf',
-                                         bounds=single_fitting.config['bounds'])
-            self.params = pd.Series(data=params, index=single_fitting.config['parameters'])
-            self.pcov = pcov
+                params, _ = curve_fit(single_fitting.model,
+                                      xdata=x_data, ydata=y_data,
+                                      method='trf', bounds=single_fitting.config['bounds'])
+        except:
+            params = np.repeat(np.nan, len(single_fitting.config['parameters']))
+        param_list.loc[ix] = params
 
-            if hasattr(single_fitting, 'metrics'):
-                for name, fn in single_fitting.metrics.items():
-                    self.params[name] = fn(self.params)
-        except RuntimeError:
-            self.params = np.nan
-            self.pcov = np.nan
+    if hasattr(single_fitting, 'metrics'):
+        for name, fn in single_fitting.metrics.items():
+            param_list[name] = param_list.apply(fn, axis=1)
 
-
-def _bs_sample_generator(single_fitting):
-    import numpy as np
-
-    if single_fitting.config['bs_method'] == 'Resample percent residue':
-        y_hat = single_fitting.model(single_fitting.x_data, *single_fitting.point_est.params.values())
-        pct_res = (single_fitting.y_data - y_hat) / y_hat
-        for _ in range(single_fitting.config['bs_depth']):
-            pct_res_resampled = np.random.choice(pct_res, replace=True, size=len(pct_res))
-            yield single_fitting.x_data, y_hat * (1 + pct_res_resampled)
+    self.summary = param_list.describe(percentiles=[0.025, 0.5, 0.975], include='all')
+    if single_fitting.config['bs_return_size'] == 0:
+        self.records = None
+    elif single_fitting.config['bs_return_size'] < single_fitting.config['bs_depth']:
+        self.records = param_list.sample(n=single_fitting.config['bs_return_size'], replace=False, axis=0)
     else:
-        indices = np.linspace(0, len(single_fitting.x_data) - 1, len(single_fitting.x_data), dtype=np.int)
-        for _ in range(single_fitting.config['bs_depth']):
-            bs_indeces = np.random.choice(a=indices, size=len(single_fitting.x_data), replace=True)
-            yield single_fitting.x_data[bs_indeces], single_fitting.y_data[bs_indeces]
+        self.records = param_list
 
 
-class _Bootstrap:
+class FitResults:
 
-    def __init__(self, single_fitting):
-        from scipy.optimize import curve_fit
-        import numpy as np
-        import pandas as pd
-
-        param_list = pd.DataFrame(index=np.linspace(0, single_fitting.config['bs_depth'] - 1,
-                                                    single_fitting.config['bs_depth'], dtype=np.int),
-                                  columns=single_fitting.config['parameters'],
-                                  dtype=np.float64)
-
-        for ix, (x_data, y_data) in enumerate(_bs_sample_generator(single_fitting)):
-            try:
-                if single_fitting.config['random_init']:
-                    init_guess = [np.random.random() for _ in single_fitting.config['parameters']]
-                    params, _ = curve_fit(single_fitting.model,
-                                             xdata=x_data, ydata=y_data,
-                                             method='trf', bounds=single_fitting.config['bounds'], p0=init_guess)
-                else:
-                    params, _ = curve_fit(single_fitting.model,
-                                             xdata=x_data, ydata=y_data,
-                                             method='trf', bounds=single_fitting.config['bounds'])
-            except:
-                params = np.repeat(np.nan, len(single_fitting.config['parameters']))
-            param_list.loc[ix] = params
-
-        if hasattr(single_fitting, 'metrics'):
-            for name, fn in single_fitting.metrics.items():
-                param_list[name] = param_list.apply(fn, axis=1)
-
-        self.summary = param_list.describe(percentiles=[0.025, 0.5, 0.975], include='all')
-        if single_fitting.config['bs_return_size'] == 0:
-            self.records = None
-        elif single_fitting.config['bs_return_size'] < single_fitting.config['bs_depth']:
-            self.records = param_list.sample(n=single_fitting.config['bs_return_size'], replace=False, axis=0)
-        else:
-            self.records = param_list
-
-
-class SingleFitting:
-
-    def __init__(self, x_data, y_data, model, name=None, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
-                 resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
-        import numpy as np
-        import pandas as pd
-        from ..utility import get_args_params
-
-        if len(x_data) != len(y_data):
-            raise Exception('Error: sizes of x and y data do not match')
-        if name is not None:
-            self.name = name
-        x_data = np.array(x_data)
-        y_data = np.array(y_data)
-        if missing_data_as_zero:
-            y_data[np.isnan(y_data)] = 0
-
-        # only include non np.nan data
-        valid = ~np.isnan(y_data)
-        self.model = model
-        self.x_data = x_data[valid]
-        self.y_data = y_data[valid]
-        if weights is None:
-            weights = np.ones(len(y_data))
-        self.weights = weights[valid]
-        self.config = {
-            'parameters': get_args_params(model, exclude_x=True),
-            'missing_data_as_zero': missing_data_as_zero,
-            'random_init': random_init
-        }
-        if bounds is None:
-            self.config['bounds'] = [[-np.inf for _ in self.config['parameters']],
-                                     [np.inf for _ in self.config['parameters']]]
-        else:
-            self.config['bounds'] = bounds
-        if bootstrap_depth > 0 and len(self.x_data) > 1:
-            self.config['bootstrap'] = True
-            self.config['bs_depth'] = bootstrap_depth
-            if bs_return_size is None:
-                self.config['bs_return_size'] = bootstrap_depth
-            else:
-                self.config['bs_return_size'] = bs_return_size
-            if resample_pct_res:
-                self.config['bs_method'] = 'Resample percent residues'
-            else:
-                self.config['bs_method'] = 'Resample data points'
-        else:
-            self.config['bootstrap'] = False
-        if metrics is not None:
-            self.metrics = metrics
-
-        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
-        from ..utility import FunctionWrapper
-        self.visualizer = FunctionWrapper(data=self,
-                                          functions=[
-                                              fitting_curve_plot,
-                                              bootstrap_params_dist_plot
-                                          ])
-
-    def fitting(self):
-        import numpy as np
-        import pandas as pd
-
-        self.point_est = _PointEstimation(self)
-        if self.config['bootstrap']:
-            if isinstance(self.point_est.params, pd.Series):
-                self.config['bs_method'] = 'Resample data points'  # if the point estimation is not valid, can only resample data points
-            self.bootstrap = _Bootstrap(self)
-        else:
-            self.bootstrap = np.nan
-
-    @classmethod
-    def from_SeqTable(cls, seq_table, seq, model, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
-                      resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
-        import numpy as np
-
-        x_data = np.array(seq_table.x_values(with_col_name=False))
-        y_data = np.array(seq_table.reacted_frac_table.loc[seq])
-        return cls(x_data=x_data, y_data=y_data, name=seq, model=model,
-                   weights=weights, bounds=bounds,
-                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
-                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
-
-    @classmethod
-    def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
-                   name=None, weights=None, bounds=None,
-                   bootstrap_depth=0, bs_return_size=None, resample_pct_res=False, missing_data_as_zero=False,
-                   random_init=True, metrics=None, **kwargs):
-        from ..data.io import read_table_files
-
-        if path_to_x is not None and path_to_y is not None:
-            x_data = read_table_files(file_path=path_to_x, col_name=x_col_name)
-            y_data = read_table_files(file_path=path_to_y, col_name=y_col_name)
-        elif path_to_file is not None:
-            x_data = read_table_files(file_path=path_to_file, col_name=x_col_name)
-            y_data = read_table_files(file_path=path_to_file, col_name=y_col_name)
-
-        return cls(x_data=x_data, y_data=y_data, name=name, model=model, weights=weights, bounds=bounds,
-                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
-                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
-
+    pass
     @property
     def summary(self):
         import numpy as np
@@ -223,6 +116,164 @@ class SingleFitting:
             return pd.Series(data=list(res.values()), index=list(res.keys()), name=self.name)
         else:
             return pd.Series(data=list(res.values()), index=list(res.keys()))
+
+# noinspection PyUnresolvedReferences
+class SingleFitter:
+    """Class to fit a single kinetic curve"""
+
+    def __init__(self, x_data, y_data, model, name=None, weights=None, bounds=None, opt_method='trf',
+                 bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
+                 exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+        import numpy as np
+        from ..utility.func_tools import DictToAttr, get_func_params
+
+        if len(x_data) != len(y_data):
+            raise ValueError('Shapes of x and y do not match')
+
+        self.model = model
+        if name is not None:
+            self.name = name
+        self.parameters = get_func_params(model, exclude_x=True),
+        self.config = DictToAttr({
+            'opt_method': opt_method,
+            'exclude_zero': exclude_zero,
+            'init_guess': init_guess,
+            'rnd_seed': rnd_seed
+        })
+
+        x_data = np.array(x_data)
+        y_data = np.array(y_data)
+        if exclude_zero is True:
+            mask = y_data != 0
+        else:
+            mask = np.repeat(True, x_data.shape[0])
+
+        self.x_data = x_data[mask]
+        self.y_data = y_data[mask]
+        if weights is None:
+            weights = np.ones(len(y_data))
+        self.weights = weights[mask]
+
+        if bounds is None:
+            self.config.bounds = [np.repeat(-np.inf, len(self.parameters)),
+                                  np.repeat(np.inf, len(self.parameters))]
+        else:
+            self.config.bounds = bounds
+
+        if bootstrap_num > 0 and len(self.x_data) > 1:
+            self.config.bootstrap = _Bootstrap(fitter=self, bootstrap_num=bootstrap_num,
+                                               return_num=0 if bs_return_num is None else bs_return_num,
+                                               method = bs_method)
+        else:
+            self.config.bootstrap = None
+
+        self.metrics = metrics
+        self.results = None
+        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
+        from ..utility.func_tools import FuncToMethod
+        self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
+                                                            bootstrap_params_dist_plot])
+
+    def _fit(self, model=None, x_data=None, y_data=None, weights=None, parameters=None, bounds=None,
+             metrics=None, init_guess=None, opt_method=None):
+        """perform fitting"""
+        from scipy.optimize import curve_fit
+        import numpy as np
+        import pandas as pd
+        import warnings
+
+        if model is None:
+            model = self.models
+            parameters = self.parameters
+        if x_data is None:
+            x_data = self.x_data
+        if y_data is None:
+            y_data = self.y_data
+        if weights is None:
+            weights = self.weights
+        if parameters is None:
+            from ..utility.func_tools import get_func_params
+            parameters = get_func_params(model, exclude_x=True)
+        if bounds is None:
+            bounds = self.bounds
+        if metrics is None:
+            metrics = self.metrics
+        if init_guess is None:
+            init_guess = self.config.init_guess
+        if opt_method is None:
+            opt_method = self.config.opt_method
+
+        try:
+            if init_guess is None:
+                # use a random guess
+                init_guess = [np.random.random() for _ in parameters]
+            params, pcov = curve_fit(f=model,
+                                     xdata=x_data, ydata=y_data,
+                                     sigma=weights, method=opt_method,
+                                     bounds=bounds, p0=init_guess)
+            if metrics is not None:
+                metrics = {name: fn(params) for name, fn in metrics.items()}
+            return {
+                'params': params,
+                'pcov': pcov,
+                'metrics': metrics
+            }
+        except RuntimeError:
+            warnings.warn(
+                f"RuntimeError for fitting model {self.model} on {self.name if self.name is not None else '*'} when\n"
+                f'\tx = {self.x_data}\n'
+                f'\ty={self.y_data}\n'
+            )
+            return {
+                'params': None,
+                'pcov': None,
+                'metrics': None
+            }
+
+    def fit(self, model=None, x_data=None, y_data=None, weights=None, parameters=None, bounds=None, metric=None, init_guess=None, method=None):
+        """Wrapper on _fit method"""
+
+        import numpy as np
+        import pandas as pd
+
+        self.results = point_est = self._fit(model, x_data, y_data, weights=None, parameters=None, bounds=None,
+             metrics=None, init_guess=None, method='trf')
+        if self.bootstrap is None:
+            pass
+        else:
+            # do bootstrap
+            self.bootstrap.run()
+
+    @classmethod
+    def from_SeqTable(cls, seq_table, seq, model, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
+                      resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
+        import numpy as np
+
+        x_data = np.array(seq_table.x_values(with_col_name=False))
+        y_data = np.array(seq_table.reacted_frac_table.loc[seq])
+        return cls(x_data=x_data, y_data=y_data, name=seq, model=model,
+                   weights=weights, bounds=bounds,
+                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
+                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
+
+    @classmethod
+    def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
+                   name=None, weights=None, bounds=None,
+                   bootstrap_depth=0, bs_return_size=None, resample_pct_res=False, missing_data_as_zero=False,
+                   random_init=True, metrics=None, **kwargs):
+        """Fit data directly from files"""
+        from ..data.io import read_table_files
+
+        if path_to_x is not None and path_to_y is not None:
+            x_data = read_table_files(file_path=path_to_x, col_name=x_col_name)
+            y_data = read_table_files(file_path=path_to_y, col_name=y_col_name)
+        elif path_to_file is not None:
+            x_data = read_table_files(file_path=path_to_file, col_name=x_col_name)
+            y_data = read_table_files(file_path=path_to_file, col_name=y_col_name)
+
+        return cls(x_data=x_data, y_data=y_data, name=name, model=model, weights=weights, bounds=bounds,
+                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
+                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
 
 
 class BatchFitting:
