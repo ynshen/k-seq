@@ -47,6 +47,7 @@ class Bootstrap:
         self.fitter = fitter
         self.bootstrap_num = bootstrap_num
         self.return_num = return_num
+        self.summary = None
         self.record = None
 
     def _percent_residue(self):
@@ -106,43 +107,37 @@ class Bootstrap:
             return res_series
 
         results = ix_list.apply(fitting_runner)
-        self.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include='all')
+        self.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include=np.number)
         self.fitter.results.uncertainty = self
         if self.return_num == self.bootstrap_num:
-            self.records = results
+            self.record = results
         else:
-            self.records = results.sample(n=self.return_num, replace=False, axis=0)
+            self.record = results.sample(n=self.return_num, replace=False, axis=0)
 
 
 class FitResults:
 
-    def __init__(self):
+    def __init__(self, fitter):
+        self._fitter = fitter
         self.point_estimation = None
         self.uncertainty = None
 
-    def to_series(self):
+    def to_series(self, stats_included=None):
         import numpy as np
         import pandas as pd
 
-        stats = self.config['parameters']
-        if hasattr(self, 'metrics'):
-            stats += tuple(self.metrics.keys())
-        res = {}
-        if self.point_est is not np.nan:
-            res.update({stat + '_point_est': self.point_est.params[stat] for stat in stats})
-        if self.config['bootstrap']:
-            for stat in stats:
-                res.update({
-                    stat + '_mean': self.bootstrap.summary[stat]['mean'],
-                    stat + '_std': self.bootstrap.summary[stat]['std'],
-                    stat + '_2.5': self.bootstrap.summary[stat]['2.5%'],
-                    stat + '_median': self.bootstrap.summary[stat]['50%'],
-                    stat + '_97.5': self.bootstrap.summary[stat]['97.5%'],
-            })
-        if hasattr(self, 'name'):
-            return pd.Series(data=list(res.values()), index=list(res.keys()), name=self.name)
+        allowed_stats = ['mean', 'std', '2.5%', '50%', '97.5%']
+        if stats_included is None:
+            stats_included = allowed_stats
+
+        res = self.point_estimation.summary.to_dict()
+        if self.uncertainty is not None:
+            from ..utility.func_tools import dict_flatten
+            res.update(dict_flatten(self.uncertainty.summary.loc[stats_included].to_dict()))
+        if self._fitter.name is not None:
+            return pd.Series(res, name=self._fitter.name)
         else:
-            return pd.Series(data=list(res.values()), index=list(res.keys()))
+            return pd.Series(res)
 
 
 # noinspection PyUnresolvedReferences
@@ -178,8 +173,7 @@ class SingleFitter:
             raise ValueError('Shapes of x and y do not match')
 
         self.model = model
-        if name is not None:
-            self.name = name
+        self.name = name
         self.parameters = get_func_params(model, exclude_x=True),
         self.config = DictToAttr({
             'opt_method': opt_method,
@@ -266,31 +260,45 @@ class SingleFitter:
                                      sigma=weights, method=opt_method,
                                      bounds=bounds, p0=init_guess)
             if metrics is not None:
-                metrics = {name: fn(params) for name, fn in metrics.items()}
-            return {
-                'params': params,
-                'pcov': pcov,
-                'metrics': metrics
-            }
+                metrics_res = {name: fn(params) for name, fn in metrics.items()}
+            else:
+                metrics_res = None
         except RuntimeError:
             warnings.warn(
                 f"RuntimeError for fitting model {self.model} on {self.name if self.name is not None else '*'} when\n"
                 f'\tx = {self.x_data}\n'
                 f'\ty={self.y_data}\n'
             )
-            return {
-                'params': None,
-                'pcov': None,
-                'metrics': None
-            }
+            params = np.full(fill_value=np.nan, shape=len(parameters))
+            pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
+            if metrics is not None:
+                metrics_res = {name: np.nan for name, fn in metrics.items()}
+            else:
+                metrics_res = None
+        return {
+            'params': params,
+            'pcov': pcov,
+            'metrics': metrics_res
+        }
 
     def fit(self):
         """Wrapper on _fit method"""
 
         import numpy as np
         import pandas as pd
+        from ..utility.func_tools import DictToAttr
+
+        if self.config.rnd_seed is not None:
+            np.random.seed(self.config.rnd_seed)
 
         point_est = self._fit()
+        summary = {key: value for key, value in zip(self.parameters, point_est['params'])}
+        if point_est['metrics'] is not None:
+            summary.update(point_est['metrics'])
+        self.results.point_estimation = DictToAttr({
+            'summary': pd.Series(summary),
+            'pcov': point_est['pcov']
+        })
         if self.bootstrap is None:
             pass
         else:
@@ -298,49 +306,50 @@ class SingleFitter:
             self.bootstrap.run()
 
     @classmethod
-    def from_SeqTable(cls, seq_table, seq, model, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
-                      resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
+    def from_table(cls, table, seq, model, x_data, weights=None, bounds=None, bootstrap_num=None, bs_return_num=None, bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+        """Get data from a column of table"""
         import numpy as np
 
-        x_data = np.array(seq_table.x_values(with_col_name=False))
-        y_data = np.array(seq_table.reacted_frac_table.loc[seq])
-        return cls(x_data=x_data, y_data=y_data, name=seq, model=model,
+        if isinstance(x_data, (list, np.ndarray)):
+            x_data = pd.Series(x_data, index=table.columns)
+        y_data = table.loc[seq]
+        return cls(x_data=x_data, y_data=y_data, model=model, name=seq,
                    weights=weights, bounds=bounds,
-                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
-                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
+                   bootstrap_num=bootstrap_num, bs_return_num=bs_return_num, bs_method=bs_method,
+                   exclude_zero=exclude_zero, init_guess=init_guess, metrics=metrics, rnd_seed=rnd_seed, **kwargs)
 
-    @classmethod
-    def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
-                   name=None, weights=None, bounds=None,
-                   bootstrap_depth=0, bs_return_size=None, resample_pct_res=False, missing_data_as_zero=False,
-                   random_init=True, metrics=None, **kwargs):
-        """Fit data directly from files"""
-        from ..data.io import read_table_files
-
-        if path_to_x is not None and path_to_y is not None:
-            x_data = read_table_files(file_path=path_to_x, col_name=x_col_name)
-            y_data = read_table_files(file_path=path_to_y, col_name=y_col_name)
-        elif path_to_file is not None:
-            x_data = read_table_files(file_path=path_to_file, col_name=x_col_name)
-            y_data = read_table_files(file_path=path_to_file, col_name=y_col_name)
-
-        return cls(x_data=x_data, y_data=y_data, name=name, model=model, weights=weights, bounds=bounds,
-                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
-                   missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
+    # @classmethod
+    # def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
+    #                name=None, weights=None, bounds=None,
+    #                bootstrap_depth=0, bs_return_size=None, resample_pct_res=False, missing_data_as_zero=False,
+    #                random_init=True, metrics=None, **kwargs):
+    #     """[Unimplemented] Fit data directly from files"""
+    #     from ..data.io import read_table_files
+    #
+    #     if path_to_x is not None and path_to_y is not None:
+    #         x_data = read_table_files(file_path=path_to_x, col_name=x_col_name)
+    #         y_data = read_table_files(file_path=path_to_y, col_name=y_col_name)
+    #     elif path_to_file is not None:
+    #         x_data = read_table_files(file_path=path_to_file, col_name=x_col_name)
+    #         y_data = read_table_files(file_path=path_to_file, col_name=y_col_name)
+    #
+    #     return cls(x_data=x_data, y_data=y_data, name=name, model=model, weights=weights, bounds=bounds,
+    #                bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
+    #                missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
 
 
 class BatchFitting:
 
     def __init__(self, seq_to_fit, x_values, model, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
                  resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
-        from ..utility import get_args_params
+        from ..utility.func_tools import get_func_params
         import pandas as pd
         import numpy as np
         from datetime import datetime
 
         self.model = model
         self.config = {
-            'parameters': get_args_params(model, exclude_x=True),
+            'parameters': get_func_params(model, exclude_x=True),
             'missing_data_as_zero': missing_data_as_zero,
             'random_init': random_init,
             'fitting_set_create_time': datetime.now()
