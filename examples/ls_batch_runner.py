@@ -36,7 +36,7 @@ def main():
     # todo: make it CL tool using argparse
     seq_table = load_table(table_path=TABLE_PATH)
     if TEST_MODE:
-        seq_test = seq_table.table.index.values[:100]
+        seq_test = seq_table.reacted_frac_filtered.index.values[:100]
     else:
         seq_test = None
 
