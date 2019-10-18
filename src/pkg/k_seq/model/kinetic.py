@@ -67,3 +67,8 @@ class BYOModel(ModelBase):
             return p0 * first_order_w_slope(c=c, k=k, A=A, alpha=0.479, t=90, b=b)
         else:
             return p0 * first_order(c=c, k=k, A=A, alpha=0.479, t=90)
+
+    @staticmethod
+    def func_react_frac_no_slope(x, k, A):
+        return first_order(c=x, k=k, A=A, alpha=0.479, t=90)
+

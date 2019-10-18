@@ -9,6 +9,7 @@ Several functions are included:
   - weighted fitting depends on the customized weights
   - confidence interval estimation using bootstrap
 
+todo: fitting seems slower, read again to improve the performance
 """
 
 
@@ -74,7 +75,7 @@ class Bootstrap:
         for _ in range(self.bootstrap_num):
             ix_resample = []
             for member_ix in self.grouper.values():
-                ix_resample += np.random.choice(member_ix, size=len(member_ix), replace=True)
+                ix_resample += list(np.random.choice(member_ix, size=len(member_ix), replace=True))
             yield self.fitter.x_data[ix_resample], self.fitter.y_data[ix_resample]
 
     def _bs_sample_generator(self):
@@ -100,7 +101,7 @@ class Bootstrap:
             result = self.fitter._fit(x_data=x_data, y_data=y_data)
             res_series = pd.Series(data=result['params'], index=self.fitter.parameters)
             if result['metrics'] is not None:
-                for key, value in results['metrics'].items():
+                for key, value in result['metrics'].items():
                     res_series[key] = value
             res_series['x_data'] = x_data
             res_series['y_data'] = y_data
@@ -144,7 +145,7 @@ class FitResults:
 class SingleFitter:
     """Class to fit a single kinetic curve"""
 
-    def __init__(self, x_data, y_data, model, name=None, weights=None, bounds=None, opt_method='trf',
+    def __init__(self, x_data, y_data, model, name=None, parameters=None, weights=None, bounds=None, opt_method='trf',
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
                  exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
         """
@@ -174,7 +175,10 @@ class SingleFitter:
 
         self.model = model
         self.name = name
-        self.parameters = get_func_params(model, exclude_x=True),
+        if parameters is None:
+            self.parameters = get_func_params(model, exclude_x=True)
+        else:
+            self.parameters = list(parameters)
         self.config = DictToAttr({
             'opt_method': opt_method,
             'exclude_zero': exclude_zero,
@@ -210,10 +214,10 @@ class SingleFitter:
                 bs_return_num = bootstrap_num
             else:
                 bs_return_num = bs_return_num
-            self.config.bootstrap = _Bootstrap(fitter=self, bootstrap_num=bootstrap_num, return_num=bs_return_num,
+            self.bootstrap = Bootstrap(fitter=self, bootstrap_num=bootstrap_num, return_num=bs_return_num,
                                                method=bs_method, **kwargs)
         else:
-            self.config.bootstrap = None
+            self.bootstrap = None
 
         self.metrics = metrics
         self.results = None
@@ -231,7 +235,7 @@ class SingleFitter:
         import warnings
 
         if model is None:
-            model = self.models
+            model = self.model
             parameters = self.parameters
         if x_data is None:
             x_data = self.x_data
@@ -243,7 +247,7 @@ class SingleFitter:
             from ..utility.func_tools import get_func_params
             parameters = get_func_params(model, exclude_x=True)
         if bounds is None:
-            bounds = self.bounds
+            bounds = self.config.bounds
         if metrics is None:
             metrics = self.metrics
         if init_guess is None:
@@ -291,6 +295,7 @@ class SingleFitter:
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
 
+        self.results = FitResults(fitter=self)
         point_est = self._fit()
         summary = {key: value for key, value in zip(self.parameters, point_est['params'])}
         if point_est['metrics'] is not None:
@@ -306,12 +311,16 @@ class SingleFitter:
             self.bootstrap.run()
 
     @classmethod
-    def from_table(cls, table, seq, model, x_data, weights=None, bounds=None, bootstrap_num=None, bs_return_num=None, bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
-        """Get data from a column of table"""
+    def from_table(cls, table, seq, model, x_data, weights=None, bounds=None, bootstrap_num=0, bs_return_num=None, bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+        """Get data from a row of `pd.DataFrame` table. `SeqTable` is not supported due to multiple tables contained"""
         import numpy as np
+        import pandas as pd
 
         if isinstance(x_data, (list, np.ndarray)):
             x_data = pd.Series(x_data, index=table.columns)
+        elif isinstance(x_data, pd.Series):
+            x_data = x_data[table.columns]
+
         y_data = table.loc[seq]
         return cls(x_data=x_data, y_data=y_data, model=model, name=seq,
                    weights=weights, bounds=bounds,
@@ -338,54 +347,72 @@ class SingleFitter:
     #                missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
 
 
-class BatchFitting:
+class BatchFitter:
 
-    def __init__(self, seq_to_fit, x_values, model, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
-                 resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
-        from ..utility.func_tools import get_func_params
+    def __init__(self, table, x_values, model, weights=None, bounds=None, seq_to_fit=None, bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
+                 opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+        from ..utility.func_tools import get_func_params, DictToAttr
         import pandas as pd
         import numpy as np
-        from datetime import datetime
 
         self.model = model
-        self.config = {
-            'parameters': get_func_params(model, exclude_x=True),
-            'missing_data_as_zero': missing_data_as_zero,
-            'random_init': random_init,
-            'fitting_set_create_time': datetime.now()
-        }
-        if weights is not None:
-            self.config['weights'] = weights
+        self.parameters = get_func_params(model, exclude_x=True)
+        self.config = DictToAttr({
+            'seq_to_fit': seq_to_fit,
+        })
+        # prep fitting params once to save time for each single fitting
+        if weights is None:
+            weights = np.ones(len(x_values))
+        if bounds is None:
+            bounds = [np.repeat(-np.inf, len(self.parameters)),
+                      np.repeat(np.inf, len(self.parameters))]
+        if len(x_values) <= 1:
+            bootstrap_num = 0
+        if bs_return_num is None:
+            bs_return_num = 0
+        elif bs_return_num < 0:
+            bs_return_num = bootstrap_num
         else:
-            weights = None
-        if bounds is not None:
-            self.config['bounds'] = bounds
-        else:
-            bounds = None
+            pass
+        if bs_return_num > 0:
+            self.config.bootstrap = True
 
-        if bootstrap_depth > 0:
-            self.config['bootstrap'] = True
-            self.config['bs_depth'] = bootstrap_depth
-            if bs_return_size is None:
-                self.config['bs_return_size'] = bootstrap_depth
-            elif bs_return_size > bootstrap_depth:
-                self.config['bs_return_size'] = bootstrap_depth
-            else:
-                self.config['bs_return_size'] = bs_return_size
-            if resample_pct_res:
-                self.config['bs_method'] = 'Resample percent residues'
-            else:
-                self.config['bs_method'] = 'Resample data points'
-        else:
-            self.config['bootstrap'] = False
-        if bs_return_size is None:
-            bs_return_size = None
-        if metrics is not None:
-            self.metrics = metrics
-        else:
-            metrics = None
+        # contains parameters should pass to the single fitter
+        self.fit_params = DictToAttr({
+            'model': self.model,
+            'parameters': self.parameters,
+            'weights': weights,
+            'bounds': bounds,
+            'opt_method': opt_method,
+            'bootstrap_num': bootstrap_num,
+            'bs_return_num': bs_return_num,
+            'bs_method': bs_method,
+            'exclude_zero': exclude_zero,
+            'init_guess': init_guess,
+            'metrics': metrics,
+            'rnd_seed': rnd_seed
+        })
 
-        if isinstance(seq_to_fit, list) or isinstance(seq_to_fit, np.ndarray):
+        if isinstance(table, str):
+            from pathlib import Path
+            table_path = Path(table)
+            if table_path.is_file():
+                try:
+                    table = pd.read_pickle(table_path)
+                except:
+                    raise TypeError(f'{table_path} is not pickled pd.DataFrame object')
+            else:
+                raise FileNotFoundError(f'{table_path} is not a valid file')
+        elif not isinstance(table, pd.DataFrame):
+            raise TypeError('Table should be a pd.DataFrame')
+        else:
+            pass
+
+        self.table = table
+        if seq_to_fit is None:
+            self.seq_list = self.table.index.values
+        else:
+            if isinstance(seq_to_fit, (list, np.ndarray)):
             if len(np.array(x_values).shape) == 1:
                 self.seq_list = [
                     SingleFitting(x_data=x_values, y_data=y_values, model=model, name=ix,
@@ -424,14 +451,14 @@ class BatchFitting:
                     for ix, (id, y_values) in enumerate(seq_to_fit.items())
                 ]
 
-        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
-        from ..utility import FunctionWrapper
-        self.visualizer = FunctionWrapper(data=self,
-                                          functions=[
-                                              fitting_curve_plot,
-                                              bootstrap_params_dist_plot,
-                                              param_value_plot
-                                          ])
+        # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
+        # from ..utility import FunctionWrapper
+        # self.visualizer = FunctionWrapper(data=self,
+        #                                   functions=[
+        #                                       fitting_curve_plot,
+        #                                       bootstrap_params_dist_plot,
+        #                                       param_value_plot
+        #                                   ])
 
     def fitting(self, parallel_cores=1):
         if parallel_cores > 1:
