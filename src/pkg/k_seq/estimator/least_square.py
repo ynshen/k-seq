@@ -124,7 +124,6 @@ class FitResults:
         self.uncertainty = None
 
     def to_series(self, stats_included=None):
-        import numpy as np
         import pandas as pd
 
         allowed_stats = ['mean', 'std', '2.5%', '50%', '97.5%']
@@ -310,6 +309,9 @@ class SingleFitter:
             # do bootstrap
             self.bootstrap.run()
 
+    def summary(self, stats_included=None):
+        return self.results.to_series(stats_included=stats_included)
+
     @classmethod
     def from_table(cls, table, seq, model, x_data, weights=None, bounds=None, bootstrap_num=0, bs_return_num=None, bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
         """Get data from a row of `pd.DataFrame` table. `SeqTable` is not supported due to multiple tables contained"""
@@ -347,6 +349,26 @@ class SingleFitter:
     #                missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
 
 
+class BatchFitResults:
+
+    def __init__(self, fitter_list, master_fitter):
+        self.fitter = master_fitter
+        self.results = {fitter[0]: fitter[1] for fitter in fitter_list}
+        self._summary = None
+
+    def summary(self):
+        if self._summary is None:
+            import pandas as pd
+            self._summary = pd.DataFrame.from_dict({seq: fitter.summary() for seq, fitter in self.results.items()}, orient='index')
+        return self._summary
+
+    def to_dataframe(self, seq_list=None):
+        if seq_list is None:
+            return self.summary()
+        else:
+            return self._summary.loc[seq_list]
+
+
 class BatchFitter:
 
     def __init__(self, table, x_values, model, weights=None, bounds=None, seq_to_fit=None, bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
@@ -361,8 +383,9 @@ class BatchFitter:
             'seq_to_fit': seq_to_fit,
         })
         # prep fitting params once to save time for each single fitting
+        self.x_values = x_values[table.columns.values]
         if weights is None:
-            weights = np.ones(len(x_values))
+            weights = np.ones(len(self.x_values))
         if bounds is None:
             bounds = [np.repeat(-np.inf, len(self.parameters)),
                       np.repeat(np.inf, len(self.parameters))]
@@ -379,6 +402,7 @@ class BatchFitter:
 
         # contains parameters should pass to the single fitter
         self.fit_params = DictToAttr({
+            'x_data': self.x_values,
             'model': self.model,
             'parameters': self.parameters,
             'weights': weights,
@@ -412,44 +436,10 @@ class BatchFitter:
         if seq_to_fit is None:
             self.seq_list = self.table.index.values
         else:
-            if isinstance(seq_to_fit, (list, np.ndarray)):
-            if len(np.array(x_values).shape) == 1:
-                self.seq_list = [
-                    SingleFitting(x_data=x_values, y_data=y_values, model=model, name=ix,
-                                  weights=weights, bounds=bounds,
-                                  bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
-                                  resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
-                                  random_init=random_init, metrics=metrics)
-                    for ix, y_values in enumerate(seq_to_fit)
-            ]
+            if isinstance(seq_to_fit, (list, np.ndarray, pd.Series)):
+                self.seq_list = list(seq_to_fit)
             else:
-                self.seq_list = [
-                    SingleFitting(x_data=x_values[ix], y_data=y_values, model=model, name=ix,
-                                  weights=weights, bounds=bounds,
-                                  bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
-                                  resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
-                                  random_init=random_init, metrics=metrics)
-                    for ix, y_values in enumerate(seq_to_fit)
-                ]
-        elif isinstance(seq_to_fit, dict):
-            if len(np.array(x_values).shape) == 1:
-                self.seq_list = [
-                    SingleFitting(x_data=x_values, y_data=y_values, model=model, name=id,
-                                  weights=weights, bounds=bounds,
-                                  bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
-                                  resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
-                                  random_init=random_init, metrics=metrics)
-                    for id, y_values in seq_to_fit.items()
-            ]
-            else:
-                self.seq_list = [
-                    SingleFitting(x_data=x_values[ix], y_data=y_values, model=model, name=id,
-                                  weights=weights, bounds=bounds,
-                                  bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
-                                  resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
-                                  random_init=random_init, metrics=metrics)
-                    for ix, (id, y_values) in enumerate(seq_to_fit.items())
-                ]
+                raise TypeError('Unknown seq_to_fit type, is it list-like?')
 
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
         # from ..utility import FunctionWrapper
@@ -460,15 +450,31 @@ class BatchFitter:
         #                                       param_value_plot
         #                                   ])
 
-    def fitting(self, parallel_cores=1):
+    def worker_generator(self):
+        for seq in self.seq_list:
+            try:
+                yield SingleFitter.from_table(table=self.table, seq=seq, **self.fit_params.__dict__)
+            except:
+                raise Exception(f'Can not create fitting worker for {seq}')
+
+    def fit(self, deduplicate=False, parallel_cores=1):
+        if deduplicate:
+            self._hash()
         if parallel_cores > 1:
             import multiprocessing as mp
             pool = mp.Pool(processes=int(parallel_cores))
-            self.seq_list = pool.map(_work_fn, self.seq_list)
+            self.results = BatchFitResults(
+                fitter_list=pool.map(_work_fn, self.worker_generator()),
+                master_fitter=self
+            )
         else:
-            for seq_fitting in self.seq_list:
-                seq_fitting.fitting()
-        self.seq_list = {seq_fitting.name: seq_fitting for seq_fitting in self.seq_list}
+            # single thread
+            self.results = BatchFitResults(
+                fitter_list=[_work_fn(fitter) for fitter in self.worker_generator()],
+                master_fitter=self
+            )
+        if deduplicate:
+            self._hash_inv()
 
     @classmethod
     def from_SeqTable(cls, seq_table, model, seq_to_fit=None, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
@@ -490,13 +496,39 @@ class BatchFitter:
                    resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
                    random_init=random_init, metrics=metrics, **kwargs)
 
-    @property
-    def summary(self):
+    def summary(self, save_to=None):
+        if save_to is None:
+            return self.results.summary()
+        else:
+            self.results.summary().to_csv(save_to)
+
+    def _hash(self):
+        """De-duplicate rows to avoid unnecessary fitting"""
+
+        def hash_series(row):
+            return hash(tuple(row))
+
+        self._table_dup = self.table.copy()
+        self.table = self.table.loc[self.seq_list]
+        print(f'Shrink rows in table by removing duplicates: {self.table.shape[0]} -->', end='')
+        self._seq_to_hash = self.table.apply(hash_series, axis=1).to_dict()
+        self.table = self.table[~self.table.duplicated(keep='first')]
+        self.table.rename(index=self._seq_to_hash, inplace=True)
+        self._seq_list_dup = self.seq_list.copy()
+        self.seq_list = [self._seq_to_hash[seq] for seq in self.seq_list]
+        print(self.table.shape[0])
+
+    def _hash_inv(self):
+        """Recover the hashed results"""
         import pandas as pd
-        series = [fitter.summary for fitter in self.seq_list.values()]
-        return pd.concat(series, axis=1).transpose()
+        print('Recovering original table...')
+        self.table = self._table_dup.copy()
+        del(self._table_dup)
+        self.seq_list = self._seq_list_dup.copy()
+        del(self._seq_list_dup)
+        self.results.results = {seq: self.results.results[seq_hash] for seq, seq_hash in self._seq_to_hash.items()}
 
 
-def _work_fn(fitter):
-    fitter.fitting()
-    return fitter
+def _work_fn(worker):
+    worker.fit()
+    return worker.name, worker
