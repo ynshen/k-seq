@@ -2,3 +2,9 @@
 """
 
 from .least_square import SingleFitter, BatchFitter
+
+
+class EstimatorType():
+
+    def __init__(self):
+        pass

@@ -190,3 +190,17 @@ def extract_metadata(target, pattern):
                                              pattern=pattern[brackets[0] + 1: brackets[1]]))
 
     return metadata
+
+
+def read_pickle(path):
+    import pickle
+
+    with open(path, 'rb') as handle:
+        return pickle.load(handle)
+
+
+def dump_pickle(obj, path):
+    import pickle
+
+    with open(path, 'wb') as handle:
+        pickle.dump(obj, handle)

@@ -1,3 +1,11 @@
+"""Module to parse, convert, characterize count files.
+
+Read directly from count file function was added to `data.SeqTable` thus this module is no long required in processing
+count files
+TODO:
+  - clean up this module (after done with other data modules)
+"""
+
 
 class CountFile(object):
 

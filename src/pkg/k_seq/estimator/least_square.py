@@ -12,137 +12,20 @@ Several functions are included:
 todo: fitting seems slower, read again to improve the performance
 """
 
-
-class Bootstrap:
-    """Class to perform bootstrap in fitting"""
-
-    def __repr__(self):
-        return f"Bootstrap method using {self.method} (n = {self.bootstrap_num})"
-
-    def __init__(self, fitter, bootstrap_num, return_num, method, **kwargs):
-
-        implemented_methods = {
-            'pct_res': 'pct_res',
-            'resample percent residues': 'pct_res',
-            'resample data points': 'data',
-            'data': 'data',
-            'stratified': 'stratified',
-        }
-        if method in implemented_methods.keys():
-            self.method = method
-            if method == 'stratified':
-                try:
-                    grouper = kwargs['grouper']
-                    from ..data.grouper import Group
-                    if isinstance(grouper, Group):
-                        grouper = grouper.group
-                    if isinstance(grouper, dict):
-                        self.grouper = grouper
-                    else:
-                        raise TypeError('Unsupported grouper type for stratified bootstrap')
-                except KeyError:
-                    raise Exception('Please indicate grouper when using stratified bootstrapping')
-        else:
-            raise NotImplementedError(f'Bootstrap method {method} is not implemented')
-
-        self.fitter = fitter
-        self.bootstrap_num = bootstrap_num
-        self.return_num = return_num
-        self.summary = None
-        self.record = None
-
-    def _percent_residue(self):
-        import numpy as np
-        try:
-            y_hat = self.fitter.model(self.fitter.x_data, *self.fitter.results.point_estimation.params.values())
-        except AttributeError:
-            params = self.fitter._fit()['params']
-            y_hat = self.fitter.model(self.fitter.x_data, *params)
-        pct_res = (self.fitter.y_data - y_hat) / y_hat
-        for _ in range(self.bootstrap_num):
-            pct_res_resample = np.random.choice(pct_res, size=len(pct_res), replace=True)
-            yield self.fitter.x_data, y_hat * (1 + pct_res_resample)
-
-    def _data(self):
-        import numpy as np
-        indices = np.arange(len(self.fitter.x_data))
-        for _ in range(self.bootstrap_num):
-            indices_resample = np.random.choice(indices, size=len(indices), replace=True)
-            yield self.fitter.x_data[indices_resample], self.fitter.y_data[indices_resample]
-
-    def _stratified(self):
-        import numpy as np
-        for _ in range(self.bootstrap_num):
-            ix_resample = []
-            for member_ix in self.grouper.values():
-                ix_resample += list(np.random.choice(member_ix, size=len(member_ix), replace=True))
-            yield self.fitter.x_data[ix_resample], self.fitter.y_data[ix_resample]
-
-    def _bs_sample_generator(self):
-        if self.method == 'pct_res':
-            return self._percent_residue()
-        elif self.method == 'data':
-            return self._data()
-        elif self.method == 'stratified':
-            return self._stratified()
-        else:
-            return None
-
-    def run(self):
-        """Perform bootstrap"""
-        import numpy as np
-        import pandas as pd
-
-        bs_sample_gen = self._bs_sample_generator()
-        ix_list = pd.Series(np.arange(self.bootstrap_num))
-
-        def fitting_runner(_):
-            x_data, y_data = next(bs_sample_gen)
-            result = self.fitter._fit(x_data=x_data, y_data=y_data)
-            res_series = pd.Series(data=result['params'], index=self.fitter.parameters)
-            if result['metrics'] is not None:
-                for key, value in result['metrics'].items():
-                    res_series[key] = value
-            res_series['x_data'] = x_data
-            res_series['y_data'] = y_data
-            return res_series
-
-        results = ix_list.apply(fitting_runner)
-        self.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include=np.number)
-        self.fitter.results.uncertainty = self
-        if self.return_num == self.bootstrap_num:
-            self.record = results
-        else:
-            self.record = results.sample(n=self.return_num, replace=False, axis=0)
-
-
-class FitResults:
-
-    def __init__(self, fitter):
-        self._fitter = fitter
-        self.point_estimation = None
-        self.uncertainty = None
-
-    def to_series(self, stats_included=None):
-        import pandas as pd
-
-        allowed_stats = ['mean', 'std', '2.5%', '50%', '97.5%']
-        if stats_included is None:
-            stats_included = allowed_stats
-
-        res = self.point_estimation.summary.to_dict()
-        if self.uncertainty is not None:
-            from ..utility.func_tools import dict_flatten
-            res.update(dict_flatten(self.uncertainty.summary.loc[stats_included].to_dict()))
-        if self._fitter.name is not None:
-            return pd.Series(res, name=self._fitter.name)
-        else:
-            return pd.Series(res)
+from . import EstimatorType
 
 
 # noinspection PyUnresolvedReferences
-class SingleFitter:
-    """Class to fit a single kinetic curve"""
+class SingleFitter(EstimatorType):
+    """Class to fit a single kinetic model for one sequence
+
+    Attributes:
+
+    """
+
+    def __repr__(self):
+        return f"Single fitter for {self.name}"\
+               f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, weights=None, bounds=None, opt_method='trf',
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
@@ -168,6 +51,8 @@ class SingleFitter:
         """
         import numpy as np
         from ..utility.func_tools import DictToAttr, get_func_params
+
+        super().__init__()
 
         if len(x_data) != len(y_data):
             raise ValueError('Shapes of x and y do not match')
@@ -299,7 +184,7 @@ class SingleFitter:
         summary = {key: value for key, value in zip(self.parameters, point_est['params'])}
         if point_est['metrics'] is not None:
             summary.update(point_est['metrics'])
-        self.results.point_estimation = DictToAttr({
+        self.results.point_estimation.from_dict({
             'summary': pd.Series(summary),
             'pcov': point_est['pcov']
         })
@@ -329,6 +214,12 @@ class SingleFitter:
                    bootstrap_num=bootstrap_num, bs_return_num=bs_return_num, bs_method=bs_method,
                    exclude_zero=exclude_zero, init_guess=init_guess, metrics=metrics, rnd_seed=rnd_seed, **kwargs)
 
+    def to_json(self):
+        pass
+
+    def from_json(self):
+        pass
+
     # @classmethod
     # def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
     #                name=None, weights=None, bounds=None,
@@ -347,6 +238,213 @@ class SingleFitter:
     #     return cls(x_data=x_data, y_data=y_data, name=name, model=model, weights=weights, bounds=bounds,
     #                bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size, resample_pct_res=resample_pct_res,
     #                missing_data_as_zero=missing_data_as_zero, random_init=random_init, metrics=metrics)
+
+
+class FitResults:
+    """A class to store, format, and visualize fitting fitting results for single fitter
+
+    Attributes:
+
+         - fitter (a `EstimatorBase`): fitter used to generate this fitting result
+
+         - point_estimation (`pd.Series`): store point estimation results
+
+         - pcov (`pd.DataFrame`): estimated covariance matrix
+
+         - uncertainty (object): store uncertainty estimation results
+
+    """
+
+    def __repr__(self):
+        return f"Fitting results for {self.fitter} " \
+               f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
+
+    def __init__(self, fitter):
+        """
+        Args:
+
+            fitter (a `EstimatorBase`): fitter used to generate this fitting result
+
+        """
+        self.fitter = fitter
+        self._point_estimation = None
+        self.pcov = None
+        self.uncertainty = None
+
+    @property
+    def point_estimation(self):
+        return self._point_estimation
+
+    @point_estimation.setter
+    def point_estimation(self, **kwargs):
+        """set result point estimation"""
+        self._point_estimation = kwargs.pop('param', None)
+        self.pcov = kwargs.pop('pcov', None)
+
+    def to_series(self, stats_included=None):
+        import pandas as pd
+
+        allowed_stats = ['mean', 'std', '2.5%', '50%', '97.5%']
+        if stats_included is None:
+            stats_included = allowed_stats
+
+        res = self.point_estimation.to_dict()
+        if self.uncertainty is not None:
+            from ..utility.func_tools import dict_flatten
+            res.update(dict_flatten(self.uncertainty.summary.loc[stats_included].to_dict()))
+        if self.fitter.name is not None:
+            return pd.Series(res, name=self.fitter.name)
+        else:
+            return pd.Series(res)
+
+    def to_json(self, path):
+        """todo: export as {point_est: {json}, uncertainty}"""
+        data_to_dump = {
+            'point_estimation': self.point_estimation.to_json(),
+            'pcov': self._pcov.to_json(),
+            'uncertainty': self.to_json()
+        }
+
+    def from_json(self, json_path):
+        from pathlib import Path
+        import json
+
+        if Path(json_path).is_file():
+            with open(json_path, 'r') as handle:
+                record = json.load(handle)
+        elif isinstance(json_path, str):
+            record = json.loads(json_path)
+
+        self._point_estimation = record.pop('point_estimation', None)
+        self.pcov = record.pop('pcov', None)
+        self.uncertainty = record.pop('uncertainty', None)
+
+
+class Bootstrap:
+    """Class to perform bootstrap in fitting and store results
+    Three types of bootstrap supported:
+
+      - `pct_res`: resample the percent residue (from data property)
+
+      - `data`: resample data points
+
+      - `stratified`: resample within group, grouper is needed
+
+    Attributes:
+
+        - fitter (`EstimatorBase` type): fitter used for estimation
+
+        - method (`str`): a string indicate the bootstrap method
+
+        - bootstrap_num (`int`): number of bootstraps
+
+        - return_num (`int`): number of bootstraps to store
+
+        - summary (describe of `pd.DataFrame`): a summary of estimated statistics of parameters
+
+        - record (`pd.DataFrame`): dataframe storing part of orignal fitting results
+
+        - grouper (`dict` or `Grouper`): optional
+    """
+
+    def __repr__(self):
+        return f"Bootstrap method using {self.method} (n = {self.bootstrap_num})"
+
+    def __init__(self, fitter, bootstrap_num, return_num, method, **kwargs):
+
+        implemented_methods = {
+            'pct_res': 'pct_res',
+            'resample percent residues': 'pct_res',
+            'resample data points': 'data',
+            'data': 'data',
+            'stratified': 'stratified',
+        }
+        if method in implemented_methods.keys():
+            self.method = method
+            if method == 'stratified':
+                try:
+                    grouper = kwargs['grouper']
+                    from ..data.grouper import Group
+                    if isinstance(grouper, Group):
+                        grouper = grouper.group
+                    if isinstance(grouper, dict):
+                        self.grouper = grouper
+                    else:
+                        raise TypeError('Unsupported grouper type for stratified bootstrap')
+                except KeyError:
+                    raise Exception('Please indicate grouper when using stratified bootstrapping')
+        else:
+            raise NotImplementedError(f'Bootstrap method {method} is not implemented')
+
+        self.fitter = fitter
+        self.bootstrap_num = bootstrap_num
+        self.return_num = return_num
+        self.summary = None
+        self.record = None
+
+    def _percent_residue(self):
+        import numpy as np
+        try:
+            y_hat = self.fitter.model(self.fitter.x_data, *self.fitter.results.point_estimation.params.values())
+        except AttributeError:
+            params = self.fitter._fit()['params']
+            y_hat = self.fitter.model(self.fitter.x_data, *params)
+        pct_res = (self.fitter.y_data - y_hat) / y_hat
+        for _ in range(self.bootstrap_num):
+            pct_res_resample = np.random.choice(pct_res, size=len(pct_res), replace=True)
+            yield self.fitter.x_data, y_hat * (1 + pct_res_resample)
+
+    def _data(self):
+        import numpy as np
+        indices = np.arange(len(self.fitter.x_data))
+        for _ in range(self.bootstrap_num):
+            indices_resample = np.random.choice(indices, size=len(indices), replace=True)
+            yield self.fitter.x_data[indices_resample], self.fitter.y_data[indices_resample]
+
+    def _stratified(self):
+        import numpy as np
+        for _ in range(self.bootstrap_num):
+            ix_resample = []
+            for member_ix in self.grouper.values():
+                ix_resample += list(np.random.choice(member_ix, size=len(member_ix), replace=True))
+            yield self.fitter.x_data[ix_resample], self.fitter.y_data[ix_resample]
+
+    def _bs_sample_generator(self):
+        if self.method == 'pct_res':
+            return self._percent_residue()
+        elif self.method == 'data':
+            return self._data()
+        elif self.method == 'stratified':
+            return self._stratified()
+        else:
+            return None
+
+    def run(self):
+        """Perform bootstrap"""
+        import numpy as np
+        import pandas as pd
+
+        bs_sample_gen = self._bs_sample_generator()
+        ix_list = pd.Series(np.arange(self.bootstrap_num))
+
+        def fitting_runner(_):
+            x_data, y_data = next(bs_sample_gen)
+            result = self.fitter._fit(x_data=x_data, y_data=y_data)
+            res_series = pd.Series(data=result['params'], index=self.fitter.parameters)
+            if result['metrics'] is not None:
+                for key, value in result['metrics'].items():
+                    res_series[key] = value
+            res_series['x_data'] = x_data
+            res_series['y_data'] = y_data
+            return res_series
+
+        results = ix_list.apply(fitting_runner)
+        self.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include=np.number)
+        self.fitter.results.uncertainty = self
+        if self.return_num == self.bootstrap_num:
+            self.record = results
+        else:
+            self.record = results.sample(n=self.return_num, replace=False, axis=0)
 
 
 class BatchFitResults:
