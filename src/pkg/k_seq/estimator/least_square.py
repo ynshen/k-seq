@@ -11,11 +11,9 @@ Several functions are included:
 
 todo: fitting seems slower, read again to improve the performance
 """
+from k_seq.estimator import EstimatorType
 
-from . import EstimatorType
 
-
-# noinspection PyUnresolvedReferences
 class SingleFitter(EstimatorType):
     """Class to fit a single kinetic model for one sequence
 
@@ -506,29 +504,91 @@ class Bootstrap:
 
 
 class BatchFitResults:
+    """Store, convert, and visualize BatchFitter results
 
-    def __init__(self, fitter_list, master_fitter):
-        self.fitter = master_fitter
-        self.results = {fitter[0]: fitter[1] for fitter in fitter_list}
+    Attributes:
+
+        - fitter: proxy to the BatchFitter
+
+        - record (`dict`): {seq: SingleFitter.results}
+
+    Methods:
+
+        todo: to add
+    """
+
+    def __init__(self, fitter):
+        """Parse results from fitter_list which the first is """
+        self.fitter = fitter
+        self.record = None
         self._summary = None
 
+    def update(self, record):
+        if isinstance(record, dict):
+            self.record = record
+        else:
+            self.record = {fitter[0]: fitter[1].results for fitter in record}
+
     def summary(self):
+        """Compose all summary from record as single `pd.DataFrame`"""
         if self._summary is None:
             import pandas as pd
-            self._summary = pd.DataFrame.from_dict({seq: fitter.summary() for seq, fitter in self.results.items()}, orient='index')
+            self._summary = pd.DataFrame.from_dict({
+                seq: fitter.summary() for seq, fitter in self.record.items()
+            }, orient='index')
         return self._summary
 
     def to_dataframe(self, seq_list=None):
+        """To report all or part of the sequence"""
         if seq_list is None:
             return self.summary()
         else:
             return self._summary.loc[seq_list]
 
+    def summary_to_csv(self, path):
+        """Save summary table as csv file"""
+        self.summary().to_csv(path)
+
+    def to_json(self, path=None):
+        import json
+        data_to_json = {
+            'fitter': str(self.fitter),
+            'record': {seq: result.to_json() for seq, result in self.record.items()}
+        }
+
+        if path is None:
+            return json.dumps(data_to_json)
+        else:
+            json.dump(data_to_json, path)
+
+    def load_json(self, json_o_path):
+        """For now, if we load json, we will erase the original fitter info"""
+        import pandas as pd
+        import json
+        try:
+            # first consider it is a json string
+            json_data = json.loads(json_o_path)
+        except json.JSONDecodeError:
+            try:
+                with open(json_o_path, 'r') as handle:
+                    json_data = json.load(handle)
+            except:
+                raise TypeError(f'Can not parse json record for {self.__repr__()}')
+
+        self.record = {seq: FitResults(fitter=None) for seq in json_data['record']}
+        for seq, result in self.record.items():
+            result.load_json(json_data['record'][seq])
+
 
 class BatchFitter:
 
-    def __init__(self, table, x_values, model, weights=None, bounds=None, seq_to_fit=None, bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
-                 opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+    def __str__(self):
+        return 'Least squared BatchFitter'
+
+    def __init__(self, table, x_values, model, weights=None, bounds=None, seq_to_fit=None,
+                 bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
+                 opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
+                 save_single_fitters=True, **kwargs):
         from ..utility.func_tools import get_func_params, AttrScope
         import pandas as pd
         import numpy as np
@@ -537,7 +597,9 @@ class BatchFitter:
         self.parameters = get_func_params(model, exclude_x=True)
         self.config = AttrScope({
             'seq_to_fit': seq_to_fit,
+            'save_single_fitters': save_single_fitters
         })
+        self.fitters = None
         # prep fitting params once to save time for each single fitting
         self.x_values = x_values[table.columns.values]
         if weights is None:
@@ -597,6 +659,8 @@ class BatchFitter:
             else:
                 raise TypeError('Unknown seq_to_fit type, is it list-like?')
 
+        self.results = BatchFitResults(fitter=self)
+
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
         # from ..utility import FunctionWrapper
         # self.visualizer = FunctionWrapper(data=self,
@@ -619,16 +683,18 @@ class BatchFitter:
         if parallel_cores > 1:
             import multiprocessing as mp
             pool = mp.Pool(processes=int(parallel_cores))
-            self.results = BatchFitResults(
-                fitter_list=pool.map(_work_fn, self.worker_generator()),
-                master_fitter=self
-            )
+            if self.config.save_single_fitters:
+                self.fitters = {seq[0]: seq[1] for seq in pool.map(_work_fn, self.worker_generator())}
+                self.results.update(self.fitters)
+            else:
+                self.results.update(pool.map(_work_fn, self.worker_generator()))
         else:
             # single thread
-            self.results = BatchFitResults(
-                fitter_list=[_work_fn(fitter) for fitter in self.worker_generator()],
-                master_fitter=self
-            )
+            if self.config.save_single_fitters:
+                self.fitters = {seq[0]: seq[1] for seq in [_work_fn(fitter) for fitter in self.worker_generator()]}
+                self.results.update(self.fitters)
+            else:
+                self.results.update([_work_fn(fitter) for fitter in self.worker_generator()])
         if deduplicate:
             self._hash_inv()
 
