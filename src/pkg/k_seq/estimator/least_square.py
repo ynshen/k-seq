@@ -215,7 +215,7 @@ class SingleFitter(EstimatorType):
 
     def load_results(self, json_o_path):
         self.results = FitResults(fitter=self)
-        self.results.read_json(json_o_path)
+        self.results.load_json(json_o_path)
 
     # @classmethod
     # def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
@@ -324,11 +324,15 @@ class FitResults:
             except:
                 raise TypeError(f'Can not parse json record for {self.__repr__()}')
         if 'point_estimation' in json_data.keys():
-            self.point_estimation.params = pd.read_json(json_data['point_estimation']['params'])
-            self.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
+            if json_data['point_estimation']['params'] is not None:
+                self.point_estimation.params = pd.read_json(json_data['point_estimation']['params'], typ='series')
+            if json_data['point_estimation']['pcov'] is not None:
+                self.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
         if 'uncertainty' in json_data.keys():
-            self.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'])
-            self.uncertainty.record = pd.read_json(json_data['uncertainty']['record'])
+            if json_data['uncertainty']['summary'] is not None:
+                self.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'])
+            if json_data['uncertainty']['record'] is not None:
+                self.uncertainty.record = pd.read_json(json_data['uncertainty']['record'])
 
 
 class Bootstrap:
@@ -505,6 +509,7 @@ class Bootstrap:
 
 class BatchFitResults:
     """Store, convert, and visualize BatchFitter results
+    Only save results (detached from fitter), corresponding fitter should be found by sequence
 
     Attributes:
 
@@ -524,8 +529,13 @@ class BatchFitResults:
         self._summary = None
 
     def update(self, record):
+        """Update fitting results
+
+        Args:
+            record (`list` or `dict`): list of a dictionary of fitted SingleFitter object
+        """
         if isinstance(record, dict):
-            self.record = record
+            self.record = {key: fitter.results for key, fitter in record.items()}
         else:
             self.record = {fitter[0]: fitter[1].results for fitter in record}
 
@@ -550,6 +560,14 @@ class BatchFitResults:
         self.summary().to_csv(path)
 
     def to_json(self, path=None):
+        """Save fitting results as a JSON file
+        Structure:
+
+          - fitter: a string representation of the fitter
+
+          - record: {seq: JSON of single fitter results}
+
+        """
         import json
         data_to_json = {
             'fitter': str(self.fitter),
@@ -562,7 +580,7 @@ class BatchFitResults:
             json.dump(data_to_json, path)
 
     def load_json(self, json_o_path):
-        """For now, if we load json, we will erase the original fitter info"""
+        """Load results from JSON"""
         import pandas as pd
         import json
         try:
@@ -574,10 +592,12 @@ class BatchFitResults:
                     json_data = json.load(handle)
             except:
                 raise TypeError(f'Can not parse json record for {self.__repr__()}')
-
-        self.record = {seq: FitResults(fitter=None) for seq in json_data['record']}
-        for seq, result in self.record.items():
-            result.load_json(json_data['record'][seq])
+        if self.fitter.fitters is None:
+            self.record = {key: FitResults(fitter=None) for key in json_data['record'].keys()}
+            _ = [self.record[seq].load_json(json_record) for seq, json_record in json_data['record'].items()]
+        else:
+            _ = [self.fitter[seq].results.load_json(json_record) for seq, json_record in json_data['record'].items()]
+            self.record = {key: single_fitter.results for key, single_fitter in self.fitter.item()}
 
 
 class BatchFitter:
@@ -677,26 +697,29 @@ class BatchFitter:
             except:
                 raise Exception(f'Can not create fitting worker for {seq}')
 
-    def fit(self, deduplicate=False, parallel_cores=1):
+    def fit(self, deduplicate=False, parallel_cores=1, dry_run=False):
         if deduplicate:
             self._hash()
-        if parallel_cores > 1:
-            import multiprocessing as mp
-            pool = mp.Pool(processes=int(parallel_cores))
-            if self.config.save_single_fitters:
-                self.fitters = {seq[0]: seq[1] for seq in pool.map(_work_fn, self.worker_generator())}
-                self.results.update(self.fitters)
-            else:
-                self.results.update(pool.map(_work_fn, self.worker_generator()))
+        if dry_run:
+            self.fitters = {worker.name: worker for worker in self.worker_generator()}
         else:
-            # single thread
-            if self.config.save_single_fitters:
-                self.fitters = {seq[0]: seq[1] for seq in [_work_fn(fitter) for fitter in self.worker_generator()]}
-                self.results.update(self.fitters)
+            if parallel_cores > 1:
+                import multiprocessing as mp
+                pool = mp.Pool(processes=int(parallel_cores))
+                if self.config.save_single_fitters:
+                    self.fitters = {seq[0]: seq[1] for seq in pool.map(_work_fn, self.worker_generator())}
+                    self.results.update(self.fitters)
+                else:
+                    self.results.update(pool.map(_work_fn, self.worker_generator()))
             else:
-                self.results.update([_work_fn(fitter) for fitter in self.worker_generator()])
-        if deduplicate:
-            self._hash_inv()
+                # single thread
+                if self.config.save_single_fitters:
+                    self.fitters = {seq[0]: seq[1] for seq in [_work_fn(fitter) for fitter in self.worker_generator()]}
+                    self.results.update(self.fitters)
+                else:
+                    self.results.update([_work_fn(fitter) for fitter in self.worker_generator()])
+            if deduplicate:
+                self._hash_inv()
 
     @classmethod
     def from_SeqTable(cls, seq_table, model, seq_to_fit=None, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
