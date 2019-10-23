@@ -116,3 +116,29 @@ class DictToAttr(object):
             kwargs = {}
         self.__dict__.update({**kwargs, **attr_dict})
 
+
+class AttrScope(object):
+    """Convert a dictionary to a group of attributes"""
+
+    def __repr__(self):
+        return f"An attribute class with keys: {list(self.__dict__.keys())}"
+
+    def __init__(self, attr_dict=None, keys=None):
+        if keys is not None:
+            for key in keys:
+                setattr(self, key, None)
+        if attr_dict is not None:
+            if isinstance(attr_dict, dict):
+                self.__dict__.update(attr_dict)
+            else:
+                raise TypeError('attr_dict needs to be dictionary')
+
+    def __getitem__(self, item):
+        return self.__getattribute__(item)
+
+    def add(self, attr_dict=None, **kwargs):
+        if attr_dict is None:
+            attr_dict = {}
+        if kwargs is None:
+            kwargs = {}
+        self.__dict__.update({**kwargs, **attr_dict})
