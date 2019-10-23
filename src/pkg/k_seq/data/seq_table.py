@@ -4,10 +4,10 @@ TODO:
   - Formalized filter and normalizer
 """
 
-from ..utility.func_tools import AttrScope
+from ..utility.func_tools import DictToAttr
 
 
-class Metadata(AttrScope):
+class Metadata(DictToAttr):
 
     def __init__(self, attr_dict):
         self.dataset = None
@@ -72,7 +72,7 @@ class SeqTable(object):
         # initialize metadata
         from datetime import datetime
         self.metadata = Metadata({
-            'dataset': AttrScope({
+            'dataset': DictToAttr({
                 'time': datetime.now(),
                 'data_unit': allowed_data_unit_mapper[data_unit],
                 'note': note,
@@ -83,9 +83,9 @@ class SeqTable(object):
         if dataset_metadata is not None:
             self.metadata.dataset.add(dataset_metadata)
         if sample_metadata is not None:
-            self.metadata.samples = AttrScope(sample_metadata)
+            self.metadata.samples = DictToAttr(sample_metadata)
         if seq_metadata is not None:
-            self.metadata.sequences = AttrScope(seq_metadata)
+            self.metadata.sequences = DictToAttr(seq_metadata)
         self.metadata.logger.add('SeqTable created')
 
         # import table

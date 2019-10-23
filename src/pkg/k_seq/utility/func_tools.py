@@ -90,7 +90,7 @@ class FuncToMethod(object):
         })
 
 
-class AttrScope(object):
+class DictToAttr(object):
     """Convert a dictionary to a group of attributes"""
 
     def __repr__(self):

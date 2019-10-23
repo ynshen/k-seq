@@ -51,7 +51,7 @@ class SingleFitter(EstimatorType):
             **kwargs:
         """
         import numpy as np
-        from ..utility.func_tools import AttrScope, get_func_params
+        from ..utility.func_tools import DictToAttr, get_func_params
 
         super().__init__()
 
@@ -64,7 +64,7 @@ class SingleFitter(EstimatorType):
             self.parameters = get_func_params(model, exclude_x=True)
         else:
             self.parameters = list(parameters)
-        self.config = AttrScope({
+        self.config = DictToAttr({
             'opt_method': opt_method,
             'exclude_zero': exclude_zero,
             'init_guess': init_guess,
@@ -175,7 +175,7 @@ class SingleFitter(EstimatorType):
 
         import numpy as np
         import pandas as pd
-        from ..utility.func_tools import AttrScope
+        from ..utility.func_tools import DictToAttr
 
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
@@ -261,11 +261,11 @@ class FitResults:
             fitter (a `EstimatorBase`): fitter used to generate this fitting result
 
         """
-        from ..utility.func_tools import AttrScope
+        from ..utility.func_tools import DictToAttr
 
         self.fitter = fitter
-        self.point_estimation = AttrScope(keys=['params', 'pcov'])
-        self.uncertainty = AttrScope(keys=['summary', 'record'])
+        self.point_estimation = DictToAttr(keys=['params', 'pcov'])
+        self.uncertainty = DictToAttr(keys=['summary', 'record'])
 
     def to_series(self, stats_included=None):
         import pandas as pd
@@ -609,13 +609,13 @@ class BatchFitter:
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
                  opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
                  save_single_fitters=True, **kwargs):
-        from ..utility.func_tools import get_func_params, AttrScope
+        from ..utility.func_tools import get_func_params, DictToAttr
         import pandas as pd
         import numpy as np
 
         self.model = model
         self.parameters = get_func_params(model, exclude_x=True)
-        self.config = AttrScope({
+        self.config = DictToAttr({
             'seq_to_fit': seq_to_fit,
             'save_single_fitters': save_single_fitters
         })
@@ -639,7 +639,7 @@ class BatchFitter:
             self.config.bootstrap = True
 
         # contains parameters should pass to the single fitter
-        self.fit_params = AttrScope({
+        self.fit_params = DictToAttr({
             'x_data': self.x_values,
             'model': self.model,
             'parameters': self.parameters,
