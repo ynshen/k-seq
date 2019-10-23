@@ -10,6 +10,7 @@ Several functions are included:
   - confidence interval estimation using bootstrap
 
 todo: fitting seems slower, read again to improve the performance
+todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
 from k_seq.estimator import EstimatorType
 
