@@ -1,4 +1,42 @@
 
+
+def var_to_doc(doc_var):
+    """Convert a variable (dictionary or list/tuple)of args/attrs/methods documents to a string of documentation
+
+    Args:
+        doc_var ('dict` or list-like): variable contains document info
+
+    Returns:
+        `str` of docstring
+    """
+
+    def parse_dict_value(single_var):
+
+        if isinstance(single_var, str):
+            return f': {single_var}\n'
+        elif isinstance(single_var, (tuple, list)):
+            if len(single_var) == 1:
+                return f': {single_var[0]}\n'
+            elif len(single_var) >= 2:
+                return f"(`{'` or `'.join(single_var[0:-1])}`): {single_var[-1]}\n"
+            else:
+                raise TypeError('List should have format (var_doc), or (var_type, var_doc)')
+        else:
+            raise TypeError('Unknown variable doc string type')
+
+    if isinstance(doc_var, dict):
+        doc_string = '\n  '.join([f'{key}{parse_dict_value(value)}' for key, value in doc_var.items()])
+    elif isinstance(doc_var, (list, tuple)):
+        raise NotImplementedError('list-like docstring not implemented yet')
+    else:
+        raise TypeError('Unknown docstring type doc_dict')
+
+    return doc_string
+
+
+
+
+
 def param_to_dict(key_list, **kwargs):
     """Assign kwargs to the dictionary with key from key_list
     - if the arg is a single value, it will be assigned to all keys

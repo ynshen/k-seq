@@ -22,6 +22,22 @@ class SingleFitter(EstimatorType):
 
     """
 
+    # __fitter_params_doc__ = {
+    #     'x_data': 'list of x values for fitting',
+    #     'model': self.model,
+    #     'parameters': self.parameters,
+    #     'weights': weights,
+    #     'bounds': bounds,s
+    #     'opt_method': opt_method,
+    #     'bootstrap_num': bootstrap_num,
+    #     'bs_return_num': bs_return_num,
+    #     'bs_method': bs_method,
+    #     'exclude_zero': exclude_zero,
+    #     'init_guess': init_guess,
+    #     'metrics': metrics,
+    #     'rnd_seed': rnd_seed
+    # }
+
     def __repr__(self):
         return f"Single fitter for {self.name}"\
                f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
@@ -32,24 +48,10 @@ class SingleFitter(EstimatorType):
     def __init__(self, x_data, y_data, model, name=None, parameters=None, weights=None, bounds=None, opt_method='trf',
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
                  exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
-        """
+        f"""
 
         Args:
-            x_data (list, np.ndarray, pd.Series): list object will convert to np.ndarray
-            y_data (list, np.ndarray, pd.Series):
-            model:
-            name:
-            weights:
-            bounds:
-            opt_method:
-            bootstrap_num:
-            bs_return_num:
-            bs_method:
-            exclude_zero:
-            init_guess:
-            metrics:
-            rnd_seed:
-            **kwargs:
+            {self.__fitter_params__}
         """
         import numpy as np
         from ..utility.func_tools import AttrScope, get_func_params
@@ -602,6 +604,37 @@ class BatchFitResults:
 
 
 class BatchFitter:
+    """Fitter for least squared batch fitting
+
+    Attributes:
+
+        model (`callable`): model function
+
+        x_values (list-like): a list of x values for each expt.
+
+        parameters (list of `str`): list of parameter names, in order of their position in model arguments
+
+        config (`AttrScope`): attributes of the batch fitter, including
+        
+          - save_single_fitters (`bool): if each single fitter is saved, default False to save storage
+
+          - note (`str`): note about this fitting job
+        
+        fitters (None or `dict`): a dictionary of SingleFitters if `self.config.save_single_fitters` is True
+        
+        y_values (`pd.DataFrame`): a dataframe table containing y values to fit (e.g. reacted fraction in each sample)
+        
+        seq_list (list of `str`): list of seq to fit for this job
+        
+        result (`BatchFitResult`): fitting results
+        
+        fit_params (`AttrScope`): parameters passed to each fitting, should be same for each sequence, includes:
+        
+          {SingleFitter.__fitter_params__}
+        
+        log (`utility.log.Logger`): logger
+
+    """
 
     def __str__(self):
         return 'Least squared BatchFitter'
@@ -609,15 +642,18 @@ class BatchFitter:
     def __init__(self, table, x_values, model, weights=None, bounds=None, seq_to_fit=None,
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
                  opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
-                 save_single_fitters=True, **kwargs):
+                 save_single_fitters=True, note=None, **kwargs):
+
         from ..utility.func_tools import get_func_params, AttrScope
+        from ..utility.log import Logger
         import pandas as pd
         import numpy as np
 
         self.model = model
         self.parameters = get_func_params(model, exclude_x=True)
+        self.log = Logger()
         self.config = AttrScope({
-            'seq_to_fit': seq_to_fit,
+            'note': note,
             'save_single_fitters': save_single_fitters
         })
         self.fitters = None

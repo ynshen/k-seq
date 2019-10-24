@@ -193,6 +193,7 @@ def extract_metadata(target, pattern):
 
 
 def read_pickle(path):
+    """Read pickled object form path"""
     import pickle
 
     with open(path, 'rb') as handle:
