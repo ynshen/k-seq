@@ -34,7 +34,7 @@ class BYOModel(ModelBase):
     """BYO Model
     input:
     p0: initial pool, not necessarily composition
-    c: controlled variable, in our case, BYO concentration
+    c: controlled variable, in our case, BYO concentration, unit convert to M for comparison
     k: kinetic coefficient
     A: fraction of reactive molecules
     slope: if include slope in the model for baseline passing rate
