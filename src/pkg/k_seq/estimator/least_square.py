@@ -9,7 +9,6 @@ Several functions are included:
   - weighted fitting depends on the customized weights
   - confidence interval estimation using bootstrap
 
-todo: fitting seems slower, read again to improve the performance
 todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
 from k_seq.estimator import EstimatorType
@@ -48,7 +47,7 @@ class SingleFitter(EstimatorType):
     def __init__(self, x_data, y_data, model, name=None, parameters=None, weights=None, bounds=None, opt_method='trf',
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
                  exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
-        f"""
+        """
 
         Args:
             {self.__fitter_params__}
@@ -156,8 +155,32 @@ class SingleFitter(EstimatorType):
             else:
                 metrics_res = None
         except RuntimeError:
-            warnings.warn(
+            print(
                 f"RuntimeError for fitting model {self.model} on {self.name if self.name is not None else '*'} when\n"
+                f'\tx = {self.x_data}\n'
+                f'\ty={self.y_data}\n'
+            )
+            params = np.full(fill_value=np.nan, shape=len(parameters))
+            pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
+            if metrics is not None:
+                metrics_res = {name: np.nan for name, fn in metrics.items()}
+            else:
+                metrics_res = None
+        except ValueError:
+            print(
+                f"ValueError for fitting model {self.model} on {self.name if self.name is not None else '*'} when\n"
+                f'\tx = {self.x_data}\n'
+                f'\ty={self.y_data}\n'
+            )
+            params = np.full(fill_value=np.nan, shape=len(parameters))
+            pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
+            if metrics is not None:
+                metrics_res = {name: np.nan for name, fn in metrics.items()}
+            else:
+                metrics_res = None
+        except:
+            print(
+                f"Other error observed for for fitting model {self.model} on {self.name if self.name is not None else '*'} when\n"
                 f'\tx = {self.x_data}\n'
                 f'\ty={self.y_data}\n'
             )
