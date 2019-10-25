@@ -18,7 +18,7 @@ def var_to_doc(doc_var):
             if len(single_var) == 1:
                 return f': {single_var[0]}\n'
             elif len(single_var) >= 2:
-                return f"(`{'` or `'.join(single_var[0:-1])}`): {single_var[-1]}\n"
+                return f"(`{' or '.join(single_var[0:-1])}`): {single_var[-1]}\n"
             else:
                 raise TypeError('List should have format (var_doc), or (var_type, var_doc)')
         else:
@@ -32,9 +32,6 @@ def var_to_doc(doc_var):
         raise TypeError('Unknown docstring type doc_dict')
 
     return doc_string
-
-
-
 
 
 def param_to_dict(key_list, **kwargs):
@@ -79,7 +76,6 @@ def dict_flatten(d, parent_key='', sep='_'):
         else:
             items.append((new_key, v))
     return dict(items)
-
 
 
 def get_func_params(func, exclude_x=True):

@@ -11,7 +11,7 @@ Several functions are included:
 
 todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
-from k_seq.estimator import EstimatorType
+from ..estimator import EstimatorType
 
 
 class SingleFitter(EstimatorType):
@@ -21,13 +21,13 @@ class SingleFitter(EstimatorType):
 
     """
 
-    # __fitter_params_doc__ = {
-    #     'x_data': 'list of x values for fitting',
-    #     'model': self.model,
-    #     'parameters': self.parameters,
-    #     'weights': weights,
-    #     'bounds': bounds,s
-    #     'opt_method': opt_method,
+    # __params_doc__ = {
+    #     'x_data': ('`list`', 'list of x values for fitting'),
+    #     'model': ('`callable`', 'model to fit'),
+    #     'parameters': ('`list`', 'Optional. List of parameter names, extracted from model if None'),
+    #     'weights': ('`list`', 'Optional. Fitting weights for each data points'),
+    #     'bounds': ('2 by m `list` ', 'Optional, [[lower bounds], [higher bounds]] for each parameter'),
+    #     'opt_method': ('`str`', "Optimization methods in `scipy.optimize`. Default 'trf'"),
     #     'bootstrap_num': bootstrap_num,
     #     'bs_return_num': bs_return_num,
     #     'bs_method': bs_method,
@@ -46,11 +46,12 @@ class SingleFitter(EstimatorType):
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, weights=None, bounds=None, opt_method='trf',
                  bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
-                 exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+                 exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, master_fitter=None, **kwargs):
         """
+        todo: update
 
         Args:
-            {self.__fitter_params__}
+            {self.__fitter_param_doc__}
         """
         import numpy as np
         from ..utility.func_tools import AttrScope, get_func_params
@@ -102,11 +103,12 @@ class SingleFitter(EstimatorType):
             else:
                 bs_return_num = bs_return_num
             self.bootstrap = Bootstrap(fitter=self, bootstrap_num=bootstrap_num, return_num=bs_return_num,
-                                               method=bs_method, **kwargs)
+                                       method=bs_method, **kwargs)
         else:
             self.bootstrap = None
 
         self.metrics = metrics
+        self.master_fitter = master_fitter
         self.results = None
         from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
         from ..utility.func_tools import FuncToMethod
@@ -118,8 +120,6 @@ class SingleFitter(EstimatorType):
         """perform fitting"""
         from scipy.optimize import curve_fit
         import numpy as np
-        import pandas as pd
-        import warnings
 
         if model is None:
             model = self.model
@@ -201,12 +201,14 @@ class SingleFitter(EstimatorType):
 
         import numpy as np
         import pandas as pd
-        from ..utility.func_tools import AttrScope
 
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
 
-        self.results = FitResults(fitter=self)
+        if self.master_fitter is None:
+            self.results = FitResults(fitter=self)
+        else:
+            self.results = FitResults(fitter=self, master_res=self.master_fitter.results)
         point_est = self._fit()
         params = {key: value for key, value in zip(self.parameters, point_est['params'])}
         if point_est['metrics'] is not None:
@@ -264,6 +266,7 @@ class SingleFitter(EstimatorType):
 
 
 class FitResults:
+    # todo: change FitResults to be proxy to master fit results (idea: BatchFitResult should be independent of FitResults
     """A class to store, format, and visualize fitting fitting results for single fitter
 
     Attributes:
@@ -280,7 +283,7 @@ class FitResults:
         return f"Fitting results for {self.fitter} " \
                f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
 
-    def __init__(self, fitter):
+    def __init__(self, fitter, master_res=None):
         """
         Args:
 
@@ -292,6 +295,7 @@ class FitResults:
         self.fitter = fitter
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'record'])
+        self.master_res = master_res
 
     def to_series(self, stats_included=None):
         import pandas as pd
@@ -428,7 +432,7 @@ class Bootstrap:
     def _percent_residue(self):
         import numpy as np
         try:
-            y_hat = self.fitter.model(self.fitter.x_data, *self.fitter.results.point_estimation.params.values())
+            y_hat = self.fitter.model(self.fitter.x_data, *self.fitter.results.point_estimation.params.values)
         except AttributeError:
             params = self.fitter._fit()['params']
             y_hat = self.fitter.model(self.fitter.x_data, *params)
@@ -831,8 +835,14 @@ class BatchFitter:
         del self._table_dup
         self.seq_list = self._seq_list_dup.copy()
         del self._seq_list_dup
-        self.results.results = {seq: self.results.results[seq_hash] for seq, seq_hash in self._seq_to_hash.items()}
+        self.results.update({seq: self.results.record[seq_hash] for seq, seq_hash in self._seq_to_hash.items()})
 
+    def save_model(self):
+        #todo: save as config/args dict, except for data_table; and results
+
+    @classmethod
+    def load_saved(cls):
+        # todo: class method to create a fitting instance and load results
 
 def _work_fn(worker):
     worker.fit()
