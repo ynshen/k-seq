@@ -399,10 +399,12 @@ class SeqTable(object):
             raise NotImplementedError(f'Dataset {dataset} is not implemented')
 
     @classmethod
-    def _load_byo_doped(cls, from_count_file=False):
+    def _load_byo_doped(cls, from_count_file=False, count_file_path=None, pickled_path=None):
         """todo: add dataset description"""
-        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl'
-        BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts'
+        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
+        BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
+            else count_file_path
+
         if from_count_file:
             import numpy as np
 
@@ -434,42 +436,46 @@ class SeqTable(object):
             from . import filters
             spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
             seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove
-            singleton_filter = filters.SingletonFilter(target=byo_doped)
+            # singleton_filter = filters.SingletonFilter(target=byo_doped)
 
-            byo_doped.filtered_table = singleton_filter.get_filtered_table(
-                target=seq_length_filter.get_filtered_table(
+            # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
+            byo_doped.table_filtered = seq_length_filter.get_filtered_table(
                     target=spike_in_filter.get_filtered_table()
-                )
             )
 
-            # Add replicate grouper
+            # Add replicates grouper
             byo_doped.grouper.add({'byo': {
                 1250: ['A1', 'A2', 'A3'],
                 250: ['B1', 'B2', 'B3'],
                 50: ['C1', 'C2', 'C3'],
                 10: ['D1', 'D2', 'D3'],
                 2: ['E1', 'E2', 'E3']
-            }}, target=byo_doped.filtered_table)
+            }}, target=byo_doped.table_filtered)
 
             # normalized using spike-in
-            byo_doped.abs_amnt_filtered = byo_doped.spike_in.apply(target=byo_doped.filtered_table)
+            byo_doped.table_filtered_abs_amnt = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
 
-            # calculate reacted faction
+            # calculate reacted faction, remove seqs are not in input pools
             from .transform import ReactedFractionNormalizer
             reacted_frac = ReactedFractionNormalizer(target=byo_doped,
                                                      input_pools=['R0'],
-                                                     abs_amnt_table='abs_amnt_filtered',
+                                                     abs_amnt_table='table_filtered_abs_amnt',
                                                      reduce_method='median',
                                                      remove_zero=True)
-            byo_doped.reacted_frac_filtered = reacted_frac.apply()
+            byo_doped.table_filtered_reacted_frac = reacted_frac.apply()
+
+            # further filter out sequences that are not detected in all samples
+            min_detected_times_filter = filters.DetectedTimesFilter(target=byo_doped.table_filtered_reacted_frac,
+                                                                    min_detected_times=15)
+            byo_doped.table_in_all_samples = min_detected_times_filter.get_filtered_table()
             print('Finished!')
         else:
-            print(f'Load BYO-doped pool data from pickled record at {BYO_DOPED_PKL}')
+            print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
             import pickle
-            with open(BYO_DOPED_PKL, 'rb') as handle:
-                byo_doped = pickle.load(handle)
+            from ..utility.file_tools import read_pickle
+            byo_doped =  read_pickle(BYO_DOPED_PKL)
             print('Imported!')
-        # print('Following pre-processing has been applied')
+
         return byo_doped
 
 

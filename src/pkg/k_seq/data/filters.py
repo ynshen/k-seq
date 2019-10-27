@@ -3,7 +3,7 @@ from .seq_table import slice_table
 
 
 class FilterBase(object):
-    """todo: not used yet, implement it"""
+    """Base type for filters"""
 
     def __init__(self, target, axis=0):
 
@@ -214,6 +214,37 @@ class SingletonFilter(FilterBase):
             reverse = self.reverse
         return self.func(target, reverse)
 
+
+class DetectedTimesFilter(FilterBase):
+
+    def __init__(self, target, min_detected_times=6, axis=0, reverse=False):
+        import pandas as pd
+
+        super().__init__(target)
+        if isinstance(target, pd.DataFrame):
+            self.target = target
+        else:
+            self.target = target.table
+        self.min_detected_times = min_detected_times
+        self.reverse = reverse
+        self.axis = axis
+
+    @staticmethod
+    def func(target, min_detected_times, reverse=True):
+        mask = (target > 0).sum(axis=1) >= min_detected_times
+        if reverse:
+            return ~mask
+        else:
+            return mask
+
+    def apply(self, target=None, min_detected_times=None, reverse=None):
+        if target is None:
+            target = self.target
+        if min_detected_times is None:
+            min_detected_times = self.min_detected_times
+        if reverse is None:
+            reverse = self.reverse
+        return self.func(target=target, min_detected_times=min_detected_times, reverse=reverse)
 
 # class SeqFilter:
 #

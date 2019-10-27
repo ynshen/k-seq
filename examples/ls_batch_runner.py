@@ -1,16 +1,5 @@
 #!/usr/bin/python3
-
-
 import sys
-
-
-def load_table(table_path):
-    from pathlib import Path
-    table_path = Path(table_path)
-    import pickle
-    with open(table_path, 'rb') as handle:
-        table = pickle.load(handle)
-    return table
 
 
 def save_pickle(obj, path):
@@ -23,11 +12,13 @@ def save_pickle(obj, path):
 def main(table_path, fit_partial, bootstrap_num, bs_return_num, bs_method, core_num, output_dir, **kwargs):
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
+    from k_seq.utility.file_tools import read_pickle
+
     import numpy as np
 
-    seq_table = load_table(table_path=table_path)
+    seq_table = read_pickle(table_path)
     if fit_partial > 0:
-        seq_test = seq_table.reacted_frac_filtered.index.values[:int(fit_partial)]
+        seq_test = seq_table.table..index.values[:int(fit_partial)]
     else:
         seq_test = None
 
@@ -59,9 +50,10 @@ def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser(description='Individual least squared kinetic model fitting')
-    parser.add_argument('--table_path', '-t', type=str, help='Path to input seq table')
+    parser.add_argument('--table_path', '-t', type=str, default='./byo_doped.pkl', help='Path to input seq table')
     parser.add_argument('--fit_partial', '-p', type=int, default=-1,
                         help='Select top p sequences to fit, fit all seq if p is negative')
+    parser.add_argument('--table_name', '-t', type=str, default='')
     parser.add_argument('--bootstrap_num', '-n', type=int, default=0,
                         help='Number of bootstraps to perform')
     parser.add_argument('--bs_return_num', '-r',type=int, default=-1,
@@ -71,9 +63,9 @@ def parse_args():
     parser.add_argument('--core_num', '-c', type=int,
                         help='Number of process to use in parallel')
     parser.add_argument('--output_dir', '-o', type=str, default='./')
-    parser.add_argument('--pkg_path', type=str, default='.')
-    args = parser.parse_args()
-    return vars(args)
+    parser.add_argument('--pkg_path', type=str, default='../')
+
+    return vars(parser.parse_args())
 
 
 if __name__ == '__main__':

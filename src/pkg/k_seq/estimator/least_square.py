@@ -12,30 +12,35 @@ Several functions are included:
 todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
 from ..estimator import EstimatorType
+from ..utility.func_tools import var_to_doc
+
+__params_doc__ = {
+        'x_data': ('`list`', 'list of x values for fitting'),
+        'model': ('`callable`', 'model to fit'),
+        'parameters': ('`list`', 'Optional. List of parameter names, extracted from model if None'),
+        'weights': ('`list`', 'Optional. Fitting weights for each data points'),
+        'bounds': ('2 by m `list` ', 'Optional, [[lower bounds], [higher bounds]] for each parameter'),
+        'opt_method': ('`str`', "Optimization methods in `scipy.optimize`. Default 'trf'"),
+        'bootstrap_num': ('`int`', 'Number of bootstrap to perform, 0 means no bootstrap'),
+        'bs_record_num': ('`int`', 'Number of bootstrap results to store. Negative number means store all results.'
+                                   'Not recommended due to memory consumption'),
+        'bs_method': ('`str`', "Bootstrap method, choose from 'pct_res' (resample percent residue),"
+                               "'data' (resample data), or 'stratified' (resample within replicates)"),
+        'exclude_zero': ('`bool`', "If exclude zero/missing data in fitting. Default False."),
+        'init_guess': ('list of `float` or generator', "Initial guess estimate parameters, random value from 0 to 1 "
+                                                       "will be use if None"),
+        'metrics': ('`dict` of `callable`', "Optional. Extra metric/parameters to calculate for each estimation"),
+        'rnd_seed': ('`int`', "random seed used in fitting for reproducibility")
+    }
 
 
 class SingleFitter(EstimatorType):
-    """Class to fit a single kinetic model for one sequence
+    __doc__ = """Class to fit a single kinetic model for one sequence
 
     Attributes:
-
-    """
-
-    # __params_doc__ = {
-    #     'x_data': ('`list`', 'list of x values for fitting'),
-    #     'model': ('`callable`', 'model to fit'),
-    #     'parameters': ('`list`', 'Optional. List of parameter names, extracted from model if None'),
-    #     'weights': ('`list`', 'Optional. Fitting weights for each data points'),
-    #     'bounds': ('2 by m `list` ', 'Optional, [[lower bounds], [higher bounds]] for each parameter'),
-    #     'opt_method': ('`str`', "Optimization methods in `scipy.optimize`. Default 'trf'"),
-    #     'bootstrap_num': bootstrap_num,
-    #     'bs_return_num': bs_return_num,
-    #     'bs_method': bs_method,
-    #     'exclude_zero': exclude_zero,
-    #     'init_guess': init_guess,
-    #     'metrics': metrics,
-    #     'rnd_seed': rnd_seed
-    # }
+    
+      {}
+    """.format(var_to_doc(__params_doc__))
 
     def __repr__(self):
         return f"Single fitter for {self.name}"\
@@ -45,14 +50,14 @@ class SingleFitter(EstimatorType):
         return f"Single fitter for {self.name}"
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, weights=None, bounds=None, opt_method='trf',
-                 bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
-                 exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, master_fitter=None, **kwargs):
-        """
-        todo: update
-
+                 exclude_zero=False, init_guess=None, metrics=None,rnd_seed=None,
+                 bootstrap_num=0, bs_record_num=0, bs_method='pct_res', **kwargs):
+        """Initialize a `SingleFitter` instance
+        
         Args:
-            {self.__fitter_param_doc__}
-        """
+            {}
+        """.format(__params_doc__)
+
         import numpy as np
         from ..utility.func_tools import AttrScope, get_func_params
 
@@ -63,10 +68,7 @@ class SingleFitter(EstimatorType):
 
         self.model = model
         self.name = name
-        if parameters is None:
-            self.parameters = get_func_params(model, exclude_x=True)
-        else:
-            self.parameters = list(parameters)
+        self.parameters = get_func_params(model, exclude_x=True) if parameters is None else list(parameters)
         self.config = AttrScope({
             'opt_method': opt_method,
             'exclude_zero': exclude_zero,
@@ -85,9 +87,7 @@ class SingleFitter(EstimatorType):
 
         self.x_data = x_data[mask]
         self.y_data = y_data[mask]
-        if weights is None:
-            weights = np.ones(len(y_data))
-        self.weights = weights[mask]
+        self.weights = np.ones(len(self.y_data)) if weights is None else weights[mask]
 
         if bounds is None:
             self.config.bounds = [np.repeat(-np.inf, len(self.parameters)),
@@ -96,20 +96,15 @@ class SingleFitter(EstimatorType):
             self.config.bounds = bounds
 
         if bootstrap_num > 0 and len(self.x_data) > 1:
-            if bs_return_num is None:
-                bs_return_num = 0
-            elif bs_return_num < 0:
-                bs_return_num = bootstrap_num
-            else:
-                bs_return_num = bs_return_num
-            self.bootstrap = Bootstrap(fitter=self, bootstrap_num=bootstrap_num, return_num=bs_return_num,
+            if bs_record_num is None:
+                bs_record_num = 0
+            self.bootstrap = Bootstrap(fitter=self, bootstrap_num=bootstrap_num, return_num=bs_record_num,
                                        method=bs_method, **kwargs)
         else:
             self.bootstrap = None
 
         self.metrics = metrics
-        self.master_fitter = master_fitter
-        self.results = None
+        self.results = FitResults(fitter=self)
         from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
         from ..utility.func_tools import FuncToMethod
         self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
@@ -205,12 +200,8 @@ class SingleFitter(EstimatorType):
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
 
-        if self.master_fitter is None:
-            self.results = FitResults(fitter=self)
-        else:
-            self.results = FitResults(fitter=self, master_res=self.master_fitter.results)
         point_est = self._fit()
-        params = {key: value for key, value in zip(self.parameters, point_est['params'])}
+        params = { key: value for key, value in zip(self.parameters, point_est['params']) }
         if point_est['metrics'] is not None:
             params.update(point_est['metrics'])
         self.results.point_estimation.params = pd.Series(params)
@@ -221,11 +212,12 @@ class SingleFitter(EstimatorType):
         else:
             self.bootstrap.run()
 
-    def summary(self, stats_included=None):
-        return self.results.to_series(stats_included=stats_included)
+    def summary(self):
+        return self.results.to_series()
 
     @classmethod
-    def from_table(cls, table, seq, model, x_data, weights=None, bounds=None, bootstrap_num=0, bs_return_num=None, bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
+    def from_table(cls, table, seq, model, x_data, weights=None, bounds=None, bootstrap_num=0, bs_record_num=0,
+                   bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
         """Get data from a row of `pd.DataFrame` table. `SeqTable` is not supported due to multiple tables contained"""
         import numpy as np
         import pandas as pd
@@ -238,13 +230,14 @@ class SingleFitter(EstimatorType):
         y_data = table.loc[seq]
         return cls(x_data=x_data, y_data=y_data, model=model, name=seq,
                    weights=weights, bounds=bounds,
-                   bootstrap_num=bootstrap_num, bs_return_num=bs_return_num, bs_method=bs_method,
+                   bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
                    exclude_zero=exclude_zero, init_guess=init_guess, metrics=metrics, rnd_seed=rnd_seed, **kwargs)
 
-    def load_results(self, json_o_path):
-        self.results = FitResults(fitter=self)
-        self.results.load_json(json_o_path)
+    # def load_results(self, json_o_path):
+    #     self.results = FitResults(fitter=self)
+    #     self.results.load_json(json_o_path)
 
+    ######################### Not necessary in k-seq implementation ####################
     # @classmethod
     # def from_files(cls, model, x_col_name, y_col_name, path_to_file=None, path_to_x=None, path_to_y=None,
     #                name=None, weights=None, bounds=None,
@@ -266,7 +259,7 @@ class SingleFitter(EstimatorType):
 
 
 class FitResults:
-    # todo: change FitResults to be proxy to master fit results (idea: BatchFitResult should be independent of FitResults
+    # todo: export a dictionary to pass results through multiprocesser
     """A class to store, format, and visualize fitting fitting results for single fitter
 
     Attributes:
@@ -283,7 +276,7 @@ class FitResults:
         return f"Fitting results for {self.fitter} " \
                f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
 
-    def __init__(self, fitter, master_res=None):
+    def __init__(self, fitter):
         """
         Args:
 
@@ -295,24 +288,38 @@ class FitResults:
         self.fitter = fitter
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'record'])
-        self.master_res = master_res
 
-    def to_series(self, stats_included=None):
+    def to_series(self):
+        """Convert `point_estimation.params` and `uncertainty.summary` to a series include flattened info"""
         import pandas as pd
 
         allowed_stats = ['mean', 'std', '2.5%', '50%', '97.5%']
-        if stats_included is None:
-            stats_included = allowed_stats
 
         res = self.point_estimation.params.to_dict()
         if self.uncertainty is not None:
             from ..utility.func_tools import dict_flatten
-            res.update(dict_flatten(self.uncertainty.summary.loc[stats_included].to_dict()))
+            res.update(dict_flatten(self.uncertainty.summary.loc[allowed_stats].to_dict()))
 
         if self.fitter.name is not None:
             return pd.Series(res, name=self.fitter.name)
         else:
             return pd.Series(res)
+
+    def to_dict(self, include_pcov=False, include_record=True):
+        """Pass results as dictionary"""
+        results = {
+            'point_estimation': {
+                'params': self.point_estimation.params
+            },
+            'uncertainty': {
+                'summary': self.uncertainty.summary
+            }
+        }
+        if include_pcov:
+            results['point_estimation']['pcov'] = self.point_estimation.pcov
+        if include_record:
+            results['uncertainty']['record'] = self.uncertainty.record
+        return results
 
     def to_json(self, path=None):
         """Convert results into a json file contains
@@ -430,11 +437,14 @@ class Bootstrap:
         self.record = None
 
     def _percent_residue(self):
+        """Bootstrap percent residue"""
         import numpy as np
         try:
-            y_hat = self.fitter.model(self.fitter.x_data, *self.fitter.results.point_estimation.params.values)
+            y_hat = self.fitter.model(
+                self.fitter.x_data, *self.fitter.results.point_estimation.params[self.fitter.parameters].values
+            )
         except AttributeError:
-            params = self.fitter._fit()['params']
+            params = self.fitter._fit()['params']     # if could not find point estimation
             y_hat = self.fitter.model(self.fitter.x_data, *params)
         pct_res = (self.fitter.y_data - y_hat) / y_hat
         for _ in range(self.bootstrap_num):
@@ -442,6 +452,7 @@ class Bootstrap:
             yield self.fitter.x_data, y_hat * (1 + pct_res_resample)
 
     def _data(self):
+        "Apply data based bootstrap"
         import numpy as np
         indices = np.arange(len(self.fitter.x_data))
         for _ in range(self.bootstrap_num):
@@ -449,6 +460,7 @@ class Bootstrap:
             yield self.fitter.x_data[indices_resample], self.fitter.y_data[indices_resample]
 
     def _stratified(self):
+        """Apply stratified bootstrap"""
         import numpy as np
         for _ in range(self.bootstrap_num):
             ix_resample = []
@@ -488,53 +500,54 @@ class Bootstrap:
         results = ix_list.apply(fitting_runner)
         self.fitter.results.uncertainty.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include=np.number)
         self.summary = self.fitter.results.uncertainty.summary
-        if self.return_num == self.bootstrap_num:
+        if (self.return_num < 0) or (self.return_num >= self.bootstrap_num):
             self.fitter.results.uncertainty.record = results
         else:
             self.fitter.results.uncertainty.record = results.sample(n=self.return_num, replace=False, axis=0)
         self.record = self.fitter.results.uncertainty.record
 
-    def to_json(self, path=None):
-        """Export bootstrap results as json format"""
-        import json
-        data_to_json = {
-            'fitter': str(self.fitter),
-            'bootstrap_num': self.bootstrap_num,
-            'return_num': self.return_num,
-            'grouper': self.grouper if hasattr(self, 'grouepr') else None,
-            'method': self.method,
-            'record': self.record.to_json(),
-            'summary': self.summary.to_json()
-        }
-        if path is None:
-            return json.dumps(data_to_json)
-        else:
-            with open(path, 'w') as handle:
-                return json.dump(data_to_json, fp=path)
-
-    def load_json(self, json_or_path):
-        """Load results from json format
-        NOTICE: we did not check fitter type and always assume the record matches this instance
-        """
-        import pandas as pd
-        import json
-        try:
-            # first consider it is a json string
-            json_data = json.loads(json_or_path)
-        except json.JSONDecodeError:
-            try:
-                with open(json_or_path, 'r') as handle:
-                    json_data = json.load(handle)
-            except:
-                raise TypeError(f'Can not parse json record for {self.__repr__()}')
-
-        # assume fitter is always correct
-        self.bootstrap_num = json_data.pop('bootstrap_num')
-        self.return_num = json_data.pop('return_num')
-        self.grouper = json_data.pop('grouper', None)
-        self.method = json_data.pop('method')
-        self.record = pd.read_json(json_data.pop('record'))
-        self.summary = pd.read_json(json_data.pop('summary'))
+    ############### Below could be removed ###################
+    # def to_json(self, path=None):
+    #     """Export bootstrap results as json format"""
+    #     import json
+    #     data_to_json = {
+    #         'fitter': str(self.fitter),
+    #         'bootstrap_num': self.bootstrap_num,
+    #         'return_num': self.return_num,
+    #         'grouper': self.grouper if hasattr(self, 'grouper') else None,
+    #         'method': self.method,
+    #         'record': self.record.to_json(),
+    #         'summary': self.summary.to_json()
+    #     }
+    #     if path is None:
+    #         return json.dumps(data_to_json)
+    #     else:
+    #         with open(path, 'w') as handle:
+    #             return json.dump(data_to_json, fp=path)
+    #
+    # def load_json(self, json_or_path):
+    #     """Load results from json format
+    #     NOTICE: we did not check fitter type and always assume the record matches this instance
+    #     """
+    #     import pandas as pd
+    #     import json
+    #     try:
+    #         # first consider it is a json string
+    #         json_data = json.loads(json_or_path)
+    #     except json.JSONDecodeError:
+    #         try:
+    #             with open(json_or_path, 'r') as handle:
+    #                 json_data = json.load(handle)
+    #         except:
+    #             raise TypeError(f'Can not parse json record for {self.__repr__()}')
+    #
+    #     # assume fitter is always correct
+    #     self.bootstrap_num = json_data.pop('bootstrap_num')
+    #     self.return_num = json_data.pop('return_num')
+    #     self.grouper = json_data.pop('grouper', None)
+    #     self.method = json_data.pop('method')
+    #     self.record = pd.read_json(json_data.pop('record'))
+    #     self.summary = pd.read_json(json_data.pop('summary'))
 
 
 class BatchFitResults:
@@ -543,51 +556,49 @@ class BatchFitResults:
 
     Attributes:
 
-        - fitter: proxy to the BatchFitter
+        - fitter: proxy to the `BatchFitter`
 
-        - record (`dict`): {seq: SingleFitter.results}
+        - bs_record (`dict` of `pd.DataFrame`): {seq: `SingleFitter.results.uncertainty.record`}
 
-    Methods:
+        - summary (`pd.DataFrame`): summarized results with each sequence as index
 
-        todo: to add
+    todo: Methods:
+
     """
 
     def __init__(self, fitter):
         """Parse results from fitter_list which the first is """
         self.fitter = fitter
-        self.record = None
-        self._summary = None
-
-    def update(self, record):
-        """Update fitting results
-
-        Args:
-            record (`list` or `dict`): list of a dictionary of fitted SingleFitter object
-        """
-        if isinstance(record, dict):
-            self.record = {key: fitter.results for key, fitter in record.items()}
-        else:
-            self.record = {fitter[0]: fitter[1].results for fitter in record}
-
-    def summary(self):
-        """Compose all summary from record as single `pd.DataFrame`"""
-        if self._summary is None:
-            import pandas as pd
-            self._summary = pd.DataFrame.from_dict({
-                seq: fitter.summary() for seq, fitter in self.record.items()
-            }, orient='index')
-        return self._summary
-
-    def to_dataframe(self, seq_list=None):
-        """To report all or part of the sequence"""
-        if seq_list is None:
-            return self.summary()
-        else:
-            return self._summary.loc[seq_list]
+        self.bs_record = None
+        self.summary = None
 
     def summary_to_csv(self, path):
         """Save summary table as csv file"""
-        self.summary().to_csv(path)
+        self.summary.to_csv(path)
+
+    def to_pickle(self, path=None):
+        """Serialize results as a picked `dict`"""
+
+        import pickle
+        results = {
+            'bs_record': self.bs_record,
+            'summary': self.summary
+        }
+        if path is None:
+            return pickle.dumps(results)
+        else:
+            from ..utility.file_tools import dump_pickle
+            dump_pickle(obj=results, path=path)
+
+    @classmethod
+    def from_pickle(cls, fitter, path):
+        """Create a `BatchFitResults` instance with results loaded from pickle"""
+        inst = cls(fitter=fitter)
+        from ..utility.file_tools import read_pickle
+        results = read_pickle(path=path)
+        inst.bs_record = results['bs_record']
+        inst.summary = results['summary']
+        return inst
 
     def to_json(self, path=None):
         """Save fitting results as a JSON file
@@ -600,8 +611,8 @@ class BatchFitResults:
         """
         import json
         data_to_json = {
-            'fitter': str(self.fitter),
-            'record': {seq: result.to_json() for seq, result in self.record.items()}
+            'bs_record': {seq: record.to_json() for seq, record in self.bs_record},
+            'summary': self.summary.to_json()
         }
 
         if path is None:
@@ -609,8 +620,10 @@ class BatchFitResults:
         else:
             json.dump(data_to_json, path)
 
-    def load_json(self, json_o_path):
+    @classmethod
+    def from_json(cls, fitter, json_o_path):
         """Load results from JSON"""
+
         import pandas as pd
         import json
         try:
@@ -621,13 +634,12 @@ class BatchFitResults:
                 with open(json_o_path, 'r') as handle:
                     json_data = json.load(handle)
             except:
-                raise TypeError(f'Can not parse json record for {self.__repr__()}')
-        if self.fitter.fitters is None:
-            self.record = {key: FitResults(fitter=None) for key in json_data['record'].keys()}
-            _ = [self.record[seq].load_json(json_record) for seq, json_record in json_data['record'].items()]
-        else:
-            _ = [self.fitter[seq].results.load_json(json_record) for seq, json_record in json_data['record'].items()]
-            self.record = {key: single_fitter.results for key, single_fitter in self.fitter.item()}
+                raise TypeError("Invalid JSON input")
+        inst = cls(fitter=fitter)
+        inst.summary = pd.read_json(json_data['summary'])
+        inst.bs_record = {key: pd.read_json(record) for key, record in json_data['bs_record']}
+
+        return inst
 
 
 class BatchFitter:
@@ -637,39 +649,43 @@ class BatchFitter:
 
         model (`callable`): model function
 
-        x_values (list-like): a list of x values for each expt.
+        x_data (list-like): a list of x values for each expt.
 
         parameters (list of `str`): list of parameter names, in order of their position in model arguments
 
         config (`AttrScope`): attributes of the batch fitter, including
         
-          - save_single_fitters (`bool): if each single fitter is saved, default False to save storage
+          - keep_single_fitters (`bool): if each single fitter is saved, default False to save storage
 
           - note (`str`): note about this fitting job
         
-        fitters (None or `dict`): a dictionary of SingleFitters if `self.config.save_single_fitters` is True
+        fitters (None or `dict`): a dictionary of SingleFitters if `self.config.keep_single_fitters` is True
         
         y_values (`pd.DataFrame`): a dataframe table containing y values to fit (e.g. reacted fraction in each sample)
         
         seq_list (list of `str`): list of seq to fit for this job
         
-        result (`BatchFitResult`): fitting results
+        results (`BatchFitResult`): fitting results
         
         fit_params (`AttrScope`): parameters passed to each fitting, should be same for each sequence, includes:
         
           {SingleFitter.__fitter_params__}
         
         log (`utility.log.Logger`): logger
-
+    todo: add log
     """
+
+    def __repr__(self):
+        return 'Least-squared BatchFitter at'\
+               f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
 
     def __str__(self):
         return 'Least squared BatchFitter'
 
-    def __init__(self, table, x_values, model, weights=None, bounds=None, seq_to_fit=None,
-                 bootstrap_num=0, bs_return_num=None, bs_method='pct_res',
+    def __init__(self, table, x_data, model, weights=None, bounds=None, seq_to_fit=None,
+                 bootstrap_num=0, bs_record_num=0, bs_method='pct_res', grouper=None,
                  opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
-                 save_single_fitters=True, note=None, **kwargs):
+                 keep_single_fitters=False, note=None, **kwargs):
 
         from ..utility.func_tools import get_func_params, AttrScope
         from ..utility.log import Logger
@@ -681,42 +697,44 @@ class BatchFitter:
         self.log = Logger()
         self.config = AttrScope({
             'note': note,
-            'save_single_fitters': save_single_fitters
+            'keep_single_fitters': keep_single_fitters
         })
         self.fitters = None
+
         # prep fitting params once to save time for each single fitting
-        self.x_values = x_values[table.columns.values]
+        if isinstance(x_data, pd.Series):
+            self.x_data = x_data[table.columns.values]
+        elif len(x_data) != table.shape[1]:
+            raise ValueError('x_data length and table column number does not match')
+        else:
+            self.x_data = np.array(x_data)
+
         if weights is None:
-            weights = np.ones(len(self.x_values))
+            weights = np.ones(len(self.x_data))
         if bounds is None:
             bounds = [np.repeat(-np.inf, len(self.parameters)),
                       np.repeat(np.inf, len(self.parameters))]
-        if len(x_values) <= 1:
+        if len(x_data) <= 1:
             bootstrap_num = 0
-        if bs_return_num is None:
-            bs_return_num = 0
-        elif bs_return_num < 0:
-            bs_return_num = bootstrap_num
-        else:
-            pass
-        if bs_return_num > 0:
+        if bootstrap_num > 0:
             self.config.bootstrap = True
 
         # contains parameters should pass to the single fitter
         self.fit_params = AttrScope({
-            'x_data': self.x_values,
+            'x_data': self.x_data,
             'model': self.model,
             'parameters': self.parameters,
             'weights': weights,
             'bounds': bounds,
             'opt_method': opt_method,
             'bootstrap_num': bootstrap_num,
-            'bs_return_num': bs_return_num,
+            'bs_record_num': bs_record_num,
             'bs_method': bs_method,
             'exclude_zero': exclude_zero,
             'init_guess': init_guess,
             'metrics': metrics,
-            'rnd_seed': rnd_seed
+            'rnd_seed': rnd_seed,
+            'grouper': grouper if bs_method == 'stratified' else None
         })
 
         if isinstance(table, str):
@@ -726,11 +744,11 @@ class BatchFitter:
                 try:
                     table = pd.read_pickle(table_path)
                 except:
-                    raise TypeError(f'{table_path} is not pickled pd.DataFrame object')
+                    raise TypeError(f'{table_path} is not pickled `pd.DataFrame` object')
             else:
                 raise FileNotFoundError(f'{table_path} is not a valid file')
         elif not isinstance(table, pd.DataFrame):
-            raise TypeError('Table should be a pd.DataFrame')
+            raise TypeError('Table should be a `pd.DataFrame`')
         else:
             pass
 
@@ -761,89 +779,129 @@ class BatchFitter:
             except:
                 raise Exception(f'Can not create fitting worker for {seq}')
 
-    def fit(self, deduplicate=False, parallel_cores=1, dry_run=False):
+    def fit(self, deduplicate=False, parallel_cores=1, dry_run=False, **kwargs):
+        """Run the estimation"""
+        import pandas as pd
+
         if deduplicate:
             self._hash()
+
         if dry_run:
-            self.fitters = {worker.name: worker for worker in self.worker_generator()}
+            workers = [worker for worker in self.worker_generator()]
         else:
             if parallel_cores > 1:
                 import multiprocessing as mp
                 pool = mp.Pool(processes=int(parallel_cores))
-                if self.config.save_single_fitters:
-                    self.fitters = {seq[0]: seq[1] for seq in pool.map(_work_fn, self.worker_generator())}
-                    self.results.update(self.fitters)
-                else:
-                    self.results.update(pool.map(_work_fn, self.worker_generator()))
+                workers = pool.map(_work_fn, self.worker_generator())
             else:
                 # single thread
-                if self.config.save_single_fitters:
-                    self.fitters = {seq[0]: seq[1] for seq in [_work_fn(fitter) for fitter in self.worker_generator()]}
-                    self.results.update(self.fitters)
-                else:
-                    self.results.update([_work_fn(fitter) for fitter in self.worker_generator()])
-            if deduplicate:
-                self._hash_inv()
+                workers = [_work_fn(fitter) for fitter in self.worker_generator()]
 
-    @classmethod
-    def from_SeqTable(cls, seq_table, model, seq_to_fit=None, weights=None, bounds=None, bootstrap_depth=0, bs_return_size=None,
-                      resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
-        if seq_to_fit is None:
-            seq_to_fit = seq_table.reacted_frac_table.index
-        if weights is None:
-            weights = None
-        if bounds is None:
-            bounds = None
-        if bs_return_size is None:
-            bs_return_size = None
-        if metrics is None:
-            metrics = None
-        return cls(seq_to_fit = {seq: seq_table.reacted_frac_table.loc[seq] for seq in seq_to_fit},
-                   x_values=seq_table.x_values, model=model,
-                   weights=weights, bounds=bounds,
-                   bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
-                   resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
-                   random_init=random_init, metrics=metrics, **kwargs)
+        if self.config.keep_single_fitters:
+            self.fitters = {worker.name: worker for worker in workers}
+
+        self.results.bs_record = {worker.name: worker.results.uncertainty.record for worker in workers}
+        self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
+
+        if deduplicate:
+            self._hash_inv()
+
+    # @classmethod
+    # def from_SeqTable(cls, seq_table, model, seq_to_fit=None, weights=None, bounds=None, bootstrap_depth=0,
+    #                   bs_return_size=None,
+    #                   resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
+    #     """I did not really use this """
+    #     raise NotImplementedError('This method is not implemented yet')
+    #     if seq_to_fit is None:
+    #         seq_to_fit = seq_table.reacted_frac_table.index
+    #     if weights is None:
+    #         weights = None
+    #     if bounds is None:
+    #         bounds = None
+    #     if bs_return_size is None:
+    #         bs_return_size = None
+    #     if metrics is None:
+    #         metrics = None
+    #     return cls(seq_to_fit = {seq: seq_table.reacted_frac_table.loc[seq] for seq in seq_to_fit},
+    #                x_data=seq_table.x_data, model=model,
+    #                weights=weights, bounds=bounds,
+    #                bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
+    #                resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
+    #                random_init=random_init, metrics=metrics, **kwargs)
 
     def summary(self, save_to=None):
         if save_to is None:
-            return self.results.summary()
+            return self.results.summary
         else:
-            self.results.summary().to_csv(save_to)
+            self.results.summary.to_csv(save_to)
 
     def _hash(self):
-        """De-duplicate rows to avoid unnecessary fitting"""
+        """De-duplicate rows before fitting"""
 
         def hash_series(row):
             return hash(tuple(row))
 
         self._table_dup = self.table.copy()
+        self._seq_list_dup = self.seq_list.copy()
         self.table = self.table.loc[self.seq_list]
-        print(f'Shrink rows in table by removing duplicates: {self.table.shape[0]} -->', end='')
         self._seq_to_hash = self.table.apply(hash_series, axis=1).to_dict()
         self.table = self.table[~self.table.duplicated(keep='first')]
         self.table.rename(index=self._seq_to_hash, inplace=True)
-        self._seq_list_dup = self.seq_list.copy()
         self.seq_list = [self._seq_to_hash[seq] for seq in self.seq_list]
-        print(self.table.shape[0])
+        self.log.add('Shrink rows in table by removing duplicates: '
+                     f'{self._table_dup.shape[0]} --> {self.table.shape[0]}')
 
     def _hash_inv(self):
         """Recover the hashed results"""
         import pandas as pd
-        print('Recovering original table...')
-        self.table = self._table_dup.copy()
-        del self._table_dup
-        self.seq_list = self._seq_list_dup.copy()
-        del self._seq_list_dup
-        self.results.update({seq: self.results.record[seq_hash] for seq, seq_hash in self._seq_to_hash.items()})
 
-    def save_model(self):
-        #todo: save as config/args dict, except for data_table; and results
+        self.log.add('Recovering original table...')
+        self.results.bs_record = {seq: self.results.bs_record[seq_hash]
+                                  for seq, seq_hash in self._seq_to_hash.items()}
+
+        def get_summary(seq):
+            return self.results.summary.loc[self._seq_to_hash[seq]]
+
+        self.results.summary = pd.Series(data=self._seq_list_dup, index=self._seq_list_dup).apply(get_summary)
+        self.table = self._table_dup.copy()
+        self.seq_list = self._seq_list_dup.copy()
+        del self._table_dup
+        del self._seq_list_dup
+
+    def save_model(self, model_path, result_path=None, table_path=None):
+        """Save models to disk as pickle"""
+        from ..utility.file_tools import dump_pickle
+
+        dump_pickle(obj={**{'seq_to_fit': self.seq_list}, **self.config.__dict__, **self.fit_params.__dict__},
+                    path=model_path)
+        if result_path is not None:
+            self.results.to_pickle(path=result_path)
+        if table_path is not None:
+            dump_pickle(obj=self.table, path=table_path)
+
+    def save_results(self, result_path):
+        """Save results to disk as pickle"""
+        self.results.to_pickle(result_path)
 
     @classmethod
-    def load_saved(cls):
-        # todo: class method to create a fitting instance and load results
+    def load_model(cls, model_path, result_path=None, table_path=None):
+        """Create a model from picked file on disk"""
+
+        from ..utility.file_tools import read_pickle
+
+        if table_path is not None:
+            table = read_pickle(table_path)
+        else:
+            table = None
+        model_config = read_pickle(model_path)
+        inst = cls(table=table, **model_config)
+        if result_path is not None:
+            results = read_pickle(result_path)
+            inst.results.bs_record = results['bs_record']
+            inst.results.summary = results['summary']
+        return inst
+
 
 def _work_fn(worker):
     worker.fit()
-    return worker.name, worker
+    return worker
