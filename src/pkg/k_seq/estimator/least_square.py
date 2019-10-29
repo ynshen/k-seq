@@ -452,7 +452,7 @@ class Bootstrap:
             yield self.fitter.x_data, y_hat * (1 + pct_res_resample)
 
     def _data(self):
-        "Apply data based bootstrap"
+        """Apply data based bootstrap"""
         import numpy as np
         indices = np.arange(len(self.fitter.x_data))
         for _ in range(self.bootstrap_num):
@@ -460,7 +460,10 @@ class Bootstrap:
             yield self.fitter.x_data[indices_resample], self.fitter.y_data[indices_resample]
 
     def _stratified(self):
-        """Apply stratified bootstrap"""
+        """Apply stratified bootstrap, need grouper assigned
+        x_data and y_data needs to be `Series` or the grouper key should be index
+        Grouper (`dict`): with key as
+        """
         import numpy as np
         for _ in range(self.bootstrap_num):
             ix_resample = []

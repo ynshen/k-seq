@@ -74,6 +74,10 @@ class pSampler(object):
         return p/np.sum(p)
 
 
+class ListSampler(object):
+
+    pass
+
 class Simulator(object):
     """Simulation controller that pass a set of parameters into a given model"""
 
@@ -177,9 +181,8 @@ class Simulator(object):
         pass
 
 
-
 class CountSimulator(object):
-    """Simulate a pool"""
+    """Given pool initial relative abundance, kinetic model, and parameters to simulate a pool"""
 
     def __init__(self, seq_n=1e5, samplers=None, kin_model=None, kin_param=None, c_param=None, c_model=None, seed=23):
         """
