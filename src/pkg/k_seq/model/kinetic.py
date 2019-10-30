@@ -1,3 +1,7 @@
+"""A collection of kinetic models used in the project
+
+
+"""
 from . import ModelBase
 
 
@@ -31,7 +35,12 @@ def first_order_w_slope(c, k, A, alpha, t, b):
 
 
 class BYOModel(ModelBase):
-    """BYO Model
+    """A collection of BYO kinetic models, where
+       exp time (t): 90 min
+       BYO degradation factor (\alpha): 0.479
+
+    -
+
     input:
     p0: initial pool, not necessarily composition
     c: controlled variable, in our case, BYO concentration
@@ -51,24 +60,56 @@ class BYOModel(ModelBase):
         self.slope = slope
 
     @staticmethod
-    def func(p0, c, k, A, b=None, slope=False):
+    def composition_first_order_no_slope(c, p0, k, A):
+        """Function of pool composition w.r.t. BYO concentration (x)
+        if x < 0, output is p0
+
+        Parameters:
+
+            - p0: initial pool composition
+
+            - k: kinetic coefficient
+
+            - A: maximal conversion ratio
+
+        """
 
         import numpy as np
 
         p0 = np.array(p0)
-        c = c
         k = np.array(k)
         A = np.array(A)
 
         if c < 0:
             return p0
-        if slope:
-            b = np.array(b)
-            return p0 * first_order_w_slope(c=c, k=k, A=A, alpha=0.479, t=90, b=b)
         else:
             return p0 * first_order(c=c, k=k, A=A, alpha=0.479, t=90)
 
     @staticmethod
-    def func_react_frac_no_slope(x, k, A):
-        return first_order(c=x, k=k, A=A, alpha=0.479, t=90)
+    def composition_first_order(c, p0, k, A, b):
+        """Function of pool composition w.r.t. BYO concentration (x)
+        if x < 0, output is p0
 
+        Parameters:
+
+        - p0: initial pool composition
+
+        - k: kinetic coefficient
+
+        - A: maximal conversion ratio
+
+        - b: slope
+
+        """
+
+        import numpy as np
+
+        p0 = np.array(p0)
+        k = np.array(k)
+        A = np.array(A)
+        b = np.array(b)
+
+        if c < 0:
+            return p0
+        else:
+            return p0 * first_order_w_slope(c=c, k=k, A=A, b=b, alpha=0.479, t=90)

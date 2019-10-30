@@ -1,86 +1,127 @@
 
-class kSampler(object):
+class DistGenerators:
+    """A collection of random value generators from preset distributions
 
-    def __init__(self, n=1e5):
-        self.n = int(n)
 
-    def from_lognormal(self, n=None, loc=None, scale=None, c95=None):
+    Available distributions:
+
+        - lognormal
+
+        - uniform
+
+        - compo_lognormal
+    """
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def lognormal(loc=None, scale=None, c95=None, seed=None, n=None):
+        """Sample from a log-normal distribution
+        indicate with `loc` and `scale`, or `c95`
+
+        Args:
+
+           n (`int`): number of values to draw
+
+           loc (`float`): center of log-normal distribution
+
+           scale (`float`): log variance of the distribution
+
+           c95 ([`float`, `float`]): 95% percentile of log-normal distribution
+
+           seed: random seed
+        """
+
         import numpy as np
 
-        if c95 is not None:
-            c95 = np.log(np.array(c95))
-
-        if loc is None:
-            if c95 is None:
+        if c95 is None:
+            if loc is None or scale is None:
                 raise ValueError('Please indicate loc/scale or c95')
+        else:
+            c95 = np.log(np.array(c95))
+            loc = (c95[0] + c95[1]) / 2
+            scale = (c95[1] - c95[0]) / 3.92
+        if seed is not None:
+            np.random.seed(seed)
+
+        if n is None:
+            while True:
+                yield np.exp(np.random.normal(loc=loc, scale=scale))
+        else:
+            while True:
+                yield np.exp(np.random.normal(loc=loc, scale=scale, size=n))
+
+    @staticmethod
+    def uniform(low=None, high=None, n=None):
+        """Sample from a uniform distribution"""
+
+        import numpy as np
+
+        if n is None:
+            while True:
+                yield np.random.uniform(low=low, high=high)
+        else:
+            while True:
+                yield np.random.uniform(low=low, high=high, size=n)
+
+    @staticmethod
+    def compo_lognormal(size, loc=None, scale=None, c95=None, seed=None, n=None):
+        """Sample a pool composition from a log-normal distribution
+
+        indicate with `loc` and `scale`, or `c95`
+
+        Example:
+
+            scale = 0 means an evenly distributed pool with all components have relative abundance 1/size
+
+        Args:
+
+            size (`int`): size of the pool
+
+            n (`int`): number of values to draw
+
+            loc (`float`): center of log-normal distribution
+
+            scale (`float`): log variance of the distribution
+
+            c95 ([`float`, `float`]): 95% percentile of log-normal distribution
+
+            seed: random seed
+        """
+
+        import numpy as np
+
+        if c95 is None:
+            if loc is None or scale is None:
+                raise ValueError('Please indicate loc/scale or c95')
+        else:
+            c95 = np.log(np.array(c95))
+            loc = (c95[0] + c95[1]) / 2
+            scale = (c95[1] - c95[0]) / 3.92
+        if seed is not None:
+            np.random.seed(seed)
+
+        while True:
+            if n is None:
+                q = np.exp(np.random.normal(loc=loc, scale=scale))
             else:
-                loc = c95.mean()
-        if scale is None:
-            if c95 is None:
-                raise ValueError('Please indecate loc/scale or c95')
-            else:
-                scale = (c95[1] - c95[0]) / 3.92
-        if n is None:
-            n = self.n
-        k_list = np.random.normal(loc=loc, scale=scale, size=n)
-        return np.exp(k_list)
-
-    def from_list(self, k_list, weight, n=None):
-        import numpy as np
-        if n is None:
-            n = self.n
-        return np.random.choice(k_list, p=weight, replace=True, size=n)
+                q = np.exp(np.random.normal(loc=loc, scale=scale, size=n))
+            yield q / np.sum(q)
 
 
-class ASampler(object):
-
-    def __init__(self, n=1e5):
-        self.n = int(n)
-
-    def from_uniform(self, low, high, n=None):
-        import numpy as np
-        if n is None:
-            n = self.n
-        return np.random.uniform(low=low, high=high, size=n)
-
-    def from_list(self, A_list, weight, n=None):
-        import numpy as np
-        if n is None:
-            n = self.n
-        return np.random.choice(A_list, p=weight, replace=True, size=n)
+class ParamSimulator(object):
+    """Simulate a set of parameters for a given model
 
 
-class pSampler(object):
+    Attributes:
+        todo: add attributes
 
-    def __init__(self, n=1e5):
-        self.n = int(n)
+    Methods:
 
-    def from_lognormal(self, loc=1, scale=1, n=None):
-        import numpy as np
+        todo: add methods
 
-        if n is None:
-            n = self.n
-        p_list = np.exp(np.random.normal(loc=loc, scale=scale, size=n))
-        return p_list / np.sum(p_list)
-
-    def from_list(self, p_list, weight=None, n=None):
-        import numpy as np
-        p_list = np.array(p_list)
-        p_list = p_list[p_list > 0]
-        if n is None:
-            n = self.n
-        p = np.random.choice(p_list, p=weight, replace=True, size=n)
-        p = sorted(p)
-        return p/np.sum(p)
-
-
-class ListSampler(object):
-
-    pass
-
-class Simulator(object):
-    """Simulation controller that pass a set of parameters into a given model"""
-
+    """
     def __init__(self, parameters, model, repeat=1, seed=23, **fixed_params):
         """
         Initialize the simulator with model and a list of parameter pass to model for simulation
@@ -125,6 +166,10 @@ class Simulator(object):
         if seed is not None:
             np.random.seed(seed)
         self.results = None
+
+    @classmethod
+    def from_dataframe(cls):
+        pass
 
     def generate(self, seed=None):
         """Return a generated parameter
@@ -232,7 +277,6 @@ class CountSimulator(object):
         import numpy as np
         if seed is not None:
             np.random.seed(seed)
-
 
         results = []
 
