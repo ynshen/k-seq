@@ -1,44 +1,58 @@
 
-class kSampler(object):
+class DistGenerators:
+    """A collection of random value generators from preset distributions
 
-    def __init__(self, n=1e5):
-        self.n = int(n)
+    Available distributions:
 
-    def from_lognormal(self, n=None, loc=None, scale=None, c95=None):
+        - lognormal
+
+        - uniform
+
+    """
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def lognormal(loc=None, scale=None, c95=None, seed=None, n=None):
+        """Sample from a log-normal distribution
+        indicate with `loc` and `scale`, or `c95`
+
+        Args:
+
+           n (`int`): number of values to draw
+
+           loc (`float`): center of log-normal distribution
+
+           scale (`float`): log variance of the distribution
+
+           c95 ([`float`, `float`]): 95% percentile of log-normal distribution
+
+           seed: random seed
+        """
+
         import numpy as np
 
-        if c95 is not None:
-            c95 = np.log(np.array(c95))
-
-        if loc is None:
-            if c95 is None:
+        if c95 is None:
+            if loc is None or scale is None:
                 raise ValueError('Please indicate loc/scale or c95')
-            else:
-                loc = c95.mean()
-        if scale is None:
-            if c95 is None:
-                raise ValueError('Please indecate loc/scale or c95')
-            else:
-                scale = (c95[1] - c95[0]) / 3.92
-        if n is None:
-            n = self.n
-        k_list = np.random.normal(loc=loc, scale=scale, size=n)
-        return np.exp(k_list)
+        else:
+            c95 = np.log(np.array(c95))
+            loc = (c95[0] + c95[1]) / 2
+            scale = (c95[1] - c95[0]) / 3.92
+        if seed is not None:
+            np.random.seed(seed)
 
-    def from_list(self, k_list, weight, n=None):
+        while True:
+
+        yield np.exp(np.random.normal(loc=loc, scale=scale, size=n))
+
+    @staticmethod
+    def uniform(low=None, high=None, n=None):
+        """Sample from a uniform distribution"""
+
         import numpy as np
-        if n is None:
-            n = self.n
-        return np.random.choice(k_list, p=weight, replace=True, size=n)
 
-
-class ASampler(object):
-
-    def __init__(self, n=1e5):
-        self.n = int(n)
-
-    def from_uniform(self, low, high, n=None):
-        import numpy as np
         if n is None:
             n = self.n
         return np.random.uniform(low=low, high=high, size=n)
@@ -78,6 +92,14 @@ class ListSampler(object):
 
     pass
 
+
+
+
+def from_list(self, k_list, weight, n=None):
+    import numpy as np
+    if n is None:
+        n = self.n
+    return np.random.choice(k_list, p=weight, replace=True, size=n)
 
 class ParamSimulator(object):
     """Simulate a set of parameters for a given model
