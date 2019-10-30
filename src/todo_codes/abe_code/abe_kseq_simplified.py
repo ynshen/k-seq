@@ -89,7 +89,7 @@ def filter_seqs(tempCounts):
     return validSeqs
 
 def printCounts(outLoc, counts, uniqs, tots, firstLoc, separator=',', fitAvg=[], compact=False):
-    # main function for fitting
+    # main function for estimator
     # ----------define type of calculation and output heading
 
     if compact == 2:
