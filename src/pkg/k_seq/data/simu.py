@@ -45,7 +45,7 @@ class DistGenerators:
         if seed is not None:
             np.random.seed(seed)
 
-        if n is None:
+        if size is None:
             while True:
                 yield np.exp(np.random.normal(loc=loc, scale=scale))
         else:
@@ -58,7 +58,7 @@ class DistGenerators:
 
         import numpy as np
 
-        if n is None:
+        if size is None:
             while True:
                 yield np.random.uniform(low=low, high=high)
         else:
@@ -218,19 +218,18 @@ class PoolParamSimulator(object):
 
 
 class CountSimulator(object):
-    """Simulate pool counts given different sub-strate concentration
+    """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
     todo: add perturbation on relative abundance
     """
 
-    def __init__(self, param_table, count_model, count_params,
-                 x_values=None, kinetic_model=None, kinetic_params=None, seed=None):
+    def __init__(self, count_model, kinetic_model, count_params=None, kinetic_params=None,
+                 x_values=None, seed=None):
         """Initialize a simulator with parameter table, count model, and parameters
 
         Args:
 
-            param_table (`pd.DataFrame`): a dataframe including parameters
 
-            kin_model (`Model` or callable): kinetic model, output should be a list of abundance of pool members
+            kinetic_model (`Model` or callable): pool kinetic model, whose output is a list of abundance of pool members
 
             kin_param (`dict`): contains parameter needed for
 
