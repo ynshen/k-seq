@@ -157,8 +157,9 @@ class PoolParamSimulator(object):
         return results
 
     @classmethod
-    def sample_from_dataframe(cls, df, size=None, replace=True, weights=None, seed=None):
+    def sample_from_dataframe(cls, df, size, replace=True, weights=None, seed=None):
         """Simulate parameter by resampling rows of a given data frame"""
+
         return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
 
     # def generate(self, seed=None):
@@ -217,17 +218,24 @@ class PoolParamSimulator(object):
 
 
 class CountSimulator(object):
-    """Given pool initial relative abundance, kinetic model, and parameters to simulate a pool
+    """Simulate pool counts given different sub-strate concentration
     todo: add perturbation on relative abundance
     """
 
-    def __init__(self, seq_n=1e5, samplers=None, kin_model=None, kin_param=None, c_param=None, c_model=None, seed=23):
-        """
+    def __init__(self, param_table, count_model, count_params,
+                 x_values=None, kinetic_model=None, kinetic_params=None, seed=None):
+        """Initialize a simulator with parameter table, count model, and parameters
 
         Args:
+
+            param_table (`pd.DataFrame`): a dataframe including parameters
+
             kin_model (`Model` or callable): kinetic model, output should be a list of abundance of pool members
+
             kin_param (`dict`): contains parameter needed for
+
             c_param:
+
             c_model:
             seed:
         """
