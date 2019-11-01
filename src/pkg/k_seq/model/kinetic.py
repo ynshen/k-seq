@@ -1,33 +1,32 @@
-"""A collection of kinetic models used in the project
-
+"""A collection of commonly used kinetic models used in the project
 
 """
 from . import ModelBase
 
 
 def first_order(c, k, A, alpha, t):
-    """Base first order kinetic model
+    """Base first-order kinetic model
     Args:
-        c (`float` or np.array): initial amount(s), could be composition of a pool
-        k (`float` or np.array): kinetic coefficient(s)
-        A (`float` or np.array): ratio of active molecules
-        alpha (`float`): degradation parameter for substrates
-        t (`float`): reaction time
+        c (float or np.array): initial amount(s), could be composition of a pool
+        k (float or np.array): kinetic coefficient(s)
+        A (float or np.array): ratio of active molecules
+        alpha (float): degradation parameter for substrates
+        t (float): reaction time
     """
     import numpy as np
 
     return A * (1 - np.exp(- alpha * t * k * c))
 
 
-def first_order_w_slope(c, k, A, alpha, t, b):
-    """Base first order kinetic model
+def first_order_w_bias(c, k, A, alpha, t, b):
+    """Base first order kinetic model with bias
     Args:
-        c (`float` or np.array): initial amount(s), could be composition of a pool
-        k (`float` or np.array): kinetic coefficient(s)
-        A (`float` or np.array): ratio of active molecules
-        alpha (`float`): degradation parameter for substrates
-        t (`float`): reaction time
-        b (`float` or np.array): slopes
+        c (float or np.array): initial amount(s), could be composition of a pool
+        k (float or np.array): kinetic coefficient(s)
+        A (float or np.array): ratio of active molecules
+        alpha (float): degradation parameter for substrates
+        t (float): reaction time
+        b (float or np.array): bias
     """
     import numpy as np
 
@@ -35,18 +34,18 @@ def first_order_w_slope(c, k, A, alpha, t, b):
 
 
 class BYOModel(ModelBase):
-    """A collection of BYO kinetic models, where
-       exp time (t): 90 min
-       BYO degradation factor (\alpha): 0.479
+    """A collection of BYO kinetic models
 
-    -
+    where some values are fixed:
+         - exp time (t): 90 min
+         - BYO degradation factor (\alpha): 0.479
 
-    input:
-    p0: initial pool, not necessarily composition
-    c: controlled variable, in our case, BYO concentration
-    k: kinetic coefficient
-    A: fraction of reactive molecules
-    slope: if include slope in the model for baseline passing rate
+    parameters:
+        - p0: initial pool composition
+        - c: controlled variable, in our case, BYO concentration
+        - k: kinetic coefficient
+        - A: fraction of reactive molecules
+        - bias: if include slope in the model for baseline passing rate
 
     return: concentration in at the target (time, concentration) point
     """
