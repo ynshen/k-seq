@@ -21,6 +21,11 @@ def main(table_path, table_name, fit_partial, bootstrap_num, bs_record_num, bs_m
     else:
         seq_test = None
 
+    if bs_method.lower() == 'stratified':
+        try:
+            grouper = seq_table.grouper.byo.group
+        except:
+            raise ValueError('Can not find grouper for stratified bootstrapping')
     batch_fitter = BatchFitter(
         table=work_table, x_data=seq_table.x_values, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.func_react_frac_no_slope, seq_to_fit=seq_test,

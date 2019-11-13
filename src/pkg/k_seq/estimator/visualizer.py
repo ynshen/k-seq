@@ -150,7 +150,7 @@ def param_value_plot(fitting_res, param, with_ci=True, show_point_est=False, use
 
     import matplotlib.pyplot as plt
     import numpy as np
-    from .least_square import BatchFitting
+    from .least_square import BatchFitResults
     from ..data.seq_table import SeqTable
 
     def plot_with_shade(ax, x, center, high, low):
@@ -159,12 +159,14 @@ def param_value_plot(fitting_res, param, with_ci=True, show_point_est=False, use
             ax.fill_between(x, y1=high, y2=low, alpha=0.5, facecolor='#2C73B4')
 
     cols = [param + post_fix for post_fix in ['_point_est', '_mean', '_std', '_median', '_2.5', '_97.5']]
-    if isinstance(fitting_res, BatchFitting):
+    if isinstance(fitting_res, BatchFitResults):
         param_values = fitting_res.summary[cols]
-    elif isinstance(fitting_res, SeqTable):
+    elif isinstance(fitting_res, BatchFitResults):
         param_values = fitting_res.fitting.summary[col]
     else:
         raise Exception('Error: fitting_res has to be an either SeqTable or BatchFitting instance')
+
+
     if seq_filter is not None:
         if isinstance(seq_filter, list):
             param_values = param_values.loc[seq_filter]
