@@ -2,12 +2,50 @@ from ..model import ModelBase
 
 
 class PoolModel(ModelBase):
+<<<<<<< HEAD
 
     def __init__(self, kinetic_model, count_model, **params):
         from ..utility.func_tools import get_func_params
 
         super().__init__()
         if issubclass(kinetic_model, ModelBase):
+=======
+    """Model of a kinetic pool
+    Attributes:
+        - kinetic_model (`callable`): input initial pool with parameter and return a reacted pool composition
+        - count_model (`callable`): input pool composition and return a list of counts given total counts or
+          params
+        - kinetic_params (list of str): list of parameter names for kinetic model
+        - count_params (list of str): list of parameter names for count model
+        - note (str): note for the model
+    """
+
+    def __repr__(self):
+        return f"Model for a kinetic pool with\n" \
+               f"\tkinetic model:{self.kinetic_model}\n" \
+               f"\tcount model:{self.count_model}" \
+               f"\tnote: {self.note}"
+
+    def __init__(self, count_model, kinetic_model=None, param_table=None, note=None, **params):
+        """Construct a pool model with given kinetic models and count_model
+        Args:
+            count_model (`ModelBase` or `callable`): model for sequencing counts
+            kinetic_model (`ModalBase` or `callable`): model for pool kinetics, no react if not given
+            **params:
+        """
+
+        def _static_pool(p0):
+            __doc__ = """Static pool with no reaction"""
+            return p0
+
+        from ..utility.func_tools import get_func_params
+        import pandas as pd
+
+        super().__init__()
+        if kinetic_model is None:
+            self.kinetic_model = _static_pool
+        elif issubclass(kinetic_model, ModelBase):
+>>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
             self.kinetic_model = kinetic_model.func
         elif callable(kinetic_model):
             self.kinetic_model = kinetic_model
@@ -22,10 +60,20 @@ class PoolModel(ModelBase):
 
         self.kinetic_params = get_func_params(self.kinetic_model, exclude_x=False)
         self.count_params = get_func_params(self.count_model, exclude_x=False)
+<<<<<<< HEAD
         if params != {}:
             self.params = params
 
     def func(self, **params):
+=======
+        if param_table is not None:
+            params.update({col: param_table[col] for col in param_table.columns})
+        self.params = pd.DataFrame.from_dict(params, orient='columns')
+        self.note = note
+
+    def func(self, **params):
+        """Draw counts from given parameters"""
+>>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
         import numpy as np
 
         kinetic_params = {key: item for key, item in params.items() if key in self.kinetic_params}
@@ -37,10 +85,18 @@ class PoolModel(ModelBase):
         return self.count_model(pt, **count_params)
 
     def predict(self, **params):
+<<<<<<< HEAD
         params = {**self.params, **params}
         return self.func(**params)
 
 
+=======
+        """Wrapper over func, can accept parameters to overwrite current ones if exist"""
+        params = {**self.params, **params}
+        return self.func(**params)
+
+######################## Belows are from legacy ####################################
+>>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
 # def pool_count_models(p, k_model, k_param, c_model, c_param):
 #     import numpy as np
 #

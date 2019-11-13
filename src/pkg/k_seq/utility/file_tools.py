@@ -193,6 +193,10 @@ def extract_metadata(target, pattern):
 
 
 def read_pickle(path):
+<<<<<<< HEAD:src/pkg/k_seq/utility/file_tools.py
+=======
+    """Read pickled object form path"""
+>>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59:src/pkg/k_seq/utility/file_tools.py
     import pickle
 
     with open(path, 'rb') as handle:
