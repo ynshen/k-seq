@@ -87,6 +87,7 @@ class MultiNomial(ModelBase):
             print(N)
             print(p)
 
+
     # @staticmethod
     # def negloglikelihood(y, N, p):
     #     """Method to calculate likelihood

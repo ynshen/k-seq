@@ -128,12 +128,6 @@ class PoolParamSimulator:
         import numpy as np
         import pandas as pd
 
-        def check_output(output):
-            if isinstance(output, (list, np.ndarray, pd.Series)):
-                return output
-            else:
-                return None
-
         def generate_params(param_input):
             from types import GeneratorType
 
@@ -276,7 +270,6 @@ def count_simulator(model_func, params, repeat=1, seed=None):
 
 # class CountSimulator(object):
 #     """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
-#     todo: add perturbation on relative abundance
 #     """
 #
 #     def __init__(self, count_model, kinetic_model, count_params=None, kinetic_params=None,
