@@ -80,6 +80,9 @@ class PoolModel(ModelBase):
         params = {**self.params, **params}
         return self.func(**params)
 
+    def __call__(self, **params):
+        return self.predict(**params)
+
 ######################## Belows are from legacy ####################################
 # def pool_count_models(p, k_model, k_param, c_model, c_param):
 #     import numpy as np

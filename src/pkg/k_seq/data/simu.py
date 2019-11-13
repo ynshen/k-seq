@@ -173,47 +173,117 @@ class PoolParamSimulator:
         return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
 
 
-def count_simulator(model_func, params, repeat=1, seed=None):
-    """Function to simulate a pool count with different parameters
+def pool_counts_simulator(pool_size, c_list, N_list, p0,
+                          kinetic_model=None, count_model=None,
+                          sample_from_table=None, weights=None, replace=True,
+                          reps=1, seed=None,
+                          save_to=None, **param_generator):
+    """Simulate a k-seq pool counts results"""
 
-    Args:
-        model_func:
-        params:
-        repeat:
-        seed:
-
-    Returns:
-        pd.DataFrame contains counts table
-
-    """
-    import numpy as np
+    from ..model import pool
     import pandas as pd
 
-    def run_model(param):
-        if isinstance(param, dict):
-            return model_func(**param)
-        elif isinstance(param, (list, tuple)):
-            return model_func(*param)
+    if kinetic_model is None:
+        # default use BYO first-order compositional model
+        from k_seq.model import kinetic
+        kinetic_model = kinetic.BYOModel.composition_first_order
+        print('No kinetic model provided, use BYOModel.composition_first_order')
+    if count_model is None:
+        # default use MultiNomial
+        from k_seq.model import count
+        count_model = count.MultiNomial
+        print('No count model provided, use MultiNomial')
+
+    if sample_from_table is None:
+        param_table = simu.PoolParamSimulator.sample_from_ind_dist(
+            p0=p0,
+            seed=seed,
+            size=pool_size,
+            **param_generator
+        )
+    else:
+        param_table = simu.PoolParamSimulator.sample_from_dataframe(
+            df=sample_from_table,
+            size=pool_size,
+            replace=replace,
+            weights=weights,
+            seed=seed
+        )
+
+    param_table.index.name = 'seq'
+    pool_model = pool.PoolModel(count_model=count_model,
+                                kinetic_model=kinetic_model,
+                                param_table=param_table)
+    X = {}
+    y = {}
+    for sample_ix, (c, n) in enumerate(zip(c_list, N_list)):
+        if reps is None or reps == 1:
+            X[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
+            y[f"s{sample_ix}"] = {'c': c, 'n': n}
         else:
-            return model_func(param)
+            for rep in range(reps):
+                X[f"s{sample_ix}-{rep}"] = pool_model(c=c, N=n)
+                y[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
+    X = pd.DataFrame.from_dict(X, orient='columns')
+    y = pd.DataFrame.from_dict(y, orient='columns')
+    X.index.name = 'sample'
+    y.index.name = 'seq'
 
-    # first parse params
-    if isinstance(params, list):
-        params = {f'sample_{int(idx)}': param for idx, param in enumerate(params)}
-
-    if seed is not None:
-        np.random.seed(seed)
-
-    result = {}   # {sample_name: counts}
-    for sample, param in params.items():
-        if repeat is None or repeat == 1:
-            result[sample] = run_model(param)
+    if save_to is not None:
+        from pathlib import Path
+        save_path = Path(save_to)
+        if save_path.suffix == '':
+            save_path.mkdir(parents=True, exist_ok=True)
+            X.to_csv(f'{save_path}/X.csv')
+            y.to_csv(f'{save_path}/y.csv')
+            param_table.to_csv(f'{save_path}/truth.csv')
         else:
-            for rep in range(repeat):
-                result[f"{sample}-{rep}"] = run_model(param)
-    return pd.DataFrame.from_dict(result, orient='columns')
+            raise TypeError('save_to should be a directory')
+
+    return X, y, param_table
 
 
+# def count_simulator(model, params, repeat=1, seed=None):
+#     """Function to simulate a pool count with different parameters
+#
+#     Args:
+#         model:
+#         params:
+#         repeat:
+#         seed:
+#
+#     Returns:
+#         pd.DataFrame contains counts table
+#
+#     """
+#     import numpy as np
+#     import pandas as pd
+#
+#     def run_model(param):
+#         if isinstance(param, dict):
+#             return model(**param)
+#         elif isinstance(param, (list, tuple)):
+#             return model(*param)
+#         else:
+#             return model(param)
+#
+#     # first parse params
+#     if isinstance(params, list):
+#         params = {f'sample_{int(idx)}': param for idx, param in enumerate(params)}
+#
+#     if seed is not None:
+#         np.random.seed(seed)
+#
+#     result = {}   # {sample_name: counts}
+#     for sample, param in params.items():
+#         if repeat is None or repeat == 1:
+#             result[sample] = run_model(param)
+#         else:
+#             for rep in range(repeat):
+#                 result[f"{sample}-{rep}"] = run_model(param)
+#     return pd.DataFrame.from_dict(result, orient='columns')
+#
+#
 # class CountSimulator(object):
 #     """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
 #     """
