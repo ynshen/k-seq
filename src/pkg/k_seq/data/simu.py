@@ -172,60 +172,6 @@ class PoolParamSimulator:
 
         return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
 
-    # def generate(self, seed=None):
-    #     """Return a generated parameter
-    #
-    #     Return: a dict or list of dict of
-    #         {'data': pd.DataFrame (sparse) of data,
-    #          'config':
-    #     """
-    #     import numpy as np
-    #
-    #     if seed is None:
-    #         seed = self.seed
-    #     if seed is not None:
-    #         np.random.seed(seed)
-    #
-    #     self.results = {sample: self.model(**param) for sample, param in self.parameters.items()}
-    #
-    # def to_pickle(self):
-    #     pass
-    #
-    # def to_DataFrame(self, sparse=True, dtype='float', seed=None):
-    #     import pandas as pd
-    #     import numpy as np
-    #
-    #     if seed is None:
-    #         seed = self.seed
-    #
-    #     if self.results is None:
-    #         self.generate(seed=seed)
-    #
-    #     if sparse:
-    #         if dtype.lower() in ['int', 'd']:
-    #             dtype = pd.SparseDtype('int', fill_value=0)
-    #         elif dtype.lower() in ['float', 'f']:
-    #             dtype = pd.SparseDtype('float', fill_value=0.0)
-    #         return pd.DataFrame(self.results).astype(dtype)
-    #     else:
-    #         if dtype.lower() in ['int', 'd']:
-    #             dtype = np.int
-    #         elif dtype.lower() in ['float', 'f']:
-    #             dtype = np.float
-    #         return pd.DataFrame(self.results, dtype=dtype)
-    #
-    # def to_numpy(self, seed=None):
-    #     import numpy as np
-    #
-    #     if seed is None:
-    #         seed = self.seed
-    #     if self.results is None:
-    #         self.generate(seed=seed)
-    #     return np.array([value for value in self.results.values()])
-    #
-    # def to_csv(self):
-    #     pass
-
 
 def count_simulator(model_func, params, repeat=1, seed=None):
     """Function to simulate a pool count with different parameters
