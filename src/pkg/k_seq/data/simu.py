@@ -42,8 +42,8 @@ class DistGenerators:
             scale = (c95[1] - c95[0]) / 3.92
 
         if return_gen is True:
-        if seed is not None:
-            np.random.seed(seed)
+            if seed is not None:
+                np.random.seed(seed)
 
         if size is None:
             while True:
@@ -101,54 +101,78 @@ class DistGenerators:
             yield q / np.sum(q)
 
 
-class PoolParamSimulator(object):
-    """Simulate a set of parameters for a sequence pool
-
-
-    Attributes:
-        todo: add attributes
+class PoolParamSimulator:
+    """Collection of functions to simulate a set of parameters for a sequence pool
 
     Methods:
 
-        todo: add methods
+        - sample_from_ind_dist
 
+        - sample_from_dataframe
+
+    Returns:
+        pd.DataFrame with columns of parameters and rows of simulated parameter for each sequence
     """
-    def __init__(self, compo_gen, seed=None, **param_generators):
-        # """
-        # Initialize the pool parameter simulator with iid generators
-        #
-        # Args:
-        #
-        #     compo_gen (`generator`): generator generate pool compositions
-        #
-        #     seed (`int`): random seed to fix in simulation for repeatability
-        #
-        #     param_generators: keyword arguments that has form parameter_name=parameter_value_generator
-        # """
-        # self.seed = seed
-        # self.compo_gen
-        # self.size = size
-        # self.param_generator = param_generators
-        pass
 
     @staticmethod
-    def sample_from_ind_dist(compo_gen, size=None, seed=None, **param_generators):
+    def sample_from_ind_dist(p0, size=None, seed=None, **param_generators):
+        """Simulate the pool parameter from individual draws of distribution
+
+        Args:
+
+            p0 (list-like, generator, or callable): at least need to indicate the initial pool composition
+
+            size (int): number of unique sequences
+
+            seed (int): global random seed to use in generation
+
+            param_generators (kwargs): keyword generator to generate parameters
+
+        """
         import numpy as np
         import pandas as pd
+
+        def check_output(output):
+            if isinstance(output, (list, np.ndarray, pd.Series)):
+                return output
+            else:
+                return None
+
+        def generate_params(param_input):
+            from types import GeneratorType
+
+            if isinstance(param_input, (list, np.ndarray, pd.Series)):
+                return param_input
+            elif isinstance(param_input, GeneratorType):
+                # assume only generate one realization
+                return [next(param_input) for _ in range(size)]
+            elif callable(param_input):
+                try:
+                    # if there is a size parameter to pass
+                    param_output = param_input(size=size)
+                    if isinstance(param_output, (list, np.ndarray, pd.Series)):
+                        return param_output
+                    elif isinstance(param_output, GeneratorType):
+                        return next(param_output)
+                    else:
+                        raise TypeError("Unknown input to draw a distribution value")
+                except:
+                    # if can not pass size, assume generate single samples
+                    param_output = param_input()
+                    if isinstance(param_output, GeneratorType):
+                        return [next(param_input) for _ in range(size)]
+                    elif isinstance(param_output, (float, int)):
+                        return [param_input() for _ in range(size)]
+            else:
+                raise TypeError('Unknown input to draw a distribution value')
 
         if seed is not None:
             np.random.seed(seed)
 
-        if callable(compo_gen):
-            # if compo_gen is a function returns a generator
-            compo_gen = compo_gen(size)
-
-        results = pd.DataFrame(data={'p0': list(next(compo_gen))})
-        for param, gen in param_generators.items():
-            if callable(gen):
-                results[param] = list(next(gen(results.shape[0])))
-            else:
-                results[param] = list(next(gen))
+        results = pd.DataFrame(
+            data={**{'p0': list(generate_params(p0))},
+                  **{param: generate_params(gen) for param, gen in param_generators.items()}}
+        )
 
         return results
 

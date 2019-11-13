@@ -33,7 +33,7 @@ def first_order_w_bias(c, k, A, alpha, t, b):
 
 
 class BYOModel(ModelBase):
-    """A collection of BYO kinetic models
+    """A collection of BYO kinetic models (static function)
 
     where some values are fixed:
         exp time (t): 90 min
@@ -79,6 +79,9 @@ class BYOModel(ModelBase):
             - p0: initial pool composition
             - k: kinetic coefficient
             - A: maximal conversion ratio
+
+        Return:
+
         """
 
         import numpy as np
@@ -90,7 +93,8 @@ class BYOModel(ModelBase):
         if c < 0:
             return p0
         else:
-            return p0 * first_order(c=c, k=k, A=A, alpha=0.479, t=90)
+            p = p0 * first_order(c=c, k=k, A=A, alpha=0.479, t=90)
+            return p / np.sum(p)
 
     @staticmethod
     def composition_first_order_w_bias(c, p0, k, A, b):
@@ -115,7 +119,8 @@ class BYOModel(ModelBase):
         if c < 0:
             return p0
         else:
-            return p0 * first_order_w_bias(c=c, k=k, A=A, b=b, alpha=0.479, t=90)
+            p = p0 * first_order_w_bias(c=c, k=k, A=A, b=b, alpha=0.479, t=90)
+            return p / np.sum(p)
 
     @staticmethod
     def func_react_frac(c, k, A):
