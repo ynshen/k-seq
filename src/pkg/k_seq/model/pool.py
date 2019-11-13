@@ -18,7 +18,7 @@ class PoolModel(ModelBase):
                f"\tcount model:{self.count_model}" \
                f"\tnote: {self.note}"
 
-    def __init__(self, count_model, kinetic_model=None, note=None, **params):
+    def __init__(self, count_model, kinetic_model=None, param_table=None, note=None, **params):
         """Construct a pool model with given kinetic models and count_model
         Args:
             count_model (`ModelBase` or `callable`): model for sequencing counts
@@ -31,6 +31,7 @@ class PoolModel(ModelBase):
             return p0
 
         from ..utility.func_tools import get_func_params
+        import pandas as pd
 
         super().__init__()
         if kinetic_model is None:
@@ -50,8 +51,9 @@ class PoolModel(ModelBase):
 
         self.kinetic_params = get_func_params(self.kinetic_model, exclude_x=False)
         self.count_params = get_func_params(self.count_model, exclude_x=False)
-        if params != {}:
-            self.params = params
+        if param_table is not None:
+            params.update({col: param_table[col] for col in param_table.columns})
+        self.params = pd.DataFrame.from_dict(params, orient='columns')
         self.note = note
 
     def func(self, **params):

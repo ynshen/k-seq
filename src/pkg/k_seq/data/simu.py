@@ -2,46 +2,46 @@
 class DistGenerators:
     """A collection of random value generators from preset distributions
 
+    Behavior:
+        each distribution will return a generator if `return_gen` argument is True,
+            else return a function take size value and return a generator
 
     Available distributions:
-
-        - lognormal
-
-        - uniform
-
-        - compo_lognormal
+        lognormal
+        uniform
+        compo_lognormal
     """
 
     def __init__(self):
         pass
 
     @staticmethod
-    def lognormal(loc=None, scale=None, c95=None, seed=None, size=None):
+    def lognormal(size=None, loc=None, scale=None, c95=None, seed=None, return_gen=True):
         """Sample from a log-normal distribution
         indicate with `loc` and `scale`, or `c95`
 
         Args:
-
-           size (`int`): number of values to draw
-
-           loc (`float`): center of log-normal distribution
-
-           scale (`float`): log variance of the distribution
-
-           c95 ([`float`, `float`]): 95% percentile of log-normal distribution
-
-           seed: random seed
+            size (`int`): number of values to draw
+            loc (`float`): center of log-normal distribution, default 0
+            scale (`float`): log variance of the distribution, default 0
+            c95 ([`float`, `float`]): 95% percentile of log-normal distribution
+            seed: random seed
+            return_gen (bool): if return a generator or a function
         """
 
         import numpy as np
 
         if c95 is None:
-            if loc is None or scale is None:
-                raise ValueError('Please indicate loc/scale or c95')
+            if loc is None:
+                loc = 0
+            if scale is None:
+                scale = 0
         else:
             c95 = np.log(np.array(c95))
             loc = (c95[0] + c95[1]) / 2
             scale = (c95[1] - c95[0]) / 3.92
+
+        if return_gen is True:
         if seed is not None:
             np.random.seed(seed)
 
@@ -66,26 +66,22 @@ class DistGenerators:
                 yield np.random.uniform(low=low, high=high, size=size)
 
     @staticmethod
-    def compo_lognormal(size, loc=None, scale=None, c95=None, seed=None):
+    def compo_lognormal(size, loc=None, scale=None, c95=None, seed=None, return_gen=True):
         """Sample a pool composition from a log-normal distribution
-
         indicate with `loc` and `scale`, or `c95`
 
         Example:
-
             scale = 0 means an evenly distributed pool with all components have relative abundance 1/size
 
         Args:
-
             size (`int`): size of the pool
-
             loc (`float`): center of log-normal distribution
-
             scale (`float`): log variance of the distribution
-
             c95 ([`float`, `float`]): 95% percentile of log-normal distribution
-
             seed: random seed
+            return_gen (bool): return a generator if True, else return
+
+
         """
 
         import numpy as np
@@ -217,76 +213,117 @@ class PoolParamSimulator(object):
     #     pass
 
 
-class CountSimulator(object):
-    """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
-    todo: add perturbation on relative abundance
+def count_simulator(model_func, params, repeat=1, seed=None):
+    """Function to simulate a pool count with different parameters
+
+    Args:
+        model_func:
+        params:
+        repeat:
+        seed:
+
+    Returns:
+        pd.DataFrame contains counts table
+
     """
+    import numpy as np
+    import pandas as pd
 
-    def __init__(self, count_model, kinetic_model, count_params=None, kinetic_params=None,
-                 x_values=None, seed=None):
-        """Initialize a simulator with parameter table, count model, and parameters
+    def run_model(param):
+        if isinstance(param, dict):
+            return model_func(**param)
+        elif isinstance(param, (list, tuple)):
+            return model_func(*param)
+        else:
+            return model_func(param)
 
-        Args:
+    # first parse params
+    if isinstance(params, list):
+        params = {f'sample_{int(idx)}': param for idx, param in enumerate(params)}
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    result = {}   # {sample_name: counts}
+    for sample, param in params.items():
+        if repeat is None or repeat == 1:
+            result[sample] = run_model(param)
+        else:
+            for rep in range(repeat):
+                result[f"{sample}-{rep}"] = run_model(param)
+    return pd.DataFrame.from_dict(result, orient='columns')
 
 
-            kinetic_model (`Model` or callable): pool kinetic model, whose output is a list of abundance of pool members
-
-            kin_param (`dict`): contains parameter needed for
-
-            c_param:
-
-            c_model:
-            seed:
-        """
-        import numpy as np
-
-        self.k_model = k_model
-        self.k_param = k_param
-        self.c_model = c_model
-        self.c_param = c_param
-        self.seed = seed
-        if seed is not None:
-            np.random.seed(seed)
-
-    def get_data(self, k_param=None, c_param=None, N=1, seed=None):
-        """Return a size N data for each param set in k_param
-
-        Return: a dict or list of dict of
-            {'data': pd.DataFrame (sparse) of data,
-             'config':
-        """
-
-        def get_one_data(k_param, c_param):
-            comp = self.k_model(**k_param)
-            if np.sum(comp) != 1:
-                comp = comp / np.sum(comp)
-            return self.c_model(comp, **c_param)
-
-        def get_one_config(k_param, c_param, N):
-            k_p = self.k_param.copy()
-            k_p.update(k_param)
-            c_p = self.c_param.copy()
-            c_p.update(c_param)
-
-            import pandas as pd
-
-            return {'data': pd.DataFrame(pd.SparseArray([get_one_data(k_p, c_p) for _ in range(N)]), dtype=int),
-                    'config': {'k_param': k_p, 'c_param': c_p}}
-
-        import numpy as np
-        if seed is not None:
-            np.random.seed(seed)
-
-        results = []
-
-    def to_pickle(self):
-        pass
-
-    def to_DataFrame(self):
-        pass
-
-    def to_csv(self):
-        pass
+# class CountSimulator(object):
+#     """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
+#     todo: add perturbation on relative abundance
+#     """
+#
+#     def __init__(self, count_model, kinetic_model, count_params=None, kinetic_params=None,
+#                  x_values=None, seed=None):
+#         """Initialize a simulator with parameter table, count model, and parameters
+#
+#         Args:
+#
+#
+#             kinetic_model (`Model` or callable): pool kinetic model, whose output is a list of abundance of pool members
+#
+#             kin_param (`dict`): contains parameter needed for
+#
+#             c_param:
+#
+#             c_model:
+#             seed:
+#         """
+#         import numpy as np
+#
+#         self.k_model = k_model
+#         self.k_param = k_param
+#         self.c_model = c_model
+#         self.c_param = c_param
+#         self.seed = seed
+#         if seed is not None:
+#             np.random.seed(seed)
+#
+#     def get_data(self, k_param=None, c_param=None, N=1, seed=None):
+#         """Return a size N data for each param set in k_param
+#
+#         Return: a dict or list of dict of
+#             {'data': pd.DataFrame (sparse) of data,
+#              'config':
+#         """
+#
+#         def get_one_data(k_param, c_param):
+#             comp = self.k_model(**k_param)
+#             if np.sum(comp) != 1:
+#                 comp = comp / np.sum(comp)
+#             return self.c_model(comp, **c_param)
+#
+#         def get_one_config(k_param, c_param, N):
+#             k_p = self.k_param.copy()
+#             k_p.update(k_param)
+#             c_p = self.c_param.copy()
+#             c_p.update(c_param)
+#
+#             import pandas as pd
+#
+#             return {'data': pd.DataFrame(pd.SparseArray([get_one_data(k_p, c_p) for _ in range(N)]), dtype=int),
+#                     'config': {'k_param': k_p, 'c_param': c_p}}
+#
+#         import numpy as np
+#         if seed is not None:
+#             np.random.seed(seed)
+#
+#         results = []
+#
+#     def to_pickle(self):
+#         pass
+#
+#     def to_DataFrame(self):
+#         pass
+#
+#     def to_csv(self):
+#         pass
 
 
 
