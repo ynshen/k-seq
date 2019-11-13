@@ -2,14 +2,6 @@ from ..model import ModelBase
 
 
 class PoolModel(ModelBase):
-<<<<<<< HEAD
-
-    def __init__(self, kinetic_model, count_model, **params):
-        from ..utility.func_tools import get_func_params
-
-        super().__init__()
-        if issubclass(kinetic_model, ModelBase):
-=======
     """Model of a kinetic pool
     Attributes:
         - kinetic_model (`callable`): input initial pool with parameter and return a reacted pool composition
@@ -45,7 +37,6 @@ class PoolModel(ModelBase):
         if kinetic_model is None:
             self.kinetic_model = _static_pool
         elif issubclass(kinetic_model, ModelBase):
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
             self.kinetic_model = kinetic_model.func
         elif callable(kinetic_model):
             self.kinetic_model = kinetic_model
@@ -60,12 +51,6 @@ class PoolModel(ModelBase):
 
         self.kinetic_params = get_func_params(self.kinetic_model, exclude_x=False)
         self.count_params = get_func_params(self.count_model, exclude_x=False)
-<<<<<<< HEAD
-        if params != {}:
-            self.params = params
-
-    def func(self, **params):
-=======
         if param_table is not None:
             params.update({col: param_table[col] for col in param_table.columns})
         self.params = pd.DataFrame.from_dict(params, orient='columns')
@@ -73,7 +58,6 @@ class PoolModel(ModelBase):
 
     def func(self, **params):
         """Draw counts from given parameters"""
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
         import numpy as np
 
         kinetic_params = {key: item for key, item in params.items() if key in self.kinetic_params}
@@ -85,18 +69,11 @@ class PoolModel(ModelBase):
         return self.count_model(pt, **count_params)
 
     def predict(self, **params):
-<<<<<<< HEAD
-        params = {**self.params, **params}
-        return self.func(**params)
-
-
-=======
         """Wrapper over func, can accept parameters to overwrite current ones if exist"""
         params = {**self.params, **params}
         return self.func(**params)
 
 ######################## Belows are from legacy ####################################
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
 # def pool_count_models(p, k_model, k_param, c_model, c_param):
 #     import numpy as np
 #

@@ -1,133 +1,16 @@
 
 class DistGenerators:
     """A collection of random value generators from preset distributions
-<<<<<<< HEAD
-
-    Available distributions:
-
-        - lognormal
-
-        - uniform
-=======
 
     Behavior:
         each distribution will return a generator if `return_gen` argument is True,
             else return a function take size value and return a generator
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
 
     Available distributions:
         lognormal
         uniform
         compo_lognormal
     """
-<<<<<<< HEAD
-
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def lognormal(loc=None, scale=None, c95=None, seed=None, n=None):
-        """Sample from a log-normal distribution
-        indicate with `loc` and `scale`, or `c95`
-
-        Args:
-
-           n (`int`): number of values to draw
-
-           loc (`float`): center of log-normal distribution
-
-           scale (`float`): log variance of the distribution
-
-           c95 ([`float`, `float`]): 95% percentile of log-normal distribution
-
-           seed: random seed
-        """
-
-        import numpy as np
-
-        if c95 is None:
-            if loc is None or scale is None:
-                raise ValueError('Please indicate loc/scale or c95')
-        else:
-            c95 = np.log(np.array(c95))
-            loc = (c95[0] + c95[1]) / 2
-            scale = (c95[1] - c95[0]) / 3.92
-        if seed is not None:
-            np.random.seed(seed)
-
-        while True:
-
-        yield np.exp(np.random.normal(loc=loc, scale=scale, size=n))
-
-    @staticmethod
-    def uniform(low=None, high=None, n=None):
-        """Sample from a uniform distribution"""
-
-        import numpy as np
-
-        if n is None:
-            n = self.n
-        return np.random.uniform(low=low, high=high, size=n)
-
-    def from_list(self, A_list, weight, n=None):
-        import numpy as np
-        if n is None:
-            n = self.n
-        return np.random.choice(A_list, p=weight, replace=True, size=n)
-
-
-class pSampler(object):
-
-    def __init__(self, n=1e5):
-        self.n = int(n)
-
-    def from_lognormal(self, loc=1, scale=1, n=None):
-        import numpy as np
-
-        if n is None:
-            n = self.n
-        p_list = np.exp(np.random.normal(loc=loc, scale=scale, size=n))
-        return p_list / np.sum(p_list)
-
-    def from_list(self, p_list, weight=None, n=None):
-        import numpy as np
-        p_list = np.array(p_list)
-        p_list = p_list[p_list > 0]
-        if n is None:
-            n = self.n
-        p = np.random.choice(p_list, p=weight, replace=True, size=n)
-        p = sorted(p)
-        return p/np.sum(p)
-
-
-class ListSampler(object):
-
-    pass
-
-
-
-
-def from_list(self, k_list, weight, n=None):
-    import numpy as np
-    if n is None:
-        n = self.n
-    return np.random.choice(k_list, p=weight, replace=True, size=n)
-
-class ParamSimulator(object):
-    """Simulate a set of parameters for a given model
-
-
-    Attributes:
-        todo: add attributes
-
-    Methods:
-
-        todo: add methods
-
-    """
-
-    def __init__(self, parameters, model, repeat=1, seed=23, **fixed_params):
-=======
 
     def __init__(self):
         pass
@@ -144,43 +27,8 @@ class ParamSimulator(object):
             c95 ([`float`, `float`]): 95% percentile of log-normal distribution
             seed: random seed
             return_gen (bool): if return a generator or a function
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
         """
-        Initialize the simulator with model and a list of parameter pass to model for simulation
-        Args:
-            parameters (`dict`): parameters should have one of following formats:
-                [{param:value} for each sample]
-                    Sample will be named as 'S{sample_num}-{replicate_num}'
-                    any kwargs will be assigned to all samples
-                {sample_name}:{param:value} for each sample}
-                    any kwargs will be assigned to all samples
 
-<<<<<<< HEAD
-            model (`ModelBase` or callable): model to feed parameter
-            repeat (`int`): number of replicates for each parameter set
-            seed (`int`): random seed to fix in simulation for repeatability
-        """
-        import numpy as np
-
-        from ..model import ModelBase
-
-        if isinstance(model, ModelBase):
-            self.model = model.func
-        elif callable(model):
-            self.model = model
-        else:
-            raise TypeError('model should be a subclass of ModelBase or a callable')
-
-        # determine number of samples to simulate from parameters
-        if isinstance(parameters, list):
-            parameters = {f'S{ix}': parameter for ix, parameter in enumerate(parameters)}
-
-        def expand_param(params, r):
-            temp = {}
-            for sample_key, sample_param in params.items():
-                temp.update({f'{sample_key}-{ix}': sample_param for ix in range(r)})
-            return temp
-=======
         import numpy as np
 
         if c95 is None:
@@ -233,138 +81,8 @@ class ParamSimulator(object):
             seed: random seed
             return_gen (bool): return a generator if True, else return
 
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
 
-        if repeat > 1:
-            parameters = expand_param(parameters, repeat)
-        self.parameters = {sample_name: {**fixed_params, **parameter_dict}
-                           for sample_name, parameter_dict in parameters.items()}
-        self.seed = seed
-        if seed is not None:
-            np.random.seed(seed)
-        self.results = None
-
-    def generate(self, seed=None):
-        """Return a generated parameter
-
-        Return: a dict or list of dict of
-            {'data': pd.DataFrame (sparse) of data,
-             'config':
         """
-<<<<<<< HEAD
-        import numpy as np
-
-        if seed is None:
-            seed = self.seed
-        if seed is not None:
-            np.random.seed(seed)
-
-        self.results = {sample: self.model(**param) for sample, param in self.parameters.items()}
-
-    def to_pickle(self):
-        pass
-
-    def to_DataFrame(self, sparse=True, dtype='float', seed=None):
-        import pandas as pd
-        import numpy as np
-
-        if seed is None:
-            seed = self.seed
-
-        if self.results is None:
-            self.generate(seed=seed)
-
-        if sparse:
-            if dtype.lower() in ['int', 'd']:
-                dtype = pd.SparseDtype('int', fill_value=0)
-            elif dtype.lower() in ['float', 'f']:
-                dtype = pd.SparseDtype('float', fill_value=0.0)
-            return pd.DataFrame(self.results).astype(dtype)
-        else:
-            if dtype.lower() in ['int', 'd']:
-                dtype = np.int
-            elif dtype.lower() in ['float', 'f']:
-                dtype = np.float
-            return pd.DataFrame(self.results, dtype=dtype)
-
-    def to_numpy(self, seed=None):
-        import numpy as np
-
-        if seed is None:
-            seed = self.seed
-        if self.results is None:
-            self.generate(seed=seed)
-        return np.array([value for value in self.results.values()])
-
-    def to_csv(self):
-        pass
-
-
-class CountSimulator(object):
-    """Given pool initial relative abundance, kinetic model, and parameters to simulate a pool"""
-
-    def __init__(self, seq_n=1e5, samplers=None, kin_model=None, kin_param=None, c_param=None, c_model=None, seed=23):
-        """
-
-        Args:
-            kin_model (`Model` or callable): kinetic model, output should be a list of abundance of pool members
-            kin_param (`dict`): contains parameter needed for
-            c_param:
-            c_model:
-            seed:
-        """
-        import numpy as np
-
-        self.k_model = k_model
-        self.k_param = k_param
-        self.c_model = c_model
-        self.c_param = c_param
-        self.seed = seed
-        if seed is not None:
-            np.random.seed(seed)
-
-    def get_data(self, k_param=None, c_param=None, N=1, seed=None):
-        """Return a size N data for each param set in k_param
-
-        Return: a dict or list of dict of
-            {'data': pd.DataFrame (sparse) of data,
-             'config':
-        """
-
-        def get_one_data(k_param, c_param):
-            comp = self.k_model(**k_param)
-            if np.sum(comp) != 1:
-                comp = comp / np.sum(comp)
-            return self.c_model(comp, **c_param)
-
-        def get_one_config(k_param, c_param, N):
-            k_p = self.k_param.copy()
-            k_p.update(k_param)
-            c_p = self.c_param.copy()
-            c_p.update(c_param)
-
-            import pandas as pd
-
-            return {'data': pd.DataFrame(pd.SparseArray([get_one_data(k_p, c_p) for _ in range(N)]), dtype=int),
-                    'config': {'k_param': k_p, 'c_param': c_p}}
-
-        import numpy as np
-        if seed is not None:
-            np.random.seed(seed)
-
-        results = []
-
-    def to_pickle(self):
-        pass
-
-    def to_DataFrame(self):
-        pass
-
-    def to_csv(self):
-        pass
-
-
-=======
 
         import numpy as np
 
@@ -608,7 +326,6 @@ def count_simulator(model_func, params, repeat=1, seed=None):
 #         pass
 
 
->>>>>>> 1be7a02362b586e609225faad6d591384e5d1f59
 
 # ----------------------- Below from legacy ------------------------
 #
