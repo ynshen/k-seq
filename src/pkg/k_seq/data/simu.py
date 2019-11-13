@@ -16,7 +16,7 @@ class DistGenerators:
         pass
 
     @staticmethod
-    def lognormal(size=None, loc=None, scale=None, c95=None, seed=None, return_gen=True):
+    def lognormal(size=None, loc=None, scale=None, c95=None, seed=None):
         """Sample from a log-normal distribution
         indicate with `loc` and `scale`, or `c95`
 
@@ -26,7 +26,9 @@ class DistGenerators:
             scale (`float`): log variance of the distribution, default 0
             c95 ([`float`, `float`]): 95% percentile of log-normal distribution
             seed: random seed
-            return_gen (bool): if return a generator or a function
+
+        Returns:
+            a draw from distribution with given size
         """
 
         import numpy as np
@@ -41,32 +43,29 @@ class DistGenerators:
             loc = (c95[0] + c95[1]) / 2
             scale = (c95[1] - c95[0]) / 3.92
 
-        if return_gen is True:
-            if seed is not None:
-                np.random.seed(seed)
+        if seed is not None:
+            np.random.seed(seed)
 
         if size is None:
-            while True:
-                yield np.exp(np.random.normal(loc=loc, scale=scale))
+            return np.exp(np.random.normal(loc=loc, scale=scale))
         else:
-            while True:
-                yield np.exp(np.random.normal(loc=loc, scale=scale, size=size))
+            return np.exp(np.random.normal(loc=loc, scale=scale, size=size))
 
     @staticmethod
-    def uniform(low=None, high=None, size=None):
+    def uniform(low=None, high=None, size=None, seed=None):
         """Sample from a uniform distribution"""
 
         import numpy as np
 
+        if seed is not None:
+            np.random.seed(seed)
         if size is None:
-            while True:
-                yield np.random.uniform(low=low, high=high)
+            return np.random.uniform(low=low, high=high)
         else:
-            while True:
-                yield np.random.uniform(low=low, high=high, size=size)
+            return np.random.uniform(low=low, high=high, size=size)
 
     @staticmethod
-    def compo_lognormal(size, loc=None, scale=None, c95=None, seed=None, return_gen=True):
+    def compo_lognormal(size, loc=None, scale=None, c95=None, seed=None):
         """Sample a pool composition from a log-normal distribution
         indicate with `loc` and `scale`, or `c95`
 
@@ -79,8 +78,6 @@ class DistGenerators:
             scale (`float`): log variance of the distribution
             c95 ([`float`, `float`]): 95% percentile of log-normal distribution
             seed: random seed
-            return_gen (bool): return a generator if True, else return
-
 
         """
 
@@ -96,9 +93,8 @@ class DistGenerators:
         if seed is not None:
             np.random.seed(seed)
 
-        while True:
-            q = np.exp(np.random.normal(loc=loc, scale=scale, size=size))
-            yield q / np.sum(q)
+        q = np.exp(np.random.normal(loc=loc, scale=scale, size=size))
+        return q / np.sum(q)
 
 
 class PoolParamSimulator:
