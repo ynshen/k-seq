@@ -173,12 +173,34 @@ class PoolParamSimulator:
         return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
 
 
-def pool_counts_simulator(pool_size, c_list, N_list, p0,
+def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
                           kinetic_model=None, count_model=None,
                           sample_from_table=None, weights=None, replace=True,
                           reps=1, seed=None,
                           save_to=None, **param_generator):
-    """Simulate a k-seq pool counts results"""
+    """Simulate a k-seq count data given kinetic and count model
+
+    Args:
+        pool_size (int): number of unique sequences
+        c_list (list): a list of substrate concentrations for each sample, negative number means initial pool
+        N_list (list): a list of total reads in for each sample
+        p0 (list, generator, or callable returns generator): composition of initial pool
+        kinetic_model(callable or ModelBase):
+        count_model(callable or ModelBase):
+        sample_from_table (pd.DataFrame): optional to sample sequences from given table
+        weights (list or str): weights/col of weight for sampling from table
+        replace (bool): if sample with replacement
+        reps (int): number of replicates for each c, N
+        seed (int): global random seed to use
+        save_to (path): path to the folder to save simulated results
+        **param_generator: keyword arguments of list, generator or callable returns generator to draw parameters
+
+    Returns:
+        X (pd.DataFrame): c, n value for samples
+        y (pd.DataFrame): sequence counts for sequence samples
+        param_table (pd.DataFrame): table list the parameters of simulated pool
+
+    """
 
     from ..model import pool
     import pandas as pd
@@ -195,14 +217,14 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0,
         print('No count model provided, use MultiNomial')
 
     if sample_from_table is None:
-        param_table = simu.PoolParamSimulator.sample_from_ind_dist(
+        param_table = PoolParamSimulator.sample_from_ind_dist(
             p0=p0,
             seed=seed,
             size=pool_size,
             **param_generator
         )
     else:
-        param_table = simu.PoolParamSimulator.sample_from_dataframe(
+        param_table = PoolParamSimulator.sample_from_dataframe(
             df=sample_from_table,
             size=pool_size,
             replace=replace,
@@ -214,33 +236,33 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0,
     pool_model = pool.PoolModel(count_model=count_model,
                                 kinetic_model=kinetic_model,
                                 param_table=param_table)
-    X = {}
-    y = {}
+    x = {}
+    Y = {}
     for sample_ix, (c, n) in enumerate(zip(c_list, N_list)):
         if reps is None or reps == 1:
-            X[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
-            y[f"s{sample_ix}"] = {'c': c, 'n': n}
+            Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
+            x[f"s{sample_ix}"] = {'c': c, 'n': n}
         else:
             for rep in range(reps):
-                X[f"s{sample_ix}-{rep}"] = pool_model(c=c, N=n)
-                y[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
-    X = pd.DataFrame.from_dict(X, orient='columns')
-    y = pd.DataFrame.from_dict(y, orient='columns')
-    X.index.name = 'sample'
-    y.index.name = 'seq'
+                Y[f"s{sample_ix}-{rep}"] = pool_model(c=c, N=n)
+                x[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
+    x = pd.DataFrame.from_dict(x, orient='columns')
+    Y = pd.DataFrame.from_dict(Y, orient='columns')
+    x.index.name = 'param'
+    Y.index.name = 'seq'
 
     if save_to is not None:
         from pathlib import Path
         save_path = Path(save_to)
         if save_path.suffix == '':
             save_path.mkdir(parents=True, exist_ok=True)
-            X.to_csv(f'{save_path}/X.csv')
-            y.to_csv(f'{save_path}/y.csv')
+            x.to_csv(f'{save_path}/x.csv')
+            Y.to_csv(f'{save_path}/Y.csv')
             param_table.to_csv(f'{save_path}/truth.csv')
         else:
             raise TypeError('save_to should be a directory')
 
-    return X, y, param_table
+    return x, Y, param_table
 
 
 # def count_simulator(model, params, repeat=1, seed=None):
