@@ -72,8 +72,11 @@ class PoolModel(ModelBase):
 
         pt = self.kinetic_model(**kinetic_params)
         if np.sum(pt) != 1:
-            pt = pt / np.sum(pt)
-        return self.count_model(pt, **count_params)
+            # if the sum up is not one, also respond the new absolute amount
+            return pt, self.count_model(pt / np.sum(pt), **count_params)
+        else:
+            # if sum up to one, only return the counts
+            return self.count_model(pt, **count_params)
 
     def predict(self, **params):
         """Wrapper over func, can accept parameters to overwrite current ones if exist"""

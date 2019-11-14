@@ -473,7 +473,7 @@ class SeqTable(object):
             print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
             import pickle
             from ..utility.file_tools import read_pickle
-            byo_doped =  read_pickle(BYO_DOPED_PKL)
+            byo_doped = read_pickle(BYO_DOPED_PKL)
             print('Imported!')
 
         return byo_doped
