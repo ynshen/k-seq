@@ -1,5 +1,5 @@
 """
-Module contains the method of transform `SeqTable` including
+Module contains the classes to transform tables (`pd.DataFrame` or `SeqTable`) instance including
     - normalize by spike-in
     - normalize by total amount
     - transform to relative abundance
@@ -11,14 +11,22 @@ import pandas as pd
 from .seq_table import SeqTable
 
 
-class TransformerBase(object):
+class Transformer(object):
+    """Base class type for transformer
+
+    Necessary components for a Transformer
+        - Attributes to store parameters
+        - A target table to apply transformation
+        - A static `func` function to calculate transformation
+        - A `apply` function to wrap func
+    """
 
     def __init__(self, target=None):
         self.target = target
         pass
 
     @staticmethod
-    def func(target):
+    def _func(target):
         """core function, input an `pd.Dataframe`, output an transformed `pd.Dataframe`. Should NOT be used alone"""
         raise NotImplementedError()
 
@@ -31,12 +39,13 @@ class TransformerBase(object):
         if target is None:
             raise ValueError('No valid target found')
 
-        return self.func(target=target)
+        return self._func(target=target)
 
 
-class SpikeInNormalizer(TransformerBase):
+class SpikeInNormalizer(Transformer):
     """
     Normalizer using spike-in information
+    todo: add attributes of spike-in
     """
 
     def __repr__(self):
@@ -110,7 +119,7 @@ class SpikeInNormalizer(TransformerBase):
             self.norm_factor = None
 
     @staticmethod
-    def func(target, norm_factor, **kwargs):
+    def _func(target, norm_factor, **kwargs):
 
         def sample_normalize_wrapper(norm_factor):
 
@@ -143,7 +152,7 @@ class SpikeInNormalizer(TransformerBase):
         if isinstance(target, SeqTable):
             target = target.table
 
-        return self.func(target=target, norm_factor=norm_factor)
+        return self._func(target=target, norm_factor=norm_factor)
 
     def spike_in_peak_plot(self, target=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
                            marker_list=None, color_list=None, err_guild_lines=None,
@@ -235,18 +244,19 @@ class SpikeInNormalizer(TransformerBase):
         return ax
 
 
-class DnaAmountNormalizer(TransformerBase):
-    """todo: check if finished"""
+class DnaAmountNormalizer(Transformer):
+    """Normalize the DNA amount by total DNA amount in each sample
+    """
 
-    def __init__(self, target, dna_amount, exclude_spike_in=True, spike_in_members=None):
+    def __init__(self, dna_amount, target=None, unit=None):
         super().__init__(target)
         self.target = target
         self.dna_amount = dna_amount
-        self.exclude_spike_in = exclude_spike_in
-        self.spike_in_members = spike_in_members
+        self.unit = unit
+        self.norm_factor = None
 
     @staticmethod
-    def func(target, norm_factor):
+    def _func(target, norm_factor):
         """Norm factor here should be per seq amount calculated from total DNA amount"""
 
         def sample_normalize(sample):
@@ -254,29 +264,22 @@ class DnaAmountNormalizer(TransformerBase):
 
         return target.apply(sample_normalize, axis=0)
 
-    @staticmethod
-    def _get_norm_factor(count_table, dna_amount, exclude_spike_in=True, spike_in_members=None):
-        """Calculate the norm factor for per seq amount
+    def apply(self, target=None, dna_amount=None):
+        """Transform counts to absolute amount based on given total DNA amount
 
-        Args:
-            count_table (`pd.DataFrame`): contains count info
-            dna_amount (`dict`): a dictionary {sample_name: dna_amount}
-            exclude_spike_in (`bool`): don't include spike-in sequences in total amount if True
-            spike_in_members (list of `str`): list of spike_in sequences
+            Args:
+                target (pd.DataFrame): contains counts of sequences in samples
 
-        Returns:
-            a `dict`: {sample_name: norm_factor}
+                dna_amount (dict): a dictionary {sample_name: total_dna_amount}
+
+                    exclude_spike_in (bool): if exclude spike-in sequences in total amount
+                    spike_in_members (list of str): list of spike_in sequences
+
+                Returns:
+                    a dict: {sample_name: norm_factor}
+                    where sequence amount = sequence counts * norm_factor
         """
 
-        if exclude_spike_in is True:
-            if spike_in_members is None:
-                raise ValueError('spike_in_members is None')
-            else:
-                count_table = count_table[~count_table.index.isin(spike_in_members)]
-
-        return {sample: dna_am/count_table[sample].sum() for sample, dna_am in dna_amount.items()}
-
-    def apply(self, target=None, dna_amount=None, exclude_spike_in=True, spike_in_members=None):
         if target is None:
             target = self.target
         if target is None:
@@ -285,24 +288,14 @@ class DnaAmountNormalizer(TransformerBase):
             dna_amount = self.dna_amount
         if dna_amount is None:
             raise ValueError('No valid dna_amount found')
-        if spike_in_members is None:
-            spike_in_members = self.spike_in_members
-        if spike_in_members is None:
-            # try to extract if still None
-            try:
-                spike_in_members = target.spike_in.spike_in_members
-            except:
-                raise ValueError('No valid spike_in_members found')
-        if isinstance(target, pd.DataFrame):
-            pass
-        else:
+        if not isinstance(target, pd.DataFrame):
             target = target.table
-        self.func(target=target.table,
-                  norm_factor=self._get_norm_factor(target, dna_amount=dna_amount, exclude_spike_in=exclude_spike_in,
-                                                    spike_in_members=spike_in_members))
+        self.norm_factor = {sample: dna_am / target[sample].sum() for sample, dna_am in dna_amount.items()}
+        self._func(target=target,
+                   norm_factor=self.norm_factor)
 
 
-class ReactedFractionNormalizer(TransformerBase):
+class ReactedFractionNormalizer(Transformer):
     """Get reacted fraction of each sequence from an absolute amount table"""
 
     def __init__(self, target, input_pools, abs_amnt_table=None, reduce_method='median', remove_zero=True):
@@ -314,7 +307,7 @@ class ReactedFractionNormalizer(TransformerBase):
         self.remove_zero = True
 
     @staticmethod
-    def func(target, input_pools, reduce_method='median'):
+    def _func(target, input_pools, reduce_method='median'):
         """Convert absolute amount to reacted fraction
 
         Args:
@@ -369,7 +362,7 @@ class ReactedFractionNormalizer(TransformerBase):
         if remove_zero is None:
             remove_zero = self.remove_zero
 
-        frac_table = self.func(target=target, input_pools=input_pools, reduce_method=reduce_method)
+        frac_table = self._func(target=target, input_pools=input_pools, reduce_method=reduce_method)
         if remove_zero:
             return frac_table[frac_table.sum(axis=1) > 0]
         else:

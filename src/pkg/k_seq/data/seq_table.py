@@ -203,50 +203,6 @@ class SeqTable(object):
         else:
             self._seq_list = seq_list
 
-#     def add_norm_table(self, norm_fn, table_name, axis=0):
-#         setattr(self, table_name, self.table.apply(norm_fn, axis=axis))
-#
-#     def filter_value(self, filter_fn, axis=0, inplace=True):
-#         "implement the elementwise filter for values, axis=-1 for elementwise, "
-#         pass
-#
-#     def filter_axis(self, filter, axis='sample', inplace=True):
-#         allowed_axis = {
-#             'sample': 'sample',
-#             'observation': 'sample',
-#             1: 'sample',
-#             'seq': 'sequence',
-#             'sequences': 'sequence',
-#             'seqs': 'sequences',
-#             0: 'sequences'
-#         }
-#         if isinstance(axis, str):
-#             axis = axis.lower()
-#         if axis not in allowed_axis.keys():
-#             raise ValueError('Unknown axis, please use sample or sequence')
-#         else:
-#             axis = allowed_axis[axis]
-#         if axis == 'sample':
-#             handle = self.sample_list.copy()
-#         else:
-#             handle = self.seq_list.copy()
-#         if callable(filter):
-#             handle = handle[handle.map(filter)]
-#         elif isinstance(filter, list):
-#             handle = handle[handle.isin(filter)]
-#
-#         if inplace:
-#             obj = self
-#         else:
-#             from copy import deepcopy
-#             obj = deepcopy(self)
-#         if axis == 'sample':
-#             obj.sample_list = handle
-#         else:
-#             obj.seq_list = handle
-#         if not inplace:
-#             return obj
-
     @classmethod
     def from_count_files(cls,
                          file_root, file_list=None, pattern_filter=None, black_list=None, name_pattern=None, sort_by=None,
@@ -302,7 +258,6 @@ class SeqTable(object):
         if 'spike_in_seq' in kwargs.keys():
             seq_table.add_spike_in(**kwargs)
 
-        # todo: add total dna amount normalizer if applicable
         if 'dna_amount' in kwargs.keys():
             seq_table.add_total_dna_amount(**kwargs)
 
@@ -315,9 +270,13 @@ class SeqTable(object):
                 SpikeInNormalizer(target=self, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
                                   radius=radius, unit=dna_unit, blacklist=black_list))
 
-    def add_total_dna_amount(self, dna_amount, dna_unit=None):
+    def add_total_dna_amount(self, dna_amount, exclude_spike_in=True, spike_in_members=True, dna_unit=None):
         """todo: add total DNA normalizer"""
-        pass
+        from .transform import DnaAmountNormalizer
+        setattr(self, 'dna_amount', DnaAmountNormalizer(target=self, dna_amount=dna_amount,
+                                                        exclude_spike_in=exclude_spike_in,
+                                                        spike_in_members=spike_in_members,
+                                                        unit=dna_unit))
 
     def sample_overview(self):
         import numpy as np
@@ -352,6 +311,13 @@ class SeqTable(object):
                 info['spike-in rad'] = self.spike_in.radius
                 info['spike-in pct'] = np.sum((self.table[sample_name][self.spike_in.spike_in_members]).sparse.to_dense()) /\
                                        info['total counts']
+            except AttributeError:
+                pass
+            except KeyError:
+                pass
+            try:
+                info[f"dna amount (from total dna{'' if self.dna_amount is None else ', ' + self.dna_amount.unit})"] = \
+                    self.dna_amount.dna_amount[sample_name]
             except AttributeError:
                 pass
             except KeyError:
@@ -399,17 +365,28 @@ class SeqTable(object):
             raise NotImplementedError(f'Dataset {dataset} is not implemented')
 
     @classmethod
-    def _load_byo_doped(cls, from_count_file=False, count_file_path=None, pickled_path=None):
+    def _load_byo_doped(cls, from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None):
         """todo: add dataset description"""
         BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
         BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
             else count_file_path
+        BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
+            else doped_norm_path
 
         if from_count_file:
             import numpy as np
+            import pandas as pd
 
             print('Generate SeqTable instance for BYO-doped pool...')
             print(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
+            # parse dna amount file
+            dna_amount = pd.read_table(BYO_DOPED_NORM_FILE, header=None).rename(columns={0: 'dna_inv'})
+            dna_amount['dna_amount'] = 1 / dna_amount['dna_inv']
+            indices = ['R0']
+            for sample in 'ABCDE':
+                for rep in range(3):
+                    indices.append(f'{sample}{rep + 1}')
+            dna_amount = {name: dna_amount['dna_amount'][ix] for ix, name in enumerate(indices)}
 
             byo_doped = cls.from_count_files(
                 file_root=BYO_DOPED_COUNT_FILE,
@@ -429,17 +406,18 @@ class SeqTable(object):
                 ),
                 radius=4,
                 dna_unit='ng',
+                dna_amount=dna_amount,
                 input_sample_name=['R0']
             )
 
             # Add standard filters
             from . import filters
             spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
-            seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove
-            # singleton_filter = filters.SingletonFilter(target=byo_doped)
+            seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove non-21 nt seq
+            # singleton_filter = filters.SingletonFilter(target=byo_doped)  # we keep even singletons
 
             # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
-            byo_doped.table_filtered = seq_length_filter.get_filtered_table(
+           byo_doped.table_filtered = seq_length_filter.get_filtered_table(
                     target=spike_in_filter.get_filtered_table()
             )
 
@@ -453,7 +431,10 @@ class SeqTable(object):
             }}, target=byo_doped.table_filtered)
 
             # normalized using spike-in
-            byo_doped.table_filtered_abs_amnt = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
+            byo_doped.table_filtered_abs_amnt_spike_in = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
+
+            # normalized using total dna amount
+            byo_doped.table_filtered_abs_amnt_total_dna = byo_doped.dna_amount.apply(target=byo_doped.table_filtered)
 
             # calculate reacted faction, remove seqs are not in input pools
             from .transform import ReactedFractionNormalizer
@@ -462,7 +443,7 @@ class SeqTable(object):
                                                      abs_amnt_table='table_filtered_abs_amnt',
                                                      reduce_method='median',
                                                      remove_zero=True)
-            byo_doped.table_filtered_reacted_frac = reacted_frac.apply()
+            byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(target=)
 
             # further filter out sequences that are not detected in all samples
             min_detected_times_filter = filters.DetectedTimesFilter(target=byo_doped.table_filtered_reacted_frac,
@@ -478,6 +459,49 @@ class SeqTable(object):
 
         return byo_doped
 
+    #     def add_norm_table(self, norm_fn, table_name, axis=0):
+    #         setattr(self, table_name, self.table.apply(norm_fn, axis=axis))
+    #
+    #     def filter_value(self, filter_fn, axis=0, inplace=True):
+    #         "implement the elementwise filter for values, axis=-1 for elementwise, "
+    #         pass
+    #
+    #     def filter_axis(self, filter, axis='sample', inplace=True):
+    #         allowed_axis = {
+    #             'sample': 'sample',
+    #             'observation': 'sample',
+    #             1: 'sample',
+    #             'seq': 'sequence',
+    #             'sequences': 'sequence',
+    #             'seqs': 'sequences',
+    #             0: 'sequences'
+    #         }
+    #         if isinstance(axis, str):
+    #             axis = axis.lower()
+    #         if axis not in allowed_axis.keys():
+    #             raise ValueError('Unknown axis, please use sample or sequence')
+    #         else:
+    #             axis = allowed_axis[axis]
+    #         if axis == 'sample':
+    #             handle = self.sample_list.copy()
+    #         else:
+    #             handle = self.seq_list.copy()
+    #         if callable(filter):
+    #             handle = handle[handle.map(filter)]
+    #         elif isinstance(filter, list):
+    #             handle = handle[handle.isin(filter)]
+    #
+    #         if inplace:
+    #             obj = self
+    #         else:
+    #             from copy import deepcopy
+    #             obj = deepcopy(self)
+    #         if axis == 'sample':
+    #             obj.sample_list = handle
+    #         else:
+    #             obj.seq_list = handle
+    #         if not inplace:
+    #             return obj
 
     #     #
     #     # @property
