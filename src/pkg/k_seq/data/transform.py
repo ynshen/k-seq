@@ -298,72 +298,62 @@ class DnaAmountNormalizer(Transformer):
 class ReactedFractionNormalizer(Transformer):
     """Get reacted fraction of each sequence from an absolute amount table"""
 
-    def __init__(self, target, input_pools, abs_amnt_table=None, reduce_method='median', remove_zero=True):
+    def __init__(self, input_pools, target=None, reduce_method='median', remove_zero=True):
         super().__init__()
         self.target = target
         self.input_pools = input_pools
-        self.abs_amnt_table = abs_amnt_table
         self.reduce_method = reduce_method
-        self.remove_zero = True
+        self.remove_zero = remove_zero
 
     @staticmethod
-    def _func(target, input_pools, reduce_method='median'):
-        """Convert absolute amount to reacted fraction
+    def _func(target, input_samples, reduce_method='median', remove_zero=True):
 
-        Args:
-            target (`pd.DataFrame`): the table of absolute amount, including input pools
-            input_pools (list of `str`): list of indices of input pools
-            reduce_method (str or callable):
-
-        Returns:
-
-        """
-        if not isinstance(target, pd.DataFrame):
-            raise TypeError('target is not a pd.DataFrame')
         method_mapper = {
             'med': np.nanmedian,
             'median': np.nanmedian,
             'mean': np.nanmean,
             'avg': np.nanmean
         }
-        if not callable(reduce_method):
+        if callable(reduce_method):
+            base = reduce_method(target[input_samples])
+        else:
             if reduce_method.lower() not in method_mapper.keys():
                 raise ValueError('Unknown reduce_method')
             else:
-                reduce_method = method_mapper[reduce_method]
-        base = reduce_method(target[input_pools], axis=1)
-        mask = base > 0
-        return target.loc[mask, ~target.columns.isin(input_pools)].divide(base[mask], axis=0)
+                base = method_mapper[reduce_method](target[input_samples], axis=1)
 
-    def apply(self, target=None, abs_amnt_table=None, input_pools=None, reduce_method=None, remove_zero=None):
+        mask = base > 0 # if any does not exist in input samples
+        reacted_frac = target.loc[mask, ~target.columns.isin(input_samples)].divide(base[mask], axis=0)
+        if remove_zero:
+            return reacted_frac[reacted_frac.sum(axis=1) > 0]
+        else:
+            return reacted_frac
+
+    def apply(self, target=None, input_samples=None, reduce_method=None, remove_zero=None):
+        """Convert absolute amount to reacted fraction
+            Args:
+                target (pd.DataFrame): the table with absolute amount to normalize on inputs, including input pools
+                input_pools (list of str): list of indices of input pools
+                reduce_method (str or callable): 'mean' or 'median' or a callable apply on a pd.DataFrame to list-like
+                remove_zero (bool): if will remove all-zero seqs from output table
+
+            Returns:
+                pd.DataFrame
+        """
         if target is None:
             target = self.target
         if target is None:
             raise ValueError('No valid target found')
-        if abs_amnt_table is None:
-            abs_amnt_table = self.abs_amnt_table
         if input_pools is None:
             input_pools = self.input_pools
         if input_pools is None:
-            # try to extract from target
-            try:
-                input_pools = target.grouper.input.group
-            except:
-                raise ValueError('No input_pools found')
+            raise ValueError('No input_pools found')
         if reduce_method is None:
             reduce_method = self.reduce_method
-
         if not isinstance(target, pd.DataFrame):
-            if abs_amnt_table is None:
-                target = getattr(target, 'table')
-            else:
-                target = getattr(target, abs_amnt_table)
-
+            target = getattr(target, 'table')
         if remove_zero is None:
             remove_zero = self.remove_zero
 
-        frac_table = self._func(target=target, input_pools=input_pools, reduce_method=reduce_method)
-        if remove_zero:
-            return frac_table[frac_table.sum(axis=1) > 0]
-        else:
-            return frac_table
+        return self._func(target=target, input_samples=input_samples,
+                          reduce_method=reduce_method, remove_zero=remove_zero)
