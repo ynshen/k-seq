@@ -154,94 +154,97 @@ class SpikeInNormalizer(Transformer):
 
         return self._func(target=target, norm_factor=norm_factor)
 
-    def spike_in_peak_plot(self, target=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
-                           marker_list=None, color_list=None, err_guild_lines=None,
-                           legend_off=False, ax=None, figsize=None, save_fig_to=None):
-        """Plot the distribution of spike_in peak
-        Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
 
-        Args:
-            target (`SeqTable` or `pd.DataFrame`): dataset to plot
-            sample_list (list of `str`): samples to show. All samples will show if None
-            max_dist (`int`): maximal edit distance to survey. Default 15
-            norm_on_center (`bool`): if the counts/abundance are normalized to then center (exact spike in)
-            log_y (`bool`): if set the y scale as log
-            marker_list (list of `str`): overwrite default marker scheme if not `None`, same length and order as valid samples
-            color_list (list of `str`): overwrite default color scheme if not `None`, same length and order as valid samples
-            err_guild_lines (list of `float`): add a series of guild lines indicate the distribution only from given error rate,
-              if not `None`
-            legend_off (`bool`): do not show the legend if True
-            ax (`matplotlib.Axis`): if use external ax object to plot. Create a new figure if `None`
-            save_fig_to (`str`): save the figure to file if not None
+def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
+                       marker_list=None, color_list=None, err_guild_lines=None,
+                       legend_off=False, legend_col=2, ax=None, figsize=None, save_fig_to=None):
+    """Plot the distribution of spike_in peak
+    Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
 
-        """
+    Args:
+        target (`SeqTable` or `pd.DataFrame`): dataset to plot
+        sample_list (list of `str`): samples to show. All samples will show if None
+        max_dist (`int`): maximal edit distance to survey. Default 15
+        norm_on_center (`bool`): if the counts/abundance are normalized to then center (exact spike in)
+        log_y (`bool`): if set the y scale as log
+        marker_list (list of `str`): overwrite default marker scheme if not `None`, same length and order as valid samples
+        color_list (list of `str`): overwrite default color scheme if not `None`, same length and order as valid samples
+        err_guild_lines (list of `float`): add a series of guild lines indicate the distribution only from given error rate,
+          if not `None`
+        legend_off (`bool`): do not show the legend if True
+        ax (`matplotlib.Axis`): if use external ax object to plot. Create a new figure if `None`
+        save_fig_to (`str`): save the figure to file if not None
 
-        from ..utility.plot_tools import PlotPreset
-        import matplotlib.pyplot as plt
-        import numpy as np
+    """
 
-        if target is None:
-            target = self.target
+    from ..utility.plot_tools import PlotPreset
+    import matplotlib.pyplot as plt
+    import numpy as np
 
-        if sample_list is None:
-            sample_list = target.columns.values
-        if marker_list is None:
-            marker_list = PlotPreset.markers(num=len(sample_list), with_line=True)
-        elif len(marker_list) != len(sample_list):
-            raise Exception('Error: length of marker_list does not align with the number of valid samples to plot')
-        if color_list is None:
-            color_list = PlotPreset.colors(num=len(sample_list))
-        elif len(color_list) != len(sample_list):
-            raise Exception('Error: length of color_list does not align with the number of valid samples to plot')
+    if seq_table is None:
+        seq_table = spike_in.target.table
+    if sample_list is None:
+        sample_list = seq_table.columns.values
+    if marker_list is None:
+        marker_list = PlotPreset.markers(num=len(sample_list), with_line=True)
+    elif len(marker_list) != len(sample_list):
+        raise Exception('Error: length of marker_list does not align with the number of valid samples to plot')
+    if color_list is None:
+        color_list = PlotPreset.colors(num=len(sample_list))
+    elif len(color_list) != len(sample_list):
+        raise Exception('Error: length of color_list does not align with the number of valid samples to plot')
 
-        if ax is None:
-            if figsize is None:
-                figsize = (max_dist / 2, 6) if legend_off else (max_dist / 2 + 5, 6)
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (max_dist / 2, 6) if legend_off else (max_dist / 2 + 5, 6)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
-        dist_series = pd.Series(data=np.arange(max_dist + 1), index=np.arange(max_dist + 1))
+    dist_series = pd.Series(data=np.arange(max_dist + 1), index=np.arange(max_dist + 1))
 
-        def get_sample_counts(dist):
-            seqs = self.dist_to_center[self.dist_to_center == dist].index
-            return target.loc[seqs].sum(axis=0)
+    def get_sample_counts(dist):
+        seqs = spike_in.dist_to_center[spike_in.dist_to_center == dist].index
+        return seq_table.loc[seqs].sum(axis=0)
 
-        peak_counts = dist_series.apply(get_sample_counts)
-        if norm_on_center:
-            peak_counts = peak_counts / peak_counts.loc[0]
+    peak_counts = dist_series.apply(get_sample_counts)
+    if norm_on_center:
+        peak_counts = peak_counts / peak_counts.loc[0]
 
-        for sample, color, marker in zip(sample_list, color_list, marker_list):
-            ax.plot(dist_series, peak_counts[sample], marker, color=color, label=sample, alpha=0.5, markeredgewidth=2)
-        if log_y:
-            ax.set_yscale('log')
-        ylim = ax.get_ylim()
-        if err_guild_lines is not None:
-            if not norm_on_center:
-                raise ValueError('Can only add guidelines if peaks are normed on center')
-            # assuming a fix error rate per nt, iid on binom
-            from scipy.stats import binom
-            if isinstance(err_guild_lines, (float, int)):
-                err_guild_lines = [err_guild_lines]
-            colors = PlotPreset.colors(num=len(err_guild_lines))
-            for ix, (p, color) in enumerate(zip(err_guild_lines, colors)):
-                rv = binom(len(self.spike_in_seq), p)
-                pmfs = np.array([rv.pmf(x) for x in dist_series])
-                pmfs_normed = pmfs / pmfs[0]
-                ax.plot(dist_series, pmfs_normed,
-                        color=color, ls='--', alpha=(ix + 1) / len(err_guild_lines), label=f'p = {p}')
-        ax.set_ylim(ylim)
-        y_label = ''
-        if norm_on_center:
-            y_label += ' normed'
-        y_label += ' counts'
-        ax.set_ylabel(y_label.title(), fontsize=14)
-        ax.set_xlabel('Edit Distance to Spike-in Center', fontsize=14)
-        if not legend_off:
-            ax.legend(loc=[1.02, 0], fontsize=14, frameon=False, ncol=2)
-        plt.tight_layout()
+    for sample, color, marker in zip(sample_list, color_list, marker_list):
+        ax.plot(dist_series, peak_counts[sample], marker, color=color, label=sample,
+                ls='-', alpha=0.5, markeredgewidth=2)
+    if log_y:
+        ax.set_yscale('log')
+    ylim = ax.get_ylim()
+    if err_guild_lines is not None:
+        if not norm_on_center:
+            raise ValueError('Can only add guidelines if peaks are normed on center')
+        # assuming a fix error rate per nt, iid on binom
+        from scipy.stats import binom
+        if isinstance(err_guild_lines, (float, int)):
+            err_guild_lines = [err_guild_lines]
+        colors = PlotPreset.colors(num=len(err_guild_lines))
+        for ix, (p, color) in enumerate(zip(err_guild_lines, colors)):
+            rv = binom(len(spike_in.spike_in_seq), p)
+            pmfs = np.array([rv.pmf(x) for x in dist_series])
+            pmfs_normed = pmfs / pmfs[0]
+            ax.plot(dist_series, pmfs_normed,
+                    color=color, ls='--', alpha=(ix + 1) / len(err_guild_lines), label=f'p = {p}')
+    ax.set_ylim(ylim)
+    y_label = ''
+    if norm_on_center:
+        y_label += ' normed'
+    y_label += ' counts'
+    ax.set_ylabel(y_label.title(), fontsize=14)
+    ax.set_xlabel('Edit Distance to Spike-in Center', fontsize=14)
+    if not legend_off:
+        ax.legend(loc=[1.02, 0], fontsize=9, frameon=False, ncol=legend_col)
+    plt.tight_layout()
 
-        if save_fig_to:
-            plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-        return ax
+    if save_fig_to:
+        fig.patch.set_facecolor('none')
+        fig.patch.set_alpha(0)
+        plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+    return ax
 
 
 class DnaAmountNormalizer(Transformer):
@@ -290,18 +293,18 @@ class DnaAmountNormalizer(Transformer):
             raise ValueError('No valid dna_amount found')
         if not isinstance(target, pd.DataFrame):
             target = target.table
-        self.norm_factor = {sample: dna_am / target[sample].sum() for sample, dna_am in dna_amount.items()}
-        self._func(target=target,
-                   norm_factor=self.norm_factor)
+        self.norm_factor = {sample: dna_am / target[sample].sparse.to_dense().sum()
+                            for sample, dna_am in dna_amount.items()}
+        return self._func(target=target, norm_factor=self.norm_factor)
 
 
 class ReactedFractionNormalizer(Transformer):
     """Get reacted fraction of each sequence from an absolute amount table"""
 
-    def __init__(self, input_pools, target=None, reduce_method='median', remove_zero=True):
+    def __init__(self, input_samples, target=None, reduce_method='median', remove_zero=True):
         super().__init__()
         self.target = target
-        self.input_pools = input_pools
+        self.input_samples = input_samples
         self.reduce_method = reduce_method
         self.remove_zero = remove_zero
 
@@ -333,7 +336,7 @@ class ReactedFractionNormalizer(Transformer):
         """Convert absolute amount to reacted fraction
             Args:
                 target (pd.DataFrame): the table with absolute amount to normalize on inputs, including input pools
-                input_pools (list of str): list of indices of input pools
+                input_samples (list of str): list of indices of input pools
                 reduce_method (str or callable): 'mean' or 'median' or a callable apply on a pd.DataFrame to list-like
                 remove_zero (bool): if will remove all-zero seqs from output table
 
@@ -344,10 +347,10 @@ class ReactedFractionNormalizer(Transformer):
             target = self.target
         if target is None:
             raise ValueError('No valid target found')
-        if input_pools is None:
-            input_pools = self.input_pools
-        if input_pools is None:
-            raise ValueError('No input_pools found')
+        if input_samples is None:
+            input_samples = self.input_samples
+        if input_samples is None:
+            raise ValueError('No input_samples found')
         if reduce_method is None:
             reduce_method = self.reduce_method
         if not isinstance(target, pd.DataFrame):

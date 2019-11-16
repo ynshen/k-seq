@@ -263,20 +263,17 @@ class SeqTable(object):
 
         return seq_table
 
-    def add_spike_in(self, spike_in_seq, spike_in_amount, radius=2, dna_unit=None, black_list=None):
+    def add_spike_in(self, spike_in_seq, spike_in_amount, radius=2, dna_unit=None, black_list=None, **kwargs):
         """Add spike in """
         from .transform import SpikeInNormalizer
         setattr(self, 'spike_in',
                 SpikeInNormalizer(target=self, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
                                   radius=radius, unit=dna_unit, blacklist=black_list))
 
-    def add_total_dna_amount(self, dna_amount, exclude_spike_in=True, spike_in_members=True, dna_unit=None):
+    def add_total_dna_amount(self, dna_amount, dna_unit=None, **kwargs):
         """todo: add total DNA normalizer"""
         from .transform import DnaAmountNormalizer
-        setattr(self, 'dna_amount', DnaAmountNormalizer(target=self, dna_amount=dna_amount,
-                                                        exclude_spike_in=exclude_spike_in,
-                                                        spike_in_members=spike_in_members,
-                                                        unit=dna_unit))
+        setattr(self, 'dna_amount', DnaAmountNormalizer(target=self, dna_amount=dna_amount, unit=dna_unit))
 
     def sample_overview(self):
         import numpy as np
@@ -325,7 +322,7 @@ class SeqTable(object):
             return info
 
         sample_info = {sample_name: get_sample_info(self=self, sample_name=sample_name)
-                        for sample_name in self.sample_list}
+                       for sample_name in self.sample_list}
         return pd.DataFrame.from_dict(sample_info, orient='index')
 
     def seq_overview(self, target=None):
@@ -417,7 +414,7 @@ class SeqTable(object):
             # singleton_filter = filters.SingletonFilter(target=byo_doped)  # we keep even singletons
 
             # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
-           byo_doped.table_filtered = seq_length_filter.get_filtered_table(
+            byo_doped.table_filtered = seq_length_filter.get_filtered_table(
                     target=spike_in_filter.get_filtered_table()
             )
 
@@ -438,23 +435,28 @@ class SeqTable(object):
 
             # calculate reacted faction, remove seqs are not in input pools
             from .transform import ReactedFractionNormalizer
-            reacted_frac = ReactedFractionNormalizer(target=byo_doped,
-                                                     input_pools=['R0'],
-                                                     abs_amnt_table='table_filtered_abs_amnt',
+            reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
                                                      reduce_method='median',
                                                      remove_zero=True)
-            byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(target=)
+            byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(
+                target=byo_doped.table_filtered_abs_amnt_spike_in
+            )
 
+            byo_doped.table_filtered_reacted_frac_total_dna = reacted_frac.apply(
+                target=byo_doped.table_filtered_abs_amnt_total_dna
+            )
             # further filter out sequences that are not detected in all samples
-            min_detected_times_filter = filters.DetectedTimesFilter(target=byo_doped.table_filtered_reacted_frac,
-                                                                    min_detected_times=15)
+            min_detected_times_filter = filters.DetectedTimesFilter(
+                target=byo_doped.table_filtered_reacted_frac_spike_in,
+                min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
+            )
             byo_doped.table_in_all_samples = min_detected_times_filter.get_filtered_table()
             print('Finished!')
         else:
             print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
             import pickle
             from ..utility.file_tools import read_pickle
-            byo_doped =  read_pickle(BYO_DOPED_PKL)
+            byo_doped = read_pickle(BYO_DOPED_PKL)
             print('Imported!')
 
         return byo_doped
