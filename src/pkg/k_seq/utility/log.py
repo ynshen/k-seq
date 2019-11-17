@@ -40,4 +40,32 @@ class Logger:
         cls(log=log, silent=silent)
 
 
+class Timer:
+    def __init__(self, message=None, save_to=None):
+        if message:
+            self.message = message
+        else:
+            self.message = 'It took {elapsed_time:.2f} {unit}.'
+        self.save_to = save_to
+
+    def __enter__(self):
+        self.start = time()
+        return None
+
+    def __exit__(self, type, value, traceback):
+        elapsed_time = time() - self.start
+        if elapsed_time < 60:
+            unit = 'seconds'
+        elif elapsed_time < 3600:
+            unit = 'minutes'
+            elapsed_time /= 60.0
+        else:
+            unit = 'hours'
+            elapsed_time /= 3600.0
+        print('-' * 50)
+        print(self.message.format(elapsed_time=elapsed_time, unit=unit))
+        if self.save_to is not None:
+            with open(self.save_to, 'w') as f:
+                f.write(self.message.format(elapsed_time=elapsed_time, unit=unit))
+
 
