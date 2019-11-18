@@ -1,3 +1,6 @@
+import sys
+from time import time
+
 
 class Logger:
     """A simple logger to log data"""
@@ -67,5 +70,27 @@ class Timer:
         if self.save_to is not None:
             with open(self.save_to, 'w') as f:
                 f.write(self.message.format(elapsed_time=elapsed_time, unit=unit))
+
+
+class FileLogger(object):
+    """Log standard output to a file"""
+
+    def __init__(self, file_path):
+        if not '.log' in file_path:
+            self.stdout = file_path + '.log'
+        else:
+            self.stdout = file_path
+
+    def __enter__(self):
+        self.sys_stdout = sys.stdout
+        self.sys_stderr = sys.stderr
+
+        sys.stdout = open(self.stdout, 'w')
+        sys.stderr = sys.stdout
+
+    def __exit__(self, type, value, traceback):
+        sys.stdout.close()
+        sys.stdout = self.sys_stdout
+        sys.stderr = self.sys_stderr
 
 
