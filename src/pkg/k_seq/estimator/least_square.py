@@ -908,3 +908,5 @@ class BatchFitter:
 def _work_fn(worker):
     worker.fit()
     return worker
+
+
