@@ -1,4 +1,5 @@
 
+from ..data.count_data import CountData
 import cvxpy as cp
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ dev_mode = DevMode(pkg='k-seq')
 dev_mode.on()
 
 
+<<<<<<< HEAD:src/pkg/k_seq/estimator/count_model_mle_cvxpy.py
 class CountData:
     """Class to store count data info for estimators
 
@@ -99,6 +101,8 @@ class CountData:
         reacted_samples = [sample for sample in self.ctrl_vars.columns if sample not in self.input_pools]
         return self.ctrl_vars[reacted_samples]
 
+=======
+>>>>>>> mle_tf:src/pkg/k_seq/estimator/count-model_mle_cvxpy.py
 def get_convex_model(data):
     """Data is the CountData"""
 
