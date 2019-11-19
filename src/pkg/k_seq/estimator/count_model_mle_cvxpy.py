@@ -20,9 +20,6 @@ class CountData:
 
     """
 
-    def __repr__(self):
-        return self.note
-
     def __init__(self, count, ctrl_vars, input_pools, truth=None, note=None):
 
         self.count = count
