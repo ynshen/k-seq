@@ -5,6 +5,7 @@ import sys
 def kA(params):
     return params[0] * params[1]
 
+
 def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
     """Parse data table source SeqTable or a Simu Folder
 
@@ -88,7 +89,6 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1,
     batch_fitter.save_model(model_path=f'{output_dir}/model.pkl',
                             result_path=f'{output_dir}/results.pkl',
                             table_path=f'{output_dir}/table.pkl')
-
 
 def parse_args():
     import argparse

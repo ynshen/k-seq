@@ -9,12 +9,13 @@
 
 SAMPLE_NAME='bs_pct_res_bounded'
 
-python estimator_ls_byo_runner.py --table_path ./byo_doped.pkl \
+python estimator_ls_byo_runner.py \
+    --table_path ./byo_doped.pkl \
     --fit_partial 10 \
     --table_name table_filtered_reacted_frac \
     --bootstrap_num 10 \
     --bs_return_num 5 \
-    --bs_method 'pct_res' \
+    --bs_method 'data' \
     --core_num 40 \
     --output_dir ./$SAMPLE_NAME \
     --pkg_path ../ \
