@@ -18,7 +18,6 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
         x_data (list): list of x values (BYO concentration), same order as samples in work_table
     """
     from k_seq.utility.file_tools import read_pickle
-    from pathlib import Path
 
     if seq_table is not None:
         # input is seq_table
@@ -49,11 +48,14 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
     return work_table, x_data
 
 
-def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1,
+def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None, **kwargs):
+    print(sys.path)
+
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
     import numpy as np
+
 
     work_table, x_data = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
                                     fit_partial=fit_partial)
@@ -65,9 +67,11 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1,
         except:
             raise ValueError('Can not find grouper for stratified bootstrapping')
 
+    print(f'exclude_zero: {exclude_zero}')
+    pass
     batch_fitter = BatchFitter(
-        table=work_table, x_data=seq_table.x_values, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
-        model=BYOModel.func_react_frac,
+        table=work_table, x_data=x_data, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
+        model=BYOModel.func_react_frac, exclude_zero=exclude_zero,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )
     batch_fitter.fit(deduplicate=True, parallel_cores=core_num)
@@ -90,6 +94,7 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1,
                             result_path=f'{output_dir}/results.pkl',
                             table_path=f'{output_dir}/table.pkl')
 
+
 def parse_args():
     import argparse
 
@@ -101,9 +106,11 @@ def parse_args():
     parser.add_argument('--table_name', '-t', type=str, help='table to use')
     parser.add_argument('--fit_partial', '-p', type=int, default=-1,
                         help='Select top p sequences to fit, fit all seq if p is negative')
+    parser.add_argument('--exclude_zero', dest='exclude_zero', default=False, action='store_true',
+                        help='If exclude zero data in fitting')
     parser.add_argument('--bootstrap_num', '-n', type=int, default=0,
                         help='Number of bootstraps to perform')
-    parser.add_argument('--bs_record_num', '-r',type=int, default=-1,
+    parser.add_argument('--bs_record_num', '-r', type=int, default=-1,
                         help='Number of bootstrap results to save, save all if negative')
     parser.add_argument('--bs_method', '-m', choices=['pct_res', 'data', 'stratified'], default='pct_res',
                         help='Bootstrap method')

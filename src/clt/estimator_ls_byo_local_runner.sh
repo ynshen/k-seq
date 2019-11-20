@@ -1,17 +1,18 @@
 #!/bin/bash -l
 
-
 CORE=6
-OUTPUT_BASE='/mnt/storage/projects/k-seq/working/simu_data/least_squared'
-SAMPLE_NAME='on_doped_s1000_d40_data_test'
+OUTPUT_BASE='/mnt/storage/projects/k-seq/working/simu_data/least_squared/'
+SAMPLE_NAME='on_doped_s1000_d40'
+OUTPUT_NAME='on_doped_s1000_d40_pct_res_no_zero_bs_500'
 
 python estimator_ls_byo_runner.py \
-    --pkg_path /home/yuning/research/k-seq/src \
-    --simu_data /mnt/storage/projects/k-seq/datasets/simulated/on_doped_s1000_d40/ \
-    --fit_partial 10 \
-    --bootstrap_num 10 \
-    --bs_record_num 5 \
-    --bs_method 'data' \
+    --pkg_path /home/yuning/research/k-seq/src/pkg/ \
+    --simu_data /mnt/storage/projects/k-seq/datasets/simulated/$SAMPLE_NAME/ \
+    --fit_partial -1 \
+    --bootstrap_num 500 \
+    --bs_record_num 100 \
+    --bs_method 'pct_res' \
     --core_num $CORE \
-    --output_dir $OUTPUT_BASE/$SAMPLE_NAME \
-    &> $SAMPLE_NAME.log
+    --exclude_zero \
+    --output_dir $OUTPUT_BASE/$OUTPUT_NAME/ \
+    &> $OUTPUT_NAME.out
