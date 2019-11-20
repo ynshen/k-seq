@@ -18,10 +18,16 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
     from k_seq.utility.file_tools import read_pickle
     from pathlib import Path
 
-    if Path
-    seq_table = read_pickle(table_path)
-
-    work_table = getattr(seq_table, table_name)
+    if seq_table is not None:
+        # input is seq_table
+        seq_table = read_pickle(seq_table)
+        work_table = getattr(seq_table, table_name)
+        x_values = seq_table.x_values[work_table.columns]
+    elif simu_data is not None:
+        # input is simu data folder
+        import pandas as pd
+    else:
+        raise ValueError('Indicate seq_table or simu_data')
 
     if fit_partial > 0:
         seq_test = work_table.index.values[:int(fit_partial)]
