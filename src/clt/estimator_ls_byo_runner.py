@@ -5,14 +5,20 @@ import sys
 def kA(params):
     return params[0] * params[1]
 
+def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
+    """Parse data table source SeqTable or a Simu Folder
 
-def main(table_path, table_name, fit_partial, bootstrap_num, bs_record_num, bs_method, core_num, output_dir, **kwargs):
-    from k_seq.estimator.least_square import BatchFitter
-    from k_seq.model.kinetic import BYOModel
+    Args:
+        seq_table (str): path to a SeqTable instance with x_value
+
+    Returns:
+        work_table (pd.DataFrame): the work table contains sequences to fit
+        x_data (list): list of x values (BYO concentration), same order as samples in work_table
+    """
     from k_seq.utility.file_tools import read_pickle
+    from pathlib import Path
 
-    import numpy as np
-
+    if Path
     seq_table = read_pickle(table_path)
 
     work_table = getattr(seq_table, table_name)
@@ -21,6 +27,22 @@ def main(table_path, table_name, fit_partial, bootstrap_num, bs_record_num, bs_m
         seq_test = work_table.index.values[:int(fit_partial)]
     else:
         seq_test = None
+
+    return work_table, x_data
+
+
+
+
+def main(seq_table=None, table_name=None, simu_data=None, fit_partial, bootstrap_num, bs_record_num, bs_method, core_num, output_dir, **kwargs):
+    from k_seq.estimator.least_square import BatchFitter
+    from k_seq.model.kinetic import BYOModel
+
+
+    import numpy as np
+
+    work_table, x_data = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
+                                    fit_partial=fit_partial)
+
 
     if bs_method.lower() == 'stratified':
         try:
@@ -59,7 +81,9 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description='Individual least squared kinetic model fitting')
     parser.add_argument('--pkg_path', type=str, default='./')
-    parser.add_argument('--table_path', '-T', type=str, required=True, help='Path to input seq table')
+    parser.add_argument('--simu_data', type=str,
+                        help='Path to folder of simulated data')
+    parser.add_argument('--seq_table', '-T', type=str, help='Path to input seq table')
     parser.add_argument('--table_name', '-t', type=str, help='table to use')
     parser.add_argument('--fit_partial', '-p', type=int, default=-1,
                         help='Select top p sequences to fit, fit all seq if p is negative')
