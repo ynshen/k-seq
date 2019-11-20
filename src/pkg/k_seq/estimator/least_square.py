@@ -11,6 +11,7 @@ Several functions are included:
 
 todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
+<<<<<<< HEAD
 from ..estimator import EstimatorType
 from ..utility.func_tools import var_to_doc
 
@@ -32,6 +33,11 @@ __params_doc__ = {
         'metrics': ('`dict` of `callable`', "Optional. Extra metric/parameters to calculate for each estimation"),
         'rnd_seed': ('`int`', "random seed used in fitting for reproducibility")
     }
+=======
+
+
+from ..estimator import EstimatorType
+>>>>>>> ls_batch_vis
 
 
 class SingleFitter(EstimatorType):
