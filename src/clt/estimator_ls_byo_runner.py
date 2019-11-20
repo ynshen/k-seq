@@ -10,6 +10,7 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
 
     Args:
         seq_table (str): path to a SeqTable instance with x_value
+        table_name (str): the table to use in SeqTable
 
     Returns:
         work_table (pd.DataFrame): the work table contains sequences to fit
@@ -22,35 +23,42 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
         # input is seq_table
         seq_table = read_pickle(seq_table)
         work_table = getattr(seq_table, table_name)
-        x_values = seq_table.x_values[work_table.columns]
+        work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
+        x_data = seq_table.x_values[work_table.columns]
     elif simu_data is not None:
         # input is simu data folder
+        # TODO: realize following use SeqTable
         import pandas as pd
+        count_table = pd.read_csv(simu_data + '/Y.csv', index_col='seq')
+        x_data = pd.read_csv(simu_data + '/x.csv', index_col='param').loc['c']
+        input_samples = list(x_data[x_data < 0].index)
+        reacted_samples = list(x_data[x_data >= 0].index)
+        total_dna = pd.read_csv(simu_data + 'dna_amount.csv', header=None, index_col=0)[1]
+        amount_table = (count_table / count_table.sum(axis=0) * total_dna)
+        input_base = amount_table[input_samples].median(axis=1)
+        work_table = amount_table[input_base > 0][reacted_samples].divide(input_base[input_base > 0], axis=0)
+        work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
+        work_table = work_table[work_table.sum(axis=1) > 0]
     else:
         raise ValueError('Indicate seq_table or simu_data')
 
     if fit_partial > 0:
-        seq_test = work_table.index.values[:int(fit_partial)]
-    else:
-        seq_test = None
+        work_table = work_table.iloc[:fit_partial]
 
     return work_table, x_data
 
 
-
-
-def main(seq_table=None, table_name=None, simu_data=None, fit_partial, bootstrap_num, bs_record_num, bs_method, core_num, output_dir, **kwargs):
+def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1,
+         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None, **kwargs):
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
-
-
     import numpy as np
 
     work_table, x_data = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
                                     fit_partial=fit_partial)
 
-
     if bs_method.lower() == 'stratified':
+        raise NotImplementedError()
         try:
             grouper = seq_table.grouper.byo.group
         except:
@@ -58,7 +66,7 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial, bootstrap
 
     batch_fitter = BatchFitter(
         table=work_table, x_data=seq_table.x_values, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
-        model=BYOModel.func_react_frac_no_slope, seq_to_fit=seq_test,
+        model=BYOModel.func_react_frac,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )
     batch_fitter.fit(deduplicate=True, parallel_cores=core_num)
