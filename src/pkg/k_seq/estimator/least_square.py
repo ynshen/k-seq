@@ -736,8 +736,7 @@ class BatchFitter:
         else:
             self.x_data = np.array(x_data)
 
-        if weights is None:
-            self.weights = {seq: None for seq in table.index}
+        self.weights = weights
         if bounds is None:
             bounds = [np.repeat(-np.inf, len(self.parameters)),
                       np.repeat(np.inf, len(self.parameters))]
@@ -777,7 +776,11 @@ class BatchFitter:
     def worker_generator(self):
         for seq in self.seq_list:
             try:
-                yield SingleFitter.from_table(table=self.table, seq=seq, weights=self.weights[seq],
+                if self.weights is None:
+                    weights = None
+                else:
+                    weights = self.weights.loc[seq]
+                yield SingleFitter.from_table(table=self.table, seq=seq, weights=weights,
                                               **self.fit_params.__dict__)
             except:
                 raise Exception(f'Can not create fitting worker for {seq}')
@@ -840,6 +843,7 @@ class BatchFitter:
 
     def _hash(self):
         """De-duplicate rows before fitting"""
+        import pandas as pd
 
         def hash_series(row):
             return hash(tuple(row))
@@ -848,6 +852,11 @@ class BatchFitter:
         self._seq_list_dup = self.seq_list.copy()
         self.table = self.table.loc[self.seq_list]
         self._seq_to_hash = self.table.apply(hash_series, axis=1).to_dict()
+        if isinstance(self.weights, pd.DataFrame):
+            self._weights_dup = self.weights.copy()
+            self.weights.rename(index=self._seq_to_hash, inplace=True)
+            print('Weight matrix is hashed')
+            print(self.weights.index)
         self.table = self.table[~self.table.duplicated(keep='first')]
         self.table.rename(index=self._seq_to_hash, inplace=True)
         self.seq_list = [self._seq_to_hash[seq] for seq in self.seq_list]
@@ -867,6 +876,9 @@ class BatchFitter:
 
         self.results.summary = pd.Series(data=self._seq_list_dup, index=self._seq_list_dup).apply(get_summary)
         self.table = self._table_dup.copy()
+        if hasattr(self, '_weights_dup'):
+            self.weights = self._weights_dup.copy()
+            del self._weights_dup
         self.seq_list = self._seq_list_dup.copy()
         del self._table_dup
         del self._seq_list_dup
