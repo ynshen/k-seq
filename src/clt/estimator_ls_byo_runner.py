@@ -6,7 +6,7 @@ def kA(params):
     return params[0] * params[1]
 
 
-def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
+def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, inverse_weight=False):
     """Parse data table source SeqTable or a Simu Folder
 
     Args:
@@ -22,6 +22,7 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
     if seq_table is not None:
         # input is seq_table
         seq_table = read_pickle(seq_table)
+        count_table = seq_table.table
         work_table = getattr(seq_table, table_name)
         work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
         x_data = seq_table.x_values[work_table.columns]
@@ -45,10 +46,17 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1):
     if fit_partial > 0:
         work_table = work_table.iloc[:fit_partial]
 
-    return work_table, x_data
+    if inverse_weight is True:
+        sigma = count_table.loc[work_table.index, work_table.columns]
+        sigma = sigma + 0.5
+    else:
+        sigma = None
 
 
-def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False,
+    return work_table, x_data, sigma
+
+
+def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None, **kwargs):
     print(sys.path)
 
@@ -56,9 +64,8 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
     from k_seq.model.kinetic import BYOModel
     import numpy as np
 
-
-    work_table, x_data = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
-                                    fit_partial=fit_partial)
+    work_table, x_data, sigma = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
+                                             fit_partial=fit_partial, inverse_weight=inverse_weight)
 
     if bs_method.lower() == 'stratified':
         raise NotImplementedError()
@@ -68,9 +75,9 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
             raise ValueError('Can not find grouper for stratified bootstrapping')
 
     print(f'exclude_zero: {exclude_zero}')
-    pass
+    print(f'inverse_weight: {inverse_weight}')
     batch_fitter = BatchFitter(
-        table=work_table, x_data=x_data, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
+        table=work_table, x_data=x_data, weights=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.func_react_frac, exclude_zero=exclude_zero,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )
@@ -108,6 +115,8 @@ def parse_args():
                         help='Select top p sequences to fit, fit all seq if p is negative')
     parser.add_argument('--exclude_zero', dest='exclude_zero', default=False, action='store_true',
                         help='If exclude zero data in fitting')
+    parser.add_argument('--inverse_weight', dest='inverse_weight', default=False, action='store_true',
+                        help='If weight data by its count inverse (pseudo counts 0.5)')
     parser.add_argument('--bootstrap_num', '-n', type=int, default=0,
                         help='Number of bootstraps to perform')
     parser.add_argument('--bs_record_num', '-r', type=int, default=-1,

@@ -201,7 +201,7 @@ class SingleFitter(EstimatorType):
             np.random.seed(self.config.rnd_seed)
 
         point_est = self._fit()
-        params = { key: value for key, value in zip(self.parameters, point_est['params']) }
+        params = {key: value for key, value in zip(self.parameters, point_est['params']) }
         if point_est['metrics'] is not None:
             params.update(point_est['metrics'])
         self.results.point_estimation.params = pd.Series(params)
@@ -704,42 +704,6 @@ class BatchFitter:
         })
         self.fitters = None
 
-        # prep fitting params once to save time for each single fitting
-        if isinstance(x_data, pd.Series):
-            self.x_data = x_data[table.columns.values]
-        elif len(x_data) != table.shape[1]:
-            raise ValueError('x_data length and table column number does not match')
-        else:
-            self.x_data = np.array(x_data)
-
-        if weights is None:
-            weights = np.ones(len(self.x_data))
-        if bounds is None:
-            bounds = [np.repeat(-np.inf, len(self.parameters)),
-                      np.repeat(np.inf, len(self.parameters))]
-        if len(x_data) <= 1:
-            bootstrap_num = 0
-        if bootstrap_num > 0:
-            self.config.bootstrap = True
-
-        # contains parameters should pass to the single fitter
-        self.fit_params = AttrScope({
-            'x_data': self.x_data,
-            'model': self.model,
-            'parameters': self.parameters,
-            'weights': weights,
-            'bounds': bounds,
-            'opt_method': opt_method,
-            'bootstrap_num': bootstrap_num,
-            'bs_record_num': bs_record_num,
-            'bs_method': bs_method,
-            'exclude_zero': exclude_zero,
-            'init_guess': init_guess,
-            'metrics': metrics,
-            'rnd_seed': rnd_seed,
-            'grouper': grouper if bs_method == 'stratified' else None
-        })
-
         if isinstance(table, str):
             from pathlib import Path
             table_path = Path(table)
@@ -764,6 +728,41 @@ class BatchFitter:
             else:
                 raise TypeError('Unknown seq_to_fit type, is it list-like?')
 
+        # prep fitting params once to save time for each single fitting
+        if isinstance(x_data, pd.Series):
+            self.x_data = x_data[table.columns.values]
+        elif len(x_data) != table.shape[1]:
+            raise ValueError('x_data length and table column number does not match')
+        else:
+            self.x_data = np.array(x_data)
+
+        if weights is None:
+            self.weights = {seq: None for seq in table.index}
+        if bounds is None:
+            bounds = [np.repeat(-np.inf, len(self.parameters)),
+                      np.repeat(np.inf, len(self.parameters))]
+        if len(x_data) <= 1:
+            bootstrap_num = 0
+        if bootstrap_num > 0:
+            self.config.bootstrap = True
+
+        # contains parameters should pass to the single fitter
+        self.fit_params = AttrScope({
+            'x_data': self.x_data,
+            'model': self.model,
+            'parameters': self.parameters,
+            'bounds': bounds,
+            'opt_method': opt_method,
+            'bootstrap_num': bootstrap_num,
+            'bs_record_num': bs_record_num,
+            'bs_method': bs_method,
+            'exclude_zero': exclude_zero,
+            'init_guess': init_guess,
+            'metrics': metrics,
+            'rnd_seed': rnd_seed,
+            'grouper': grouper if bs_method == 'stratified' else None
+        })
+
         self.results = BatchFitResults(fitter=self)
 
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
@@ -778,7 +777,8 @@ class BatchFitter:
     def worker_generator(self):
         for seq in self.seq_list:
             try:
-                yield SingleFitter.from_table(table=self.table, seq=seq, **self.fit_params.__dict__)
+                yield SingleFitter.from_table(table=self.table, seq=seq, weights=self.weights[seq],
+                                              **self.fit_params.__dict__)
             except:
                 raise Exception(f'Can not create fitting worker for {seq}')
 
