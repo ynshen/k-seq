@@ -174,7 +174,7 @@ class PoolParamSimulator:
 
 
 def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
-                          kinetic_model=None, count_model=None,
+                          kinetic_model=None, count_model=None, dna_amount_error=None,
                           sample_from_table=None, weights=None, replace=True,
                           reps=1, seed=None,
                           save_to=None, **param_generator):
@@ -187,6 +187,8 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
         p0 (list, generator, or callable returns generator): composition of initial pool
         kinetic_model(callable or ModelBase):
         count_model(callable or ModelBase):
+        dna_amount_error (float or callable): a Gaussian error with std. dev. as the float
+            or any error function on the DNA amount
         sample_from_table (pd.DataFrame): optional to sample sequences from given table
         weights (list or str): weights/col of weight for sampling from table
         replace (bool): if sample with replacement
@@ -208,8 +210,8 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
     if kinetic_model is None:
         # default use BYO first-order compositional model
         from k_seq.model import kinetic
-        kinetic_model = kinetic.BYOModel.composition_first_order
-        print('No kinetic model provided, use BYOModel.composition_first_order')
+        kinetic_model = kinetic.BYOModel.amount_first_order
+        print('No kinetic model provided, use BYOModel.amount_first_order')
     if count_model is None:
         # default use MultiNomial
         from k_seq.model import count
@@ -238,31 +240,42 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
                                 param_table=param_table)
     x = {}
     Y = {}
+    dna_amount = {}
     for sample_ix, (c, n) in enumerate(zip(c_list, N_list)):
         if reps is None or reps == 1:
-            Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
+            dna_amount[f"s{sample_ix}"], Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
             x[f"s{sample_ix}"] = {'c': c, 'n': n}
         else:
             for rep in range(reps):
-                Y[f"s{sample_ix}-{rep}"] = pool_model(c=c, N=n)
+                dna_amount[f"s{sample_ix}-{rep}"], Y[f"s{sample_ix}-{rep}"] = pool_model.predict(c=c, N=n)
                 x[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
+    # return x, Y, dna_amount, param_table
     x = pd.DataFrame.from_dict(x, orient='columns')
     Y = pd.DataFrame.from_dict(Y, orient='columns')
+    dna_amount = pd.DataFrame.from_dict(dna_amount, orient='columns')
+    dna_amount = dna_amount.sum(axis=0)
+    if isinstance(dna_amount_error, float):
+        import numpy as np
+        dna_amount += np.random.normal(loc=0, scale=dna_amount_error, size=len(dna_amount))
+    elif callable(dna_amount_error):
+        dna_amount = dna_amount.apply(dna_amount_error)
     x.index.name = 'param'
     Y.index.name = 'seq'
+    dna_amount.index.name = 'amount'
 
     if save_to is not None:
         from pathlib import Path
         save_path = Path(save_to)
         if save_path.suffix == '':
             save_path.mkdir(parents=True, exist_ok=True)
+            dna_amount.to_csv(f'{save_path}/dna_amount.csv')
             x.to_csv(f'{save_path}/x.csv')
             Y.to_csv(f'{save_path}/Y.csv')
             param_table.to_csv(f'{save_path}/truth.csv')
         else:
             raise TypeError('save_to should be a directory')
 
-    return x, Y, param_table
+    return x, Y, dna_amount, param_table
 
 
 # def count_simulator(model, params, repeat=1, seed=None):
