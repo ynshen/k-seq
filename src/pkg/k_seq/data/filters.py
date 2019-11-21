@@ -49,6 +49,7 @@ class FilterBase(object):
         return summary
 
     def get_filtered_table(self, target=None, remove_zero=False):
+        """Return the table with only True mask"""
         if target is None:
             target = self.target
         if hasattr(target, 'table'):
@@ -245,6 +246,46 @@ class DetectedTimesFilter(FilterBase):
         if reverse is None:
             reverse = self.reverse
         return self.func(target=target, min_detected_times=min_detected_times, reverse=reverse)
+
+
+class SampleFilter(FilterBase):
+
+    def __init__(self, target, sample_to_keep=None, sample_to_remove=None):
+        import pandas as pd
+
+        super().__init__(target)
+        if isinstance(target, pd.DataFrame):
+            self.target = target
+        else:
+            self.target = target.table
+
+        self.sample_to_keep = sample_to_keep
+        self.sample_to_remove = sample_to_remove
+        self.reverse = False
+        self.axis = 1
+
+    @staticmethod
+    def func(target, sample_to_keep, reverse=False):
+        mask = target.columns.isin(sample_to_keep)
+        if reverse:
+            return ~mask
+        else:
+            return mask
+
+    def apply(self, target=None, sample_to_keep=None, sample_to_remove=None):
+        if target is None:
+            target = self.target
+        if sample_to_keep is None:
+            sample_to_keep = self.sample_to_keep
+        if sample_to_remove is None:
+            sample_to_remove = self.sample_to_remove
+
+        if sample_to_keep is None:
+            sample_to_keep = list(self.target.columns)
+        if sample_to_remove is not None:
+            sample_to_keep = [sample for sample in sample_to_keep if sample not in sample_to_remove]
+
+        return self.func(target=target, sample_to_keep=sample_to_keep, reverse=False)
 
 # class SeqFilter:
 #
