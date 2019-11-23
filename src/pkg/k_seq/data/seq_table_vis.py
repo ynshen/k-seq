@@ -31,11 +31,12 @@ def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=
     ax.bar(pos, uniq_counts, **barplot_kwargs)
     ax.set_xticks(pos)
     ax.set_xticklabels(list(uniq_counts.index), fontsize=12, rotation=90)
-    ax.set_ylabel('Number of unique seqs', fontsize=12)
+    ax.set_ylabel('Unique seqs', fontsize=14)
     ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}', ))
     ax.tick_params(axis='both', labelsize=12)
 
     if fig is not None and save_fig_to is not None:
+        fig.patch.set_alpha(0)
         fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
 
     return uniq_counts
@@ -64,10 +65,11 @@ def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to
     ax.set_xticklabels(list(total_counts.index), fontsize=12, rotation=90)
     ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}', ))
     plt.setp(ax.get_yticklabels()[-1], visible=False)
-    ax.set_ylabel('Number of total counts', fontsize=12)
+    ax.set_ylabel('Total counts', fontsize=14)
     ax.tick_params(axis='both', labelsize=12)
 
     if fig is not None and save_fig_to is not None:
+        fig.patch.set_alpha(0)
         fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
 
     return total_counts
@@ -103,11 +105,11 @@ def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_
     else:
         fig = None
     pos = np.arange(len(spike_in_ratio))
-    ax.scatter(pos, spike_in_ratio, marker='*', **scatter_kwargs)
+    ax.scatter(pos, spike_in_ratio, marker='x', s=70, **scatter_kwargs)
     ax.set_xticks(pos)
     ax.set_xticklabels(list(spike_in_ratio.index), fontsize=12, rotation=90)
     ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.3f}', ))
-    ax.set_ylabel('Spike-in percent', fontsize=12)
+    ax.set_ylabel('Spike-in percent', fontsize=14)
     ax.tick_params(axis='both', labelsize=12)
     ax.set_ylim([0, ax.get_ylim()[1]])
     yticks = [tick for tick in ax.get_yticks()][:-2]
@@ -116,12 +118,13 @@ def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_
     # plt.setp(ax.get_yticklabels()[-1], visible=False)
     ax.tick_params(axis='both', labelsize=12)
     if save_fig_to:
+        fig.patch.set_alpha(0)
         fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
     return spike_in_ratio
 
 
 def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=True, plot_spike_in_frac=True,
-                          black_list=None, save_fig_to=None):
+                          color_map=None, black_list=None, figsize=None, save_fig_to=None):
     """Overview plot(s) of unique seqs, total counts and spike-in fractions in the samples
 
     Args:
@@ -133,6 +136,8 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
         plot_total_counts (`bool`): plot bar plot for total counts if True
 
         plot_spike_in_frac (`bool`): plot scatter plot for spike in fraction if True
+
+        color_map (dict): {sample_name: color} for all plots
 
         black_list (list of `str`): list of sample name to exlude from the plots
 
@@ -148,22 +153,28 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
         black_list = []
     sample_num = len([sample for sample in seq_table.sample_list if sample not in black_list])
 
-    fig, axes = plt.subplots(plot_num, 1, figsize=[sample_num * 0.5, 3 * plot_num], sharex=True)
+    if figsize is None:
+        figsize = (sample_num * 0.5, 3 * plot_num)
+    fig, axes = plt.subplots(plot_num, 1, figsize=figsize, sharex=True)
     plt.subplots_adjust(wspace=0, hspace=0.01)
     axes_itr = (ax for ax in axes)
     if plot_unique_seq:
         ax = next(axes_itr)
-        sample_unique_seqs_barplot(seq_table=seq_table, ax=ax, barplot_kwargs={'color': '#2C73B4'})
+        color = [color_map[sample] for sample in seq_table.sample_list] if color_map else '#2C73B4'
+        sample_unique_seqs_barplot(seq_table=seq_table, ax=ax, barplot_kwargs={'color': color})
     if plot_total_counts:
         ax = next(axes_itr)
-        sample_total_counts_barplot(seq_table=seq_table, ax=ax, barplot_kwargs={'color': '#F39730'})
+        color = [color_map[sample] for sample in seq_table.sample_list] if color_map else '#F39730'
+        sample_total_counts_barplot(seq_table=seq_table, ax=ax, barplot_kwargs={'color': color})
     if plot_spike_in_frac:
         ax = next(axes_itr)
-        sample_spike_in_ratio_scatterplot(seq_table=seq_table, ax=ax, scatter_kwargs={'color': '#B2112A'})
+        color = [color_map[sample] for sample in seq_table.sample_list] if color_map else '#B2112A'
+        sample_spike_in_ratio_scatterplot(seq_table=seq_table, ax=ax, scatter_kwargs={'color': color})
     fig.align_ylabels(axes)
 
     if save_fig_to:
-        fig.savefig(save_fig_to, dpi=300)
+        fig.patch.set_alpha(0)
+        fig.savefig(save_fig_to, dpi=300, bbox_inches='tight')
 
 
 def sample_rel_abun_hist(seq_table, black_list=None, bins=None, x_log=True, y_log=False,
@@ -211,7 +222,7 @@ def sample_rel_abun_hist(seq_table, black_list=None, bins=None, x_log=True, y_lo
     plt.tight_layout()
 
 
-def sample_entropy_scatterplot(seq_table, black_list=None, normalize=False, base=2, figsize=None, scatter_kwargs=None):
+def sample_entropy_scatterplot(seq_table, black_list=None, normalize=False, base=2, color_map=None, figsize=None, scatter_kwargs=None, save_fig_to=None):
     import numpy as np
     import pandas as pd
 
@@ -225,19 +236,113 @@ def sample_entropy_scatterplot(seq_table, black_list=None, normalize=False, base
         else:
             return -np.sum(valid * np.log(valid)) / np.log(base)
 
-    sample_list = seq_table.sample_list
+    if isinstance(seq_table, pd.DataFrame):
+        sample_list = seq_table.columns
+    else:
+        sample_list = seq_table.sample_list
+        seq_table = seq_table.table
+
     if black_list is not None:
         sample_list = [sample for sample in sample_list if sample not in black_list]
 
-    entropy = seq_table.table[sample_list].apply(get_entropy, axis=0)
+    entropy = seq_table[sample_list].apply(get_entropy, axis=0)
 
     if figsize is None:
         figsize = [len(entropy)/2, 4]
+    if scatter_kwargs is None:
+        scatter_kwargs = {}
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     pos = np.arange(len(entropy))
-    ax.scatter(pos, entropy, marker='x', **scatter_kwargs)
+    colors = [color_map[sample] for sample in sample_list] if color_map else '#2C73B4'
+    ax.scatter(pos, entropy, marker='x', color=colors, **scatter_kwargs)
     ax.set_xticks(pos)
     ax.set_xticklabels(sample_list, fontsize=12, rotation=90)
     ax.tick_params(axis='both', labelsize=12)
     ax.set_ylabel('Entropy efficiency' if normalize else f'Entropy (base {base})', fontsize=14)
     ax.set_ylim([0, ax.get_ylim()[1]])
+    if save_fig_to:
+        fig.patch.set_alpha(0)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+
+
+def cross_table_compare(base_table, compare_table, samples=None, ax=None, figsize=None, color_map=None,
+                        save_fig_to=None):
+    import matplotlib.pyplot as plt
+    plt.style.use('seaborn')
+
+    if samples is None:
+        samples = set(base_table.columns) & set(compare_table.columns)
+    if figsize is None:
+        figsize = (len(samples), 6)
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    colors = '#2C73B4' if color_map is None else [color_map[sample] for sample in samples]
+    ax.bar(np.arange(len(samples)),
+           (compare_table[samples] > 0).sum(axis=0) / (base_table[samples] > 0).sum(axis=0),
+           color=colors, width=0.6, label='Unique seq')
+    colors = '#F39730' if color_map is None else [color_map[sample] for sample in samples]
+    ax.scatter(np.arange(len(samples)),
+               compare_table[samples].sum(axis=0) / base_table[samples].sum(axis=0),
+               color=colors, marker='x', s=50, label='Total reads')
+    ax.set_xticks(np.arange(len(samples)))
+    ax.set_xticklabels(samples, fontsize=12, rotation=90)
+    ax.set_ylabel('Pass ratio', fontsize=14)
+    ax.tick_params('both', labelsize=12)
+
+    if save_fig_to:
+        fig.patch.set_alpha(0)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+
+
+def rep_variance_scatter(table, grouper, subsample=None,
+                         xlog=True, ylog=True, xlim=None, ylim=None, group_title_pos=None,
+                         xlabel=None, ylabel=None,
+                         figsize=None, save_fig_to=None):
+    table_gen = grouper.get_table(target=table, remove_zero=True)
+    if figsize is None:
+        figsize = (len(grouper.group) * 3, 3)
+
+    fig, axes = plt.subplots(1, 5, figsize=figsize, sharey=True)
+    fig.subplots_adjust(hspace=0, wspace=0.01)
+    if xlabel is None:
+        xlabel = 'Mean'
+    if ylabel is None:
+        ylabel = 'Standard Deviation'
+
+    for ix, ((key, subtable), ax) in enumerate(zip(table_gen, axes)):
+        if subsample is not None:
+            subtable = subtable.sample(subsample, replace=False)
+        ax.scatter(subtable.mean(axis=1), subtable.std(axis=1), s=3, alpha=0.3, zorder=2)
+
+        # plot lines
+        line_xlim = ax.get_xlim() if xlim is None else xlim
+        xs = np.logspace(np.log10(line_xlim[0]), np.log10(line_xlim[1]), 20)
+        ax.plot(xs, xs, '#151515', alpha=0.5, ls='--', zorder=1)
+        ax.plot(xs, xs * 0.1, '#151515', alpha=0.3, ls='--', zorder=1)
+        ax.plot(xs, xs * 0.01, '#151515', alpha=0.1, ls='--', zorder=1)
+
+        if group_title_pos is None:
+            group_title_pos = (ax.get_xlim[0], ax.get_ylim[1])
+        ax.text(s=f'{key:d} $\mu mol$', x=group_title_pos[0], y=group_title_pos[1], ha='left', va='top', fontsize=12)
+        ax.tick_params(axis='both', labelsize=12)
+        if xlog:
+            ax.set_xscale('log')
+        if ylog:
+            ax.set_yscale('log')
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        if ix > 0:
+            xticks = [tick for tick in ax.get_xticks()][2:-1]
+            ax.set_xticks(xticks)
+        else:
+            ax.set_ylabel(ylabel, fontsize=12)
+        if xlim is not None:
+            ax.set_xlim(xlim)
+
+    fig.text(s=xlabel, x=0.5, y=0, ha='center', va='top', fontsize=12)
+    if save_fig_to:
+        fig.patch.set_alpha(0)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+    plt.show()

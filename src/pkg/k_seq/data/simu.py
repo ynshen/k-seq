@@ -2,90 +2,83 @@
 class DistGenerators:
     """A collection of random value generators from preset distributions
 
+    Behavior:
+        each distribution will return a generator if `return_gen` argument is True,
+            else return a function take size value and return a generator
 
     Available distributions:
-
-        - lognormal
-
-        - uniform
-
-        - compo_lognormal
+        lognormal
+        uniform
+        compo_lognormal
     """
 
     def __init__(self):
         pass
 
     @staticmethod
-    def lognormal(loc=None, scale=None, c95=None, seed=None, size=None):
+    def lognormal(size=None, loc=None, scale=None, c95=None, seed=None):
         """Sample from a log-normal distribution
         indicate with `loc` and `scale`, or `c95`
 
         Args:
+            size (`int`): number of values to draw
+            loc (`float`): center of log-normal distribution, default 0
+            scale (`float`): log variance of the distribution, default 0
+            c95 ([`float`, `float`]): 95% percentile of log-normal distribution
+            seed: random seed
 
-           size (`int`): number of values to draw
-
-           loc (`float`): center of log-normal distribution
-
-           scale (`float`): log variance of the distribution
-
-           c95 ([`float`, `float`]): 95% percentile of log-normal distribution
-
-           seed: random seed
+        Returns:
+            a draw from distribution with given size
         """
 
         import numpy as np
 
         if c95 is None:
-            if loc is None or scale is None:
-                raise ValueError('Please indicate loc/scale or c95')
+            if loc is None:
+                loc = 0
+            if scale is None:
+                scale = 0
         else:
             c95 = np.log(np.array(c95))
             loc = (c95[0] + c95[1]) / 2
             scale = (c95[1] - c95[0]) / 3.92
+
         if seed is not None:
             np.random.seed(seed)
 
-        if n is None:
-            while True:
-                yield np.exp(np.random.normal(loc=loc, scale=scale))
+        if size is None:
+            return np.exp(np.random.normal(loc=loc, scale=scale))
         else:
-            while True:
-                yield np.exp(np.random.normal(loc=loc, scale=scale, size=size))
+            return np.exp(np.random.normal(loc=loc, scale=scale, size=size))
 
     @staticmethod
-    def uniform(low=None, high=None, size=None):
+    def uniform(low=None, high=None, size=None, seed=None):
         """Sample from a uniform distribution"""
 
         import numpy as np
 
-        if n is None:
-            while True:
-                yield np.random.uniform(low=low, high=high)
+        if seed is not None:
+            np.random.seed(seed)
+        if size is None:
+            return np.random.uniform(low=low, high=high)
         else:
-            while True:
-                yield np.random.uniform(low=low, high=high, size=size)
+            return np.random.uniform(low=low, high=high, size=size)
 
     @staticmethod
     def compo_lognormal(size, loc=None, scale=None, c95=None, seed=None):
         """Sample a pool composition from a log-normal distribution
-
         indicate with `loc` and `scale`, or `c95`
 
         Example:
-
             scale = 0 means an evenly distributed pool with all components have relative abundance 1/size
 
         Args:
-
             size (`int`): size of the pool
-
             loc (`float`): center of log-normal distribution
-
             scale (`float`): log variance of the distribution
-
             c95 ([`float`, `float`]): 95% percentile of log-normal distribution
-
             seed: random seed
+
         """
 
         import numpy as np
@@ -100,59 +93,76 @@ class DistGenerators:
         if seed is not None:
             np.random.seed(seed)
 
-        while True:
-            q = np.exp(np.random.normal(loc=loc, scale=scale, size=size))
-            yield q / np.sum(q)
+        q = np.exp(np.random.normal(loc=loc, scale=scale, size=size))
+        return q / np.sum(q)
 
 
-class PoolParamSimulator(object):
-    """Simulate a set of parameters for a sequence pool
-
-
-    Attributes:
-        todo: add attributes
+class PoolParamSimulator:
+    """Collection of functions to simulate a set of parameters for a sequence pool
 
     Methods:
 
-        todo: add methods
+        - sample_from_ind_dist
 
+        - sample_from_dataframe
+
+    Returns:
+        pd.DataFrame with columns of parameters and rows of simulated parameter for each sequence
     """
-    def __init__(self, compo_gen, seed=None, **param_generators):
-        # """
-        # Initialize the pool parameter simulator with iid generators
-        #
-        # Args:
-        #
-        #     compo_gen (`generator`): generator generate pool compositions
-        #
-        #     seed (`int`): random seed to fix in simulation for repeatability
-        #
-        #     param_generators: keyword arguments that has form parameter_name=parameter_value_generator
-        # """
-        # self.seed = seed
-        # self.compo_gen
-        # self.size = size
-        # self.param_generator = param_generators
-        pass
 
     @staticmethod
-    def sample_from_ind_dist(compo_gen, size=None, seed=None, **param_generators):
+    def sample_from_ind_dist(p0, size=None, seed=None, **param_generators):
+        """Simulate the pool parameter from individual draws of distribution
+
+        Args:
+
+            p0 (list-like, generator, or callable): at least need to indicate the initial pool composition
+
+            size (int): number of unique sequences
+
+            seed (int): global random seed to use in generation
+
+            param_generators (kwargs): keyword generator to generate parameters
+
+        """
         import numpy as np
         import pandas as pd
+
+        def generate_params(param_input):
+            from types import GeneratorType
+
+            if isinstance(param_input, (list, np.ndarray, pd.Series)):
+                return param_input
+            elif isinstance(param_input, GeneratorType):
+                # assume only generate one realization
+                return [next(param_input) for _ in range(size)]
+            elif callable(param_input):
+                try:
+                    # if there is a size parameter to pass
+                    param_output = param_input(size=size)
+                    if isinstance(param_output, (list, np.ndarray, pd.Series)):
+                        return param_output
+                    elif isinstance(param_output, GeneratorType):
+                        return next(param_output)
+                    else:
+                        raise TypeError("Unknown input to draw a distribution value")
+                except:
+                    # if can not pass size, assume generate single samples
+                    param_output = param_input()
+                    if isinstance(param_output, GeneratorType):
+                        return [next(param_input) for _ in range(size)]
+                    elif isinstance(param_output, (float, int)):
+                        return [param_input() for _ in range(size)]
+            else:
+                raise TypeError('Unknown input to draw a distribution value')
 
         if seed is not None:
             np.random.seed(seed)
 
-        if callable(compo_gen):
-            # if compo_gen is a function returns a generator
-            compo_gen = compo_gen(size)
-
-        results = pd.DataFrame(data={'p0': list(next(compo_gen))})
-        for param, gen in param_generators.items():
-            if callable(gen):
-                results[param] = list(next(gen(results.shape[0])))
-            else:
-                results[param] = list(next(gen))
+        results = pd.DataFrame(
+            data={**{'p0': list(generate_params(p0))},
+                  **{param: generate_params(gen) for param, gen in param_generators.items()}}
+        )
 
         return results
 
@@ -162,132 +172,209 @@ class PoolParamSimulator(object):
 
         return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
 
-    # def generate(self, seed=None):
-    #     """Return a generated parameter
-    #
-    #     Return: a dict or list of dict of
-    #         {'data': pd.DataFrame (sparse) of data,
-    #          'config':
-    #     """
-    #     import numpy as np
-    #
-    #     if seed is None:
-    #         seed = self.seed
-    #     if seed is not None:
-    #         np.random.seed(seed)
-    #
-    #     self.results = {sample: self.model(**param) for sample, param in self.parameters.items()}
-    #
-    # def to_pickle(self):
-    #     pass
-    #
-    # def to_DataFrame(self, sparse=True, dtype='float', seed=None):
-    #     import pandas as pd
-    #     import numpy as np
-    #
-    #     if seed is None:
-    #         seed = self.seed
-    #
-    #     if self.results is None:
-    #         self.generate(seed=seed)
-    #
-    #     if sparse:
-    #         if dtype.lower() in ['int', 'd']:
-    #             dtype = pd.SparseDtype('int', fill_value=0)
-    #         elif dtype.lower() in ['float', 'f']:
-    #             dtype = pd.SparseDtype('float', fill_value=0.0)
-    #         return pd.DataFrame(self.results).astype(dtype)
-    #     else:
-    #         if dtype.lower() in ['int', 'd']:
-    #             dtype = np.int
-    #         elif dtype.lower() in ['float', 'f']:
-    #             dtype = np.float
-    #         return pd.DataFrame(self.results, dtype=dtype)
-    #
-    # def to_numpy(self, seed=None):
-    #     import numpy as np
-    #
-    #     if seed is None:
-    #         seed = self.seed
-    #     if self.results is None:
-    #         self.generate(seed=seed)
-    #     return np.array([value for value in self.results.values()])
-    #
-    # def to_csv(self):
-    #     pass
 
+def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
+                          kinetic_model=None, count_model=None,
+                          sample_from_table=None, weights=None, replace=True,
+                          reps=1, seed=None,
+                          save_to=None, **param_generator):
+    """Simulate a k-seq count data given kinetic and count model
 
-class CountSimulator(object):
-    """Simulate pool counts given different sub-strate concentration
-    todo: add perturbation on relative abundance
+    Args:
+        pool_size (int): number of unique sequences
+        c_list (list): a list of substrate concentrations for each sample, negative number means initial pool
+        N_list (list): a list of total reads in for each sample
+        p0 (list, generator, or callable returns generator): composition of initial pool
+        kinetic_model(callable or ModelBase):
+        count_model(callable or ModelBase):
+        sample_from_table (pd.DataFrame): optional to sample sequences from given table
+        weights (list or str): weights/col of weight for sampling from table
+        replace (bool): if sample with replacement
+        reps (int): number of replicates for each c, N
+        seed (int): global random seed to use
+        save_to (path): path to the folder to save simulated results
+        **param_generator: keyword arguments of list, generator or callable returns generator to draw parameters
+
+    Returns:
+        X (pd.DataFrame): c, n value for samples
+        y (pd.DataFrame): sequence counts for sequence samples
+        param_table (pd.DataFrame): table list the parameters of simulated pool
+
     """
 
-    def __init__(self, param_table, count_model, count_params,
-                 x_values=None, kinetic_model=None, kinetic_params=None, seed=None):
-        """Initialize a simulator with parameter table, count model, and parameters
+    from ..model import pool
+    import pandas as pd
 
-        Args:
+    if kinetic_model is None:
+        # default use BYO first-order compositional model
+        from k_seq.model import kinetic
+        kinetic_model = kinetic.BYOModel.composition_first_order
+        print('No kinetic model provided, use BYOModel.composition_first_order')
+    if count_model is None:
+        # default use MultiNomial
+        from k_seq.model import count
+        count_model = count.MultiNomial
+        print('No count model provided, use MultiNomial')
 
-            param_table (`pd.DataFrame`): a dataframe including parameters
+    if sample_from_table is None:
+        param_table = PoolParamSimulator.sample_from_ind_dist(
+            p0=p0,
+            seed=seed,
+            size=pool_size,
+            **param_generator
+        )
+    else:
+        param_table = PoolParamSimulator.sample_from_dataframe(
+            df=sample_from_table,
+            size=pool_size,
+            replace=replace,
+            weights=weights,
+            seed=seed
+        )
 
-            kin_model (`Model` or callable): kinetic model, output should be a list of abundance of pool members
+    param_table.index.name = 'seq'
+    pool_model = pool.PoolModel(count_model=count_model,
+                                kinetic_model=kinetic_model,
+                                param_table=param_table)
+    x = {}
+    Y = {}
+    for sample_ix, (c, n) in enumerate(zip(c_list, N_list)):
+        if reps is None or reps == 1:
+            Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
+            x[f"s{sample_ix}"] = {'c': c, 'n': n}
+        else:
+            for rep in range(reps):
+                Y[f"s{sample_ix}-{rep}"] = pool_model(c=c, N=n)
+                x[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
+    x = pd.DataFrame.from_dict(x, orient='columns')
+    Y = pd.DataFrame.from_dict(Y, orient='columns')
+    x.index.name = 'param'
+    Y.index.name = 'seq'
 
-            kin_param (`dict`): contains parameter needed for
+    if save_to is not None:
+        from pathlib import Path
+        save_path = Path(save_to)
+        if save_path.suffix == '':
+            save_path.mkdir(parents=True, exist_ok=True)
+            x.to_csv(f'{save_path}/x.csv')
+            Y.to_csv(f'{save_path}/Y.csv')
+            param_table.to_csv(f'{save_path}/truth.csv')
+        else:
+            raise TypeError('save_to should be a directory')
 
-            c_param:
+    return x, Y, param_table
 
-            c_model:
-            seed:
-        """
-        import numpy as np
 
-        self.k_model = k_model
-        self.k_param = k_param
-        self.c_model = c_model
-        self.c_param = c_param
-        self.seed = seed
-        if seed is not None:
-            np.random.seed(seed)
-
-    def get_data(self, k_param=None, c_param=None, N=1, seed=None):
-        """Return a size N data for each param set in k_param
-
-        Return: a dict or list of dict of
-            {'data': pd.DataFrame (sparse) of data,
-             'config':
-        """
-
-        def get_one_data(k_param, c_param):
-            comp = self.k_model(**k_param)
-            if np.sum(comp) != 1:
-                comp = comp / np.sum(comp)
-            return self.c_model(comp, **c_param)
-
-        def get_one_config(k_param, c_param, N):
-            k_p = self.k_param.copy()
-            k_p.update(k_param)
-            c_p = self.c_param.copy()
-            c_p.update(c_param)
-
-            import pandas as pd
-
-            return {'data': pd.DataFrame(pd.SparseArray([get_one_data(k_p, c_p) for _ in range(N)]), dtype=int),
-                    'config': {'k_param': k_p, 'c_param': c_p}}
-
-        import numpy as np
-        if seed is not None:
-            np.random.seed(seed)
-
-        results = []
-
-    def to_pickle(self):
-        pass
-
-    def to_DataFrame(self):
-        pass
-
-    def to_csv(self):
-        pass
+# def count_simulator(model, params, repeat=1, seed=None):
+#     """Function to simulate a pool count with different parameters
+#
+#     Args:
+#         model:
+#         params:
+#         repeat:
+#         seed:
+#
+#     Returns:
+#         pd.DataFrame contains counts table
+#
+#     """
+#     import numpy as np
+#     import pandas as pd
+#
+#     def run_model(param):
+#         if isinstance(param, dict):
+#             return model(**param)
+#         elif isinstance(param, (list, tuple)):
+#             return model(*param)
+#         else:
+#             return model(param)
+#
+#     # first parse params
+#     if isinstance(params, list):
+#         params = {f'sample_{int(idx)}': param for idx, param in enumerate(params)}
+#
+#     if seed is not None:
+#         np.random.seed(seed)
+#
+#     result = {}   # {sample_name: counts}
+#     for sample, param in params.items():
+#         if repeat is None or repeat == 1:
+#             result[sample] = run_model(param)
+#         else:
+#             for rep in range(repeat):
+#                 result[f"{sample}-{rep}"] = run_model(param)
+#     return pd.DataFrame.from_dict(result, orient='columns')
+#
+#
+# class CountSimulator(object):
+#     """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
+#     """
+#
+#     def __init__(self, count_model, kinetic_model, count_params=None, kinetic_params=None,
+#                  x_values=None, seed=None):
+#         """Initialize a simulator with parameter table, count model, and parameters
+#
+#         Args:
+#
+#
+#             kinetic_model (`Model` or callable): pool kinetic model, whose output is a list of abundance of pool members
+#
+#             kin_param (`dict`): contains parameter needed for
+#
+#             c_param:
+#
+#             c_model:
+#             seed:
+#         """
+#         import numpy as np
+#
+#         self.k_model = k_model
+#         self.k_param = k_param
+#         self.c_model = c_model
+#         self.c_param = c_param
+#         self.seed = seed
+#         if seed is not None:
+#             np.random.seed(seed)
+#
+#     def get_data(self, k_param=None, c_param=None, N=1, seed=None):
+#         """Return a size N data for each param set in k_param
+#
+#         Return: a dict or list of dict of
+#             {'data': pd.DataFrame (sparse) of data,
+#              'config':
+#         """
+#
+#         def get_one_data(k_param, c_param):
+#             comp = self.k_model(**k_param)
+#             if np.sum(comp) != 1:
+#                 comp = comp / np.sum(comp)
+#             return self.c_model(comp, **c_param)
+#
+#         def get_one_config(k_param, c_param, N):
+#             k_p = self.k_param.copy()
+#             k_p.update(k_param)
+#             c_p = self.c_param.copy()
+#             c_p.update(c_param)
+#
+#             import pandas as pd
+#
+#             return {'data': pd.DataFrame(pd.SparseArray([get_one_data(k_p, c_p) for _ in range(N)]), dtype=int),
+#                     'config': {'k_param': k_p, 'c_param': c_p}}
+#
+#         import numpy as np
+#         if seed is not None:
+#             np.random.seed(seed)
+#
+#         results = []
+#
+#     def to_pickle(self):
+#         pass
+#
+#     def to_DataFrame(self):
+#         pass
+#
+#     def to_csv(self):
+#         pass
 
 
 
