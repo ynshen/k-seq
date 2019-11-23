@@ -29,7 +29,7 @@ def main(table_path, table_name, fit_partial, bootstrap_num, bs_record_num, bs_m
 
 
     batch_fitter = BatchFitter(
-        table=work_table, x_data=seq_table.x_values, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
+        y_data_batch=work_table, x_data=seq_table.x_values, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.func_react_frac_no_slope, seq_to_fit=seq_test,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )

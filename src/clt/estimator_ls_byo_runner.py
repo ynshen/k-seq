@@ -77,7 +77,7 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
     print(f'exclude_zero: {exclude_zero}')
     print(f'inverse_weight: {inverse_weight}')
     batch_fitter = BatchFitter(
-        table=work_table, x_data=x_data, weights=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
+        y_data_batch=work_table, x_data=x_data, weights=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.func_react_frac, exclude_zero=exclude_zero,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )

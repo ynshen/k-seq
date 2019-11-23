@@ -9,7 +9,7 @@ class DocHelper(object):
 
         add: add keyword arguments to the doc_helper
 
-        generate: generate a formatted docstring
+        get: generate a formatted docstring
 
     """
 
@@ -49,8 +49,8 @@ class DocHelper(object):
         else:
             return f"{variable.name} ({variable['dtype']}): {variable['docstring']}\n"
 
-    def generate(self, var_names, indent=4, sep='\n'):
-        """Generate a formated docstring
+    def get(self, var_names, indent=4, sep=''):
+        """Generate a formatted docstring
 
         Args:
 
@@ -196,20 +196,30 @@ class FuncToMethod(object):
 
 
 class AttrScope(object):
-    """Convert a dictionary to a group of attributes"""
+    """A name scope for a group of attributes"""
 
     def __repr__(self):
         return f"An attribute class with keys: {list(self.__dict__.keys())}"
 
-    def __init__(self, attr_dict=None, keys=None):
+    def __init__(self, attr_dict=None, keys=None, **attr_kwargs):
+        """Create a name scope for a group of attributes
+
+        Args:
+
+            attr_dict (dict): a dictionary with values to pass
+
+            keys (list of str): a list of attributes to initialize with None
+
+            attr_kwargs: or directly pass some keyword arguments
+        """
         if keys is not None:
             for key in keys:
                 setattr(self, key, None)
-        if attr_dict is not None:
-            if isinstance(attr_dict, dict):
-                self.__dict__.update(attr_dict)
-            else:
-                raise TypeError('attr_dict needs to be dictionary')
+        if attr_dict is None:
+            attr_dict = {}
+        if attr_kwargs is None:
+            attr_kwargs = {}
+        self.__dict__.update({**attr_dict, **attr_kwargs})
 
     def __getitem__(self, item):
         return self.__getattribute__(item)
@@ -220,4 +230,3 @@ class AttrScope(object):
         if kwargs is None:
             kwargs = {}
         self.__dict__.update({**kwargs, **attr_dict})
-

@@ -40,7 +40,7 @@ def main():
     else:
         seq_test = None
 
-    batch_fitter = BatchFitter(table=seq_table.reacted_frac_filtered, x_values=seq_table.x_values, model=BYOModel.func_react_frac_no_slope, seq_to_fit=seq_test, bootstrap_num=BS_NUM, bs_return_num=BS_SAVE_NUM, bs_method=BS_METHOD)
+    batch_fitter = BatchFitter(y_data_batch=seq_table.reacted_frac_filtered, x_values=seq_table.x_values, model=BYOModel.func_react_frac_no_slope, seq_to_fit=seq_test, bootstrap_num=BS_NUM, bs_return_num=BS_SAVE_NUM, bs_method=BS_METHOD)
     batch_fitter.fit(deduplicate=True, parallel_cores=CORE_NUM)
     batch_fitter.summary(save_to=f'./fitting-res_bs{BS_NUM}_m{BS_METHOD}_c{CORE_NUM}.csv')
     save_pickle(batch_fitter, path=f'./fitter_bs{BS_NUM}_m{BS_METHOD}_c{CORE_NUM}.pkl')
