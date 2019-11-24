@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import sys
+import logging
 
 
 def kA(params):
@@ -52,49 +53,80 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, 
     else:
         sigma = None
 
-
     return work_table, x_data, sigma
 
 
+def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False,
+                      inverse_weight=False, bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1,
+                      output_dir=None, pkg_path=None):
+    """Create the output dir and logging/config files"""
+
+    from pathlib import Path
+    if Path(output_dir).is_dir():
+        if fit_partial <= 0:
+            name = f'bs-{int(bootstrap_num)}_mtd-{bs_method}_no-zero-{exclude_zero}_' \
+                   f'inv-weight-{inverse_weight}_core-{core_num}/'
+        else:
+            name = f'first-{int(fit_partial)}_bs-{int(bootstrap_num)}_mtd-{bs_method}_no-zero-{exclude_zero}_' \
+                   f'inv-weight-{inverse_weight}_core-{core_num}/'
+        output_dir = Path(f'{output_dir}/{name}')
+        output_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    logging.basicConfig(filename=f"{output_dir}/app_run.log",
+                        format='%(asctime)s %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',
+                        level=logging.DEBUG,
+                        filemode='w')
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+    import json
+    with open(f"{output_dir}/config.txt", 'w') as handle:
+        json.dump(obj={
+            'seq_table': seq_table,
+            'table_name': table_name,
+            'simu_data': simu_data,
+            'fit_partial': fit_partial,
+            'exclude_zero': exclude_zero,
+            'inverse_weight': inverse_weight,
+            'bootstrap_num': bootstrap_num,
+            'bs_record_num': bs_record_num,
+            'bs_method': bs_method,
+            'core_num': core_num,
+            'output_dir': str(output_dir),
+            'pkg_path': pkg_path
+        }, fp=handle)
+
+    return str(output_dir)
+
+
 def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
-         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None, **kwargs):
-    print(sys.path)
+         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None):
 
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
     import numpy as np
 
     work_table, x_data, sigma = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
-                                             fit_partial=fit_partial, inverse_weight=inverse_weight)
-
+                                           fit_partial=fit_partial, inverse_weight=inverse_weight)
     if bs_method.lower() == 'stratified':
-        raise NotImplementedError()
         try:
             grouper = seq_table.grouper.byo.group
         except:
             raise ValueError('Can not find grouper for stratified bootstrapping')
+    else:
+        grouper = None
 
     print(f'exclude_zero: {exclude_zero}')
     print(f'inverse_weight: {inverse_weight}')
     batch_fitter = BatchFitter(
-        y_data_batch=work_table, x_data=x_data, weights=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
-        model=BYOModel.func_react_frac, exclude_zero=exclude_zero,
+        y_data_batch=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
+        model=BYOModel.func_react_frac, exclude_zero=exclude_zero, grouper=grouper,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )
     batch_fitter.fit(deduplicate=True, parallel_cores=core_num)
-
-    from pathlib import Path
-
-    if Path(output_dir).is_dir():
-        if fit_partial <= 0:
-            name = f'bs_{int(bootstrap_num)}-mtd_{bs_method}-core_{core_num}/'
-        else:
-            name = f'first_{int(fit_partial)}-bs_{bootstrap_num}-mtd_{bs_method}-core_{core_num}/'
-        output_dir = Path(output_dir + '/' + name)
-        output_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
     batch_fitter.save_model(model_path=f'{output_dir}/model.pkl',
@@ -105,26 +137,28 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
 def parse_args():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Individual least squared kinetic model fitting')
-    parser.add_argument('--pkg_path', type=str, default='./')
+    parser = argparse.ArgumentParser(description='Individual least-squares kinetic model fitting')
+    parser.add_argument('--pkg_path', type=str, default='./',
+                        help='Path to customize k-seq package')
     parser.add_argument('--simu_data', type=str,
                         help='Path to folder of simulated data')
-    parser.add_argument('--seq_table', '-T', type=str, help='Path to input seq table')
-    parser.add_argument('--table_name', '-t', type=str, help='table to use')
+    parser.add_argument('--seq_table', '-T', type=str,
+                        help='Path to input seq_table object')
+    parser.add_argument('--table_name', '-t', type=str,
+                        help='table name in seq_table to use')
     parser.add_argument('--fit_partial', '-p', type=int, default=-1,
                         help='Select top p sequences to fit, fit all seq if p is negative')
     parser.add_argument('--exclude_zero', dest='exclude_zero', default=False, action='store_true',
                         help='If exclude zero data in fitting')
     parser.add_argument('--inverse_weight', dest='inverse_weight', default=False, action='store_true',
-                        help='If weight data by its count inverse (pseudo counts 0.5)')
+                        help='Apply counts (pseudo counts 0.5) as the sigma in fitting')
     parser.add_argument('--bootstrap_num', '-n', type=int, default=0,
                         help='Number of bootstraps to perform')
     parser.add_argument('--bs_record_num', '-r', type=int, default=-1,
                         help='Number of bootstrap results to save, save all if negative')
     parser.add_argument('--bs_method', '-m', choices=['pct_res', 'data', 'stratified'], default='pct_res',
                         help='Bootstrap method')
-    parser.add_argument('--core_num', '-c', type=int,
-                        help='Number of process to use in parallel')
+    parser.add_argument('--core_num', '-c', type=int,help='Number of process to use in parallel')
     parser.add_argument('--output_dir', '-o', type=str, default='./')
 
     return vars(parser.parse_args())
@@ -134,4 +168,9 @@ if __name__ == '__main__':
     args = parse_args()
     if args['pkg_path'] not in sys.path:
         sys.path.insert(0, args['pkg_path'])
-    sys.exit(main(**args))
+    output_dir = create_output_dir(**args)
+    _ = args.pop('output_dir')
+    _ = args.pop('pkg_path')
+    from k_seq.utility.log import Timer
+    with Timer():
+        sys.exit(main(output_dir=output_dir, **args))

@@ -72,7 +72,7 @@ class SingleFitter(EstimatorType):
         return f"Single fitter for {self.name}"
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, sigma=None, bounds=None, init_guess=None,
-                 opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None,
+                 opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, grouper=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_params=None, silent=False):
         """Initialize a `SingleFitter` instance
         
@@ -132,7 +132,7 @@ class SingleFitter(EstimatorType):
             if bs_record_num is None:
                 bs_record_num = 0
             self.bootstrap = Bootstrap(fitter=self, bootstrap_num=bootstrap_num, bs_record_num=bs_record_num,
-                                       bs_method=bs_method)
+                                       bs_method=bs_method, grouper=grouper)
         else:
             self.bootstrap = None
 
@@ -849,7 +849,7 @@ class BatchFitter(EstimatorType):
             try:
                 yield SingleFitter(
                     name=seq,
-                    y_data=self.y_data_batch[seq],
+                    y_data=self.y_data_batch.loc[seq],
                     sigma=None if self.sigma is None else self.sigma.loc[seq],
                     **self.fit_params.__dict__
                 )

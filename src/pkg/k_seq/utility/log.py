@@ -1,6 +1,6 @@
 import sys
 from time import time
-
+import logging
 
 class Logger:
     """A simple logger to log data"""
@@ -65,8 +65,8 @@ class Timer:
         else:
             unit = 'hours'
             elapsed_time /= 3600.0
-        print('-' * 50)
-        print(self.message.format(elapsed_time=elapsed_time, unit=unit))
+        logging.info('-' * 50)
+        logging.info(self.message.format(elapsed_time=elapsed_time, unit=unit))
         if self.save_to is not None:
             with open(self.save_to, 'w') as f:
                 f.write(self.message.format(elapsed_time=elapsed_time, unit=unit))

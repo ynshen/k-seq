@@ -7,17 +7,21 @@
 
 #cd $SLURM_SUBMIT_DIR
 
-SAMPLE_NAME='bs_pct_res_bounded'
+CORE=6
+OUTPUT_BASE='./'
+SAMPLE_NAME='on_doped_s1000_d40'
+OUTPUT_NAME='on_doped_s1000_d40'
 
 python estimator_ls_byo_runner.py \
-    --table_path ./byo_doped.pkl \
-    --fit_partial 10 \
-    --table_name table_filtered_reacted_frac \
-    --bootstrap_num 10 \
-    --bs_return_num 5 \
+    --pkg_path /home/yuning/research/k-seq/src/pkg/ \
+    --simu_data /mnt/storage/projects/k-seq/datasets/simulated/$SAMPLE_NAME/ \
+    --fit_partial -1 \
+    --bootstrap_num 500 \
+    --bs_record_num 100 \
     --bs_method 'data' \
-    --core_num 40 \
-    --output_dir ./$SAMPLE_NAME \
-    --pkg_path ../ \
-    &> $SAMPLE_NAME.log
+    --core_num $CORE \
+    --exclude_zero \
+    --inverse_weight \
+    --output_dir $OUTPUT_BASE/$OUTPUT_NAME/ \
+    &> $OUTPUT_NAME.out
 

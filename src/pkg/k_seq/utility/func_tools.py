@@ -42,8 +42,6 @@ class DocHelper(object):
 
     @staticmethod
     def _record_to_string(variable):
-        import numpy as np
-        print(variable['dtype'])
         if variable.isna()['dtype']:
             return f"{variable.name}: {'' if variable.isna()['docstring'] else variable['docstring']}\n"
         else:
@@ -161,9 +159,7 @@ def get_func_params(func, exclude_x=True):
     """
     from inspect import signature, isfunction, isclass
 
-    if isclass(func):
-        arg_tuple = tuple(signature(func.func).parameters.keys())
-    elif isfunction(func):
+    if callable(func):
         arg_tuple = tuple(signature(func).parameters.keys())
     else:
         raise TypeError('Unidentified func passed')
