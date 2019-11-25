@@ -948,14 +948,15 @@ class BatchFitter(EstimatorType):
         import pandas as pd
 
         logging.info('Recovering original table from hash...')
-        self.results.bs_record = {seq: self.results.bs_record[seq_hash]
-                                  for seq, seq_hash in self._seq_to_hash.items()}
 
         def get_summary(seq):
             return self.results.summary.loc[self._seq_to_hash[seq]]
 
         self.results.summary = pd.Series(data=list(self._seq_to_hash.keys()),
                                          index=list(self._seq_to_hash.keys())).apply(get_summary)
+        if self.results.bs_record is not None:
+            self.results.bs_record = {seq: self.results.bs_record[seq_hash]
+                                      for seq, seq_hash in self._seq_to_hash.items()}
         self.y_data_batch = self._y_data_batch_dup.copy()
         del self._y_data_batch_dup
         if hasattr(self, '_sigma_dup'):
