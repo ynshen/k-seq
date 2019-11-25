@@ -36,7 +36,7 @@ We first setup the workspace by loading the core modules from `k_seq` package, a
 
 
 ```python
-from k_seq.data import SeqSampleSet, SeqTable, SeqFilter
+from src.k_seq import SeqSampleSet, SeqTable, SeqFilter
 
 # Optional, set default screen dpi for jupyter notebook for download figures with correct resolution directly
 import matplotlib as mpl
@@ -1015,7 +1015,7 @@ We first simulate the `y_data` (reacted fraction) from known BFO model with 20% 
 def bfo_model(x, A, k):
     return A * (1 - np.exp(-0.3371 * 90 * k * x * 1e-6))
 
-from k_seq.data.simu import y_value_simulator
+from src.k_seq import y_value_simulator
 
 x = [2, 10, 50, 250, 1250]
 params = {'A': 0.6, 'k': 20}
@@ -1039,7 +1039,7 @@ y_simy = [6.93526788e-04 2.82106299e-03 1.42922033e-02 5.86353893e-02
 
 Then, we can use `SingleFitting` to fit this fake data to the BFO model:
 ```python
-from k_seq.fitting import SingleFitting
+from src.k_seq import SingleFitting
 import numpy as np
 
 fitter = SingleFitting(x_data=x_simu, y_data=y_simu, model=bfo_model,

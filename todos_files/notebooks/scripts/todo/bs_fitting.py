@@ -1,5 +1,5 @@
 import util
-import k_seq.k_seq as k_seq
+from src import k_seq as k_seq
 import time
 import multiprocessing as mp
 import numpy as np

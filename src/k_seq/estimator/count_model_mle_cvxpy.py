@@ -154,7 +154,7 @@ def get_convex_model(data):
 
 
 def run_solver(prob, solver=cp.SCS, verbose=True, log_dir=None):
-    from k_seq.utility.log import Timer, FileLogger
+    from src.k_seq import Timer, FileLogger
 
     if log_dir is not None:
         with FileLogger(file_path=log_dir), Timer():
@@ -168,7 +168,7 @@ def main(output_dir, seq_table=None, table_name=None, input_pools=None,
          simu_data_path=None, solver='SCS', notes=None):
 
 
-    from k_seq.utility.file_tools import dump_pickle
+    from src.k_seq import dump_pickle
     import cvxpy as cp
     from pathlib import Path
 

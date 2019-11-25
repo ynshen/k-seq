@@ -207,12 +207,12 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
 
     if kinetic_model is None:
         # default use BYO first-order compositional model
-        from k_seq.model import kinetic
+        from src.k_seq.model import kinetic
         kinetic_model = kinetic.BYOModel.composition_first_order
         print('No kinetic model provided, use BYOModel.composition_first_order')
     if count_model is None:
         # default use MultiNomial
-        from k_seq.model import count
+        from src.k_seq.model import count
         count_model = count.MultiNomial
         print('No count model provided, use MultiNomial')
 

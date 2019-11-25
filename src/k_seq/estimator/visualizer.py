@@ -29,7 +29,7 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
             if isinstance(seq_ix, str):
                 seq_ix = [seq_ix]
             if seq_name is None:
-                seq_name = seq_ix
+                seq_name = seq_ixs
             if model is None:
                 model = fitting_res.model
             data_to_plot = {
@@ -145,87 +145,93 @@ def bootstrap_params_dist_plot(fitting_res, model=None, seq_ix=None, params_to_p
             jp.savefig(save_fit_to, bbox_inches='tight', dpi=300)
 
 
-def param_value_plot(fitting_res, param, with_ci=True, show_point_est=False, use_mean_sd=False,
-                     sort_by='median', y_log=False, seq_filter=None, seq_table=None, save_fig_to=None):
+def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
+                     line_postfix='', line_color='#2C73B4', line_marker='',
+                     show_shade=True, upper_postfix='_97.5%', lower_postfix='_2.5%',
+                     shade_color='#2C73B4', shade_alpha=0.3,
+                     sort_by=None, y_log=False, save_fig_to=None, **kwargs):
+    """Plot of given estimated parameter values across selected sequences"""
 
     import matplotlib.pyplot as plt
     import numpy as np
-    from .least_square import BatchFitResults
+    import pandas as pd
+    from .least_square import BatchFitResults, BatchFitter
     from ..data.seq_table import SeqTable
 
-    def plot_with_shade(ax, x, center, high, low):
-        ax.plot(x, center, '.-', color='#2C73B4')
-        if (high is not None) and (low is not None):
-            ax.fill_between(x, y1=high, y2=low, alpha=0.5, facecolor='#2C73B4')
+    def get_res_col():
+        """parse col name to use"""
 
-    cols = [param + post_fix for post_fix in ['_point_est', '_mean', '_std', '_median', '_2.5', '_97.5']]
-    if isinstance(fitting_res, BatchFitResults):
-        param_values = fitting_res.summary[cols]
-    elif isinstance(fitting_res, BatchFitResults):
-        param_values = fitting_res.fitting.summary[col]
-    else:
-        raise Exception('Error: fitting_res has to be an either SeqTable or BatchFitting instance')
+        def check_col(param, postfix):
+            if (param + postfix) in param_values.columns:
+                return param + postfix
+            elif postfix in param_values.columns:
+                return postfix
+            else:
+                print(param_values.columns)
+                raise IndexError(f"Column '{param + postfix}' or '{postfix}' not found in result")
 
+        line_col = check_col(param, line_postfix)
+        if show_shade:
+            lower_col = check_col(param, lower_postfix)
+            upper_col = check_col(param, upper_postfix)
+        else:
+            lower_col = None
+            upper_col = None
+        return line_col, lower_col, upper_col
 
-    if seq_filter is not None:
-        if isinstance(seq_filter, list):
-            param_values = param_values.loc[seq_filter]
-        elif callable(seq_filter):
-            param_values = param_values[[seq_filter(fitting_res.seq_list[seq_ix]) for seq_ix in param_values.index]]
+    def parse_fitting_res():
+        """Parse various fitting result input type and get the `pd.DataFrame` output of summary"""
+
+        if isinstance(fitting_res, pd.DataFrame):
+            return fitting_res
+        elif isinstance(fitting_res, BatchFitter):
+            return fitting_res.results.summary()
+        elif isinstance(fitting_res, BatchFitResults):
+            return fitting_res.summary()
+        elif isinstance(fitting_res, SeqTable):
+            return fitting_res.fitter.results.summary
+        else:
+            raise Exception('Error: fitting_res has to be an either SeqTable or BatchFitting instance')
+
+    param_values = parse_fitting_res()
+    line_col, lower_col, upper_col = get_res_col()
+
+    if seq_to_show is not None:
+        if isinstance(seq_to_show, list):
+            param_values = param_values.loc[seq_to_show]
+        elif callable(seq_to_show):
+            param_values = param_values[param_values.index.to_series().apply(seq_to_show)]
 
     if isinstance(sort_by, str):
-        if sort_by.lower() in ['median', 'point_est', 'mean']:
-            param_values = param_values.sort_values(by=param + '_' + sort_by)
-        elif sort_by.lower() in ['abun', 'rel_abun', 'relative abundance']:
-            if isinstance(fitting_res, SeqTable):
-                if seq_table is None:
-                    seq_table = fitting_res
-            else:
-                if seq_table is None:
-                    raise Exception('Error: please provide a SeqTable instance for relative abundance')
-            param_values['rel_abun'] = seq_table.seq_info['avg_rel_abun_in_inputs'].loc[param_values.index]
-            param_values = param_values.sort_values(by='rel_abun')
+        if sort_by in param_values.columns:
+            param_values = param_values.sort_values(by=sort_by)
+        else:
+            raise IndexError(f'Unknown column name {sort_by} to sort')
     elif callable(sort_by):
-        sort_fn = lambda x: sort_by(fitting_res.seq_list[x])
-        param_values = param_values.reindex(sorted(param_values.index, key=sort_fn))
-
-    fig = plt.figure(figsize=[12, 6])
-    ax = fig.add_subplot(111)
-    pos = np.linspace(0, param_values.shape[0] - 1, param_values.shape[0])
-    if use_mean_sd:
-        center = param_values[param + '_mean']
-        high = param_values[param + '_mean'] - 1.96 * param_values[param + '_std']
-        low = param_values[param + '_mean'] + 1.96 * param_values[param + '_std']
+        new_index = param_values.apply(sort_by, axis=1).index
+        param_values = param_values.reindex(new_index)
     else:
-        center = param_values[param + '_median']
-        high = param_values[param + '_97.5']
-        low = param_values[param + '_2.5']
-    if with_ci:
-        plot_with_shade(ax=ax, x=pos, center=center, high=high, low=low)
-    else:
-        plot_with_shade(ax=ax, x=pos, center=center, high=None, low=None)
+        if sort_by is not None:
+            raise TypeError('Unknown sorting method')
 
-    if show_point_est:
-        ax.scatter(x=pos, y=param_values[param + '_point_est'], marker='x', color='#F39730')
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 1, figsize=kwargs.pop('figsize', (12, 6)))
 
+    pos = np.arange(param_values.shape[0])
+    ax.plot(pos, param_values[line_col], marker=line_marker, color=line_color, ls='-')
+    if show_shade:
+        ax.fill_between(pos, y1=param_values[upper_col], y2=param_values[lower_col],
+                        facecolor=shade_color, alpha=shade_alpha)
     if y_log:
         ax.set_yscale('log')
-
     ax.set_xlabel('Sequences', fontsize=14)
-    ylabel = 'Estimated ' + param
-    if use_mean_sd:
-        ylabel += ' (mean)'
-    else:
-        ylabel += ' (median)'
-    if with_ci:
-        ylabel += ' with 95% CI'
-    ax.set_ylabel(ylabel, fontsize=14)
+    ax.set_ylabel(param, fontsize=14)
 
     if save_fig_to:
-        fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
 
-    plt.show()
-
+    return ax
 
 
 # def get_loss(x, y, params, func=, weights=None):
