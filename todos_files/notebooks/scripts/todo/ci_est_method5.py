@@ -1,6 +1,6 @@
 import util
 import time
-import k_seq.confidence_estimation
+from src import k_seq
 
 if __name__ == '__main__':
     timeInit = time.time()

@@ -30,8 +30,8 @@ def save_pickle(obj, path):
 
 
 def main():
-    from k_seq.estimator.least_square import BatchFitter
-    from k_seq.model.kinetic import BYOModel
+    from src.k_seq import BatchFitter
+    from src.k_seq import BYOModel
 
     # todo: make it CL tool using argparse
     seq_table = load_table(table_path=TABLE_PATH)

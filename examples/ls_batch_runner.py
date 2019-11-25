@@ -7,11 +7,7 @@ def kA(params):
 
 
 def main(table_path, table_name, fit_partial, bootstrap_num, bs_record_num, bs_method, core_num, output_dir, **kwargs):
-    from k_seq.estimator.least_square import BatchFitter
-    from k_seq.model.kinetic import BYOModel
-    from k_seq.utility.file_tools import read_pickle
-
-    import numpy as np
+    from src.k_seq import read_pickle
 
     seq_table = read_pickle(table_path)
     work_table = getattr(seq_table, table_name)

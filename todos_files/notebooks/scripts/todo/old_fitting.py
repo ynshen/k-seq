@@ -1,6 +1,5 @@
-import numpy as np
 from ribo import load_pickle, dump_pickle
-from k_seq import data_fitting
+from src.k_seq import data_fitting
 
 if __name__=='__main__':
     countTable = load_pickle('/home/yuning/Work/ribozyme_pred/data/k_seq/labeled_count_table_non_empty_in_r5_INT_STD.pkl')

@@ -18,7 +18,7 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, 
         work_table (pd.DataFrame): the work table contains sequences to fit
         x_data (list): list of x values (BYO concentration), same order as samples in work_table
     """
-    from k_seq.utility.file_tools import read_pickle
+    from src.k_seq import read_pickle
 
     if seq_table is not None:
         # input is seq_table
@@ -105,8 +105,8 @@ def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_parti
 def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None):
 
-    from k_seq.estimator.least_square import BatchFitter
-    from k_seq.model.kinetic import BYOModel
+    from src.k_seq import BatchFitter
+    from src.k_seq import BYOModel
     import numpy as np
 
     work_table, x_data, sigma = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
@@ -171,6 +171,6 @@ if __name__ == '__main__':
     output_dir = create_output_dir(**args)
     _ = args.pop('output_dir')
     _ = args.pop('pkg_path')
-    from k_seq.utility.log import Timer
+    from src.k_seq import Timer
     with Timer():
         sys.exit(main(output_dir=output_dir, **args))
