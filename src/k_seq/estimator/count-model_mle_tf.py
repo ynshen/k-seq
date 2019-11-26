@@ -167,8 +167,8 @@ def fit(ctrl_var, counts):
 
 
 def main(output_path, simu_data_path=None, seq_table=None, table_name=None):
-    from k_seq.data.count_data import CountData
-    from k_seq.utility.log import Timer, FileLogger
+    from src.k_seq import CountData
+    from src.k_seq import Timer, FileLogger
     from pathlib import Path
 
     if not Path(output_path).exists():
@@ -179,7 +179,7 @@ def main(output_path, simu_data_path=None, seq_table=None, table_name=None):
         ctrl_var = count_data.ctrl_vars.loc['c'].astype(np.float32).values
         counts = count_data.count.to_numpy().astype(np.float32).T
     elif seq_table is not None:
-        from k_seq.utility.file_tools import read_pickle
+        from src.k_seq import read_pickle
         seq_table = read_pickle(seq_table)
         ctrl_var = seq_table.x_values.values
         counts = getattr(seq_table, table_name).to_numpy().astype(np.float32).T
@@ -187,7 +187,7 @@ def main(output_path, simu_data_path=None, seq_table=None, table_name=None):
     with Timer(), FileLogger(output_path + '/estimator.log'):
         results = fit(ctrl_var=ctrl_var, counts=counts)
 
-    from k_seq.utility.file_tools import dump_pickle
+    from src.k_seq import dump_pickle
     dump_pickle(obj=results, path=output_path + '/results.pkl')
 
 

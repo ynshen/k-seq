@@ -3,14 +3,7 @@ import numpy as np
 if np.sum([dirc.find('k-seq') >= 0 for dirc in sys.path]) == 0:
     sys.path = ['/home/yuning/Work/k-seq/src/'] + sys.path
 
-
-import util
-import k_seq.data.pre_processing as pre_processing
-import k_seq.data.analysis as analysis
-import k_seq.fitting.fitting as fitting
-import k_seq.fitting.analysis as fit_analysis
-import k_seq.data.io as io
-
+from src import k_seq as pre_processing, k_seq as fitting
 
 
 def main():
