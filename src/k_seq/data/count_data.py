@@ -1,3 +1,6 @@
+"""This module parse count data for count model simulator
+will merged to simulator package in the future
+"""
 import pandas as pd
 import numpy as np
 
