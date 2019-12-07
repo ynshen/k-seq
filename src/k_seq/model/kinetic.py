@@ -63,7 +63,7 @@ class BYOModel(ModelBase):
             if bias:
                 raise NotImplementedError('reacted fraction with bias is not implemented yet')
             else:
-                self.func = self.func_react_frac
+                self.func = self.react_frac
         else:
             if bias:
                 self.func = self.composition_first_order_w_bias
@@ -123,7 +123,7 @@ class BYOModel(ModelBase):
             return p / np.sum(p)
 
     @staticmethod
-    def func_react_frac(c, k, A):
+    def react_frac(c, k, A):
         """Sequence reacted fraction"""
         import numpy as np
 
