@@ -115,7 +115,7 @@ class SingleFitter(EstimatorType):
         elif isinstance(sigma, list):
             self.config.sigma = np.array(sigma)[mask]
         else:
-            print(self.config.sigma)
+            print(sigma)
             print(mask)
             self.config.sigma = sigma[mask]
 
