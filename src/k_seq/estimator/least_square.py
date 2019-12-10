@@ -115,6 +115,8 @@ class SingleFitter(EstimatorType):
         elif isinstance(sigma, list):
             self.config.sigma = np.array(sigma)[mask]
         else:
+            print(self.config.sigma)
+            print(mask)
             self.config.sigma = sigma[mask]
 
         if bounds is None:
