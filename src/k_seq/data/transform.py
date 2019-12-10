@@ -70,7 +70,7 @@ class SpikeInNormalizer(Transformer):
         self.spike_in_members = None
         self.norm_factor = None
         self.radius = None
-        self.radius = radius # calculate radius calculates the norm factor
+        self.radius = radius
 
     @property
     def spike_in_amount(self):
@@ -86,7 +86,6 @@ class SpikeInNormalizer(Transformer):
             if self.blacklist is not None:
                 sample_list = [sample for sample in sample_list if sample not in self.blacklist]
             self._spike_in_amount = {key: value for key, value in zip(sample_list, spike_in_amount)}
-            self._spike_in_amount = {**self._spike_in_amount, **{key: np.nan for key in self.blacklist}}
         elif isinstance(spike_in_amount, dict):
             self._spike_in_amount = spike_in_amount
         else:
@@ -296,8 +295,6 @@ class DnaAmountNormalizer(Transformer):
             target = target.table
         self.norm_factor = {sample: dna_am / target[sample].sparse.to_dense().sum()
                             for sample, dna_am in dna_amount.items()}
-        self.norm_factor = {**self.norm_factor,
-                            **{sample: np.nan for sample in target.columns if sample not in dna_amount.keys()}}
         return self._func(target=target, norm_factor=self.norm_factor)
 
 
