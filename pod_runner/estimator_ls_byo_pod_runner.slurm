@@ -1,11 +1,10 @@
 #!/bin/bash -l
-# ask for 40 cores on 1 node
-#SBATCH --nodes=1 --ntasks-per-node=30
-#SBATCH --time=48:00:00
+#SBATCH --nodes=1 --ntasks-per-node=40
+#SBATCH --time=10:00:00
 #SBATCH --mail-user=yuningshen@ucsb.edu
 #SBATCH --mail-type=start,end
 
-cd $SLURM_SUBMIT_DIR
+# cd $SLURM_SUBMIT_DIR
 
 ############################  Define task sample ####################
 #   table name options for BYO-doped
@@ -15,28 +14,29 @@ cd $SLURM_SUBMIT_DIR
 #####################################################################
 
 SAMPLE_NAME='byo_doped.pkl'
-TABLE='total_dna'
+TABLE='spike_in'
 OUTPUT_BASE='/home/yshen/k-seq/results/byo-doped_2019-10/point-est-bounded_2019-11-23'
 TABLE_NAME=table_filtered_reacted_frac_$TABLE
-CORE=30
+CORE=40
 
 ############################ Define estimator details ##############################
 # output nameing: prefix _ table _  bs-num _ bs-mtd _ no-zero _ inv-weight _ core _ postfix
 ###########################################################################
 
-PREFIX='prefix'
+PREFIX=''
 FIT_NUM=-1
 BS_NUM=0
 BS_SAVE_NUM=0
 BS_MTD="data"
-NO_ZERO=''
-INV_WEIGHT=''
+NO_ZERO='true'
+INV_WEIGHT='true'
 POSTFIX=''
 
-FOLDER_NAME= echo $( [ -z $PREFIX ] && echo '' || echo $PREFIX\_ )table-$TABLE\_bs-num-$BS_NUM\_bs-mtd-$BS_MTD\_no-zero-$( [ -z $NO_ZERO ] && echo true || echo false )_inv-weight-$( [ -z $INV_WEIGHT ] && echo true || echo false )_core-$CORE$( [ -z $POSTFIX ] && echo '' || echo _$POSTFIX )
+FOLDER_NAME=$( [ -z $PREFIX ] && echo '' || echo $PREFIX\_ )table-$TABLE\_bs-num-$BS_NUM\_bs-mtd-$BS_MTD\_no-zero-$( [ -z $NO_ZERO ] && echo true || echo false )_inv-weight-$( [ -z $INV_WEIGHT ] && echo true || echo false )_core-$CORE$( [ -z $POSTFIX ] && echo '' || echo _$POSTFIX )
 
 OUTPUT_DIR=$OUTPUT_BASE/$FOLDER_NAME
 mkdir -p $OUTPUT_DIR
+echo "create folder at $OUTPUT_DIR"
 
 # Avaiable flags
 # --simu_data
