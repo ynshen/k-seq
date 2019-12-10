@@ -136,8 +136,8 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
 def parse_args():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Individual least-squares kinetic model fitting')
-    parser.add_argument('--pkg_path', type=str, default='./',
+    parser = argparse.ArgumentParser(description='Least-squares kinetic model fitting')
+    parser.add_argument('--pkg_path', type=str, default=None,
                         help='Path to customize k-seq package')
     parser.add_argument('--simu_data', type=str,
                         help='Path to folder of simulated data')
@@ -157,7 +157,7 @@ def parse_args():
                         help='Number of bootstrap results to save, save all if negative')
     parser.add_argument('--bs_method', '-m', choices=['pct_res', 'data', 'stratified'], default='pct_res',
                         help='Bootstrap method')
-    parser.add_argument('--core_num', '-c', type=int,help='Number of process to use in parallel')
+    parser.add_argument('--core_num', '-c', dest='core_num', type=int, help='Number of process to use in parallel')
     parser.add_argument('--output_dir', '-o', type=str, default='./')
 
     return vars(parser.parse_args())

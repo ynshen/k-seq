@@ -660,7 +660,10 @@ class BatchFitResults:
 
     @classmethod
     def from_pickle(cls, fitter, path):
-        """Create a `BatchFitResults` instance with results loaded from pickle"""
+        """Create a `BatchFitResults` instance with results loaded from pickle
+        Notice:
+            this will take a very long time if the pickle is large
+        """
         inst = cls(fitter=fitter)
         from ..utility.file_tools import read_pickle
         results = read_pickle(path=path)
@@ -876,9 +879,11 @@ class BatchFitter(EstimatorType):
             if parallel_cores > 1:
                 import multiprocessing as mp
                 pool = mp.Pool(processes=int(parallel_cores))
+                logging.info('Use multiprocessing to fit in {} parallel threads...'.format(parallel_cores))
                 workers = pool.map(_work_fn, self.worker_generator())
             else:
                 # single thread
+                logging.info('Fitting in a single thread...')
                 workers = [_work_fn(fitter) for fitter in self.worker_generator()]
 
         if self.keep_single_fitters:
