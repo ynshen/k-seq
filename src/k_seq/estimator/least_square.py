@@ -115,8 +115,6 @@ class SingleFitter(EstimatorType):
         elif isinstance(sigma, list):
             self.config.sigma = np.array(sigma)[mask]
         else:
-            print(sigma)
-            print(mask)
             self.config.sigma = sigma[mask]
 
         if bounds is None:
@@ -932,13 +930,21 @@ class BatchFitter(EstimatorType):
 
         self._y_data_batch_dup = self.y_data_batch.copy()
         if self.seq_to_fit is not None:
+            # filter the seq to fit
             self._seq_to_fit_dup = self.seq_to_fit.copy()
             self.y_data_batch = self.y_data_batch.loc[self.seq_to_fit]
+        # find seq to hash mapping
         self._seq_to_hash = self.y_data_batch.apply(hash_series, axis=1).to_dict()
-        if isinstance(self.sigma, pd.DataFrame):
-            self._sigma_dup = self.sigma.copy()
-            self.sigma.rename(index=self._seq_to_hash, inplace=True)
+        # only keep the first instance of each hash
         self.y_data_batch = self.y_data_batch[~self.y_data_batch.duplicated(keep='first')]
+        if isinstance(self.sigma, pd.DataFrame):
+            # only accept sigma as an pd.DataFrame
+            self._sigma_dup = self.sigma.copy()
+            # filter sigma table for only the first instance of each hash
+            self.sigma = self.sigma.loc[self.y_data_batch.index]
+            # convert seq --> hash
+            self.sigma.rename(index=self._seq_to_hash, inplace=True)
+        # convert seq --> hash
         self.y_data_batch.rename(index=self._seq_to_hash, inplace=True)
         if self.seq_to_fit is not None:
             self.seq_to_fit = [self._seq_to_hash[seq] for seq in self.seq_to_fit]
@@ -954,16 +960,21 @@ class BatchFitter(EstimatorType):
         def get_summary(seq):
             return self.results.summary.loc[self._seq_to_hash[seq]]
 
+        # map hash --> seq for results summary
         self.results.summary = pd.Series(data=list(self._seq_to_hash.keys()),
                                          index=list(self._seq_to_hash.keys())).apply(get_summary)
+        # map hash --> seq for bs_record
         if self.results.bs_record is not None:
             self.results.bs_record = {seq: self.results.bs_record[seq_hash]
                                       for seq, seq_hash in self._seq_to_hash.items()}
+        # recover the original y_data_batch
         self.y_data_batch = self._y_data_batch_dup.copy()
         del self._y_data_batch_dup
+        # recover the original sigma if exists
         if hasattr(self, '_sigma_dup'):
             self.sigma = self._sigma_dup.copy()
             del self._sigma_dup
+        # recover the original seq_to_fit if exists
         if hasattr(self, '_seq_to_fit'):
             self.seq_to_fit = self._seq_to_fit_dup.copy()
             del self._seq_to_fit_dup
