@@ -58,7 +58,10 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, 
 def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False,
                       inverse_weight=False, bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1,
                       output_dir=None, pkg_path=None):
-    """Create the output dir and logging/config files"""
+    """Create the output dir and logging/config files
+    Logic:
+      TODO: resolve bash/python double folder create problem
+    """
 
     from pathlib import Path
     if Path(output_dir).is_dir():
@@ -102,7 +105,7 @@ def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_parti
 
 
 def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
-         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, output_dir=None):
+         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None):
 
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
@@ -118,26 +121,28 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
     else:
         grouper = None
 
-    print(f'exclude_zero: {exclude_zero}')
-    print(f'inverse_weight: {inverse_weight}')
+    logging.info(f'exclude_zero: {exclude_zero}')
+    logging.info(f'inverse_weight: {inverse_weight}')
+    logging.info(f'deduplicate: {deduplicate}')
     batch_fitter = BatchFitter(
         y_data_batch=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.func_react_frac, exclude_zero=exclude_zero, grouper=grouper,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
     )
-    batch_fitter.fit(deduplicate=True, parallel_cores=core_num)
+    batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
-    batch_fitter.save_model(model_path=f'{output_dir}/model.pkl',
-                            result_path=f'{output_dir}/results.pkl',
-                            table_path=f'{output_dir}/table.pkl')
+    batch_fitter.save_model(output_dir=output_dir,
+                            results=True,
+                            sep_files=True,
+                            tables=True)
 
 
 def parse_args():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Individual least-squares kinetic model fitting')
-    parser.add_argument('--pkg_path', type=str, default='./',
+    parser = argparse.ArgumentParser(description='Least-squares kinetic model fitting')
+    parser.add_argument('--pkg_path', type=str, default=None,
                         help='Path to customize k-seq package')
     parser.add_argument('--simu_data', type=str,
                         help='Path to folder of simulated data')
@@ -157,7 +162,9 @@ def parse_args():
                         help='Number of bootstrap results to save, save all if negative')
     parser.add_argument('--bs_method', '-m', choices=['pct_res', 'data', 'stratified'], default='pct_res',
                         help='Bootstrap method')
-    parser.add_argument('--core_num', '-c', type=int,help='Number of process to use in parallel')
+    parser.add_argument('--deduplicate', dest='deduplicate', default=False, action='store_true',
+                        help='If deduplicate seq with same data')
+    parser.add_argument('--core_num', '-c', dest='core_num', type=int, help='Number of process to use in parallel')
     parser.add_argument('--output_dir', '-o', type=str, default='./')
 
     return vars(parser.parse_args())
