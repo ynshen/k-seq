@@ -618,58 +618,151 @@ class Bootstrap:
 
 
 class BatchFitResults:
-    """Store, convert, and visualize BatchFitter results
-    Only save results (detached from fitter), corresponding fitter should be found by sequence
+    """Parse, store, and visualize BatchFitter results
+    Only save results (detached from each fitter), corresponding fitter should be found by sequence
 
     Attributes:
         fitter: proxy to the `BatchFitter`
-        bs_record (dict of pd.DataFrame): {seq: `SingleFitter.results.uncertainty.record`}
         summary (`pd.DataFrame`): summarized results with each sequence as index
+        bs_record (dict of pd.DataFrame): {seq: `SingleFitter.results.uncertainty.record`}
 
     Methods:
         summary_to_csv: export summary dataframe as csv file
         to_pickle: save results as pickled dictionary
         from_pickle: load bootstrapping results from picked dictionary
-
-
+        from_folder: link results to a saved folder
+        from_record: overall method to infer either load `BatchFitResults` from pickled or a folder
     """
 
-    def __init__(self, fitter):
-        """Parse results from fitter_list which the first is """
+    def __init__(self, fitter=None, result_path=None):
+        """Init a BatchFitResults instance
+        Args:
+            fitter (BatchFitter): corresponding fitter
+            result_path (str): path to saved results
+        """
         self.fitter = fitter
         self.bs_record = None
         self.summary = None
+        self.result_path = result_path
+        self.sep_files = None
+        if result_path:
+            self.parse_saved_results()
+
+    def parse_saved_results(self):
+        """Load/link data from `self.result_path`"""
+
+        from pathlib import Path
+        result_path = Path(self.result_path)
+        if result_path.is_dir():
+            if result_path.joinpath('results.pkl').exists():
+                self.sep_files = False
+                result_path = result_path.joinpath('results.pkl')
+            elif result_path.joinpath('results').is_dir():
+                self.sep_files = True
+                result_path = result_path.joinpath('results/')
+            elif result_path.joinpath('summary.pkl').exists():
+                self.sep_files = True
+                result_path = result_path
+            else:
+                raise ValueError('Can not parse result_path.')
+        else:
+            self.sep_files = False
+            result_path = result_path
+        from ..utility.file_tools import read_pickle
+        if self.sep_files:
+            # record the results root
+            self.result_path = result_path
+            self.summary = read_pickle(result_path.joinpath('summary.pkl'))
+        else:
+            results = read_pickle(result_path)
+            self.summary = results['summary']
+            if 'bs_record' in results.keys():
+                self.bs_record = results['bs_record']
+
+    @property
+    def bs_record(self):
+        if self.sep_files is True:
+            print('Bootstrap records are saved as separate files, use `get_bs_record` instead')
+        else:
+            return self._bs_record
+
+    @bs_record.setter
+    def bs_record(self, value):
+        self._bs_record = value
+        self.sep_files = False
+
+    def get_bs_record(self, seq=None):
+        """Load bootstrap records for seq from files
+        Args:
+            seq (str or a list of str): a sequence or a list of sequence
+
+        Returns:
+            a pd.DataFrame of bootstrap record if seq is str
+            a dict of pd.DataFrame contains bootstrap records if seq is a list of str
+        """
+        import pandas as pd
+        import numpy as np
+        from ..utility.file_tools import read_pickle
+
+        if isinstance(seq, (list, pd.Series, np.ndarray)):
+            return {seq: read_pickle(str(self.result_path) + '/' + s + '.pkl') for s in seq}
+        else:
+            return read_pickle(str(self.result_path) + '/' + seq + '.pkl')
 
     def summary_to_csv(self, path):
         """Save summary table as csv file"""
         self.summary.to_csv(path)
 
-    def to_pickle(self, path=None):
-        """Serialize results as a pickled `dict`"""
+    def to_pickle(self, output_dir, sep_files=True):
+        """Serialize results as a pickled `dict`
+        Args:
+             output_dir (str): path to saved results, should be the parent of target location
+             sep_files (bool): if save bs_records as separate files
+                 If True:
+                     |path/results/
+                         |- summary.pkl
+                         |- bs_records
+                             |- seq1.pkl
+                             |- seq2.pkl
+                              ...
+                if False:
+                     save to path/results.pkl contains
+                     {
+                         summary: pd.DataFrame
+                         bs_records: {
+                            seq1 (pd.DataFrame)
+                            seq2 (pd.DataFrame)
+                            ...
+                       }
+                     }
+        """
+        from pathlib import Path
+        from ..utility.file_tools import dump_pickle
 
-        import pickle
-        results = {
-            'bs_record': self.bs_record,
-            'summary': self.summary
-        }
-        if path is None:
-            return pickle.dumps(results)
+        output_dir = Path(output_dir)
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
+        if sep_files:
+            output_dir = output_dir.joinpath('results/')
+            output_dir.mkdir()
+            dump_pickle(obj=self.summary, path=output_dir.joinpath('summary.pkl'))
+            [dump_pickle(obj=record, path=output_dir.joinpath(seq + '.pkl')) for record, seq in self.bs_record.items()]
         else:
-            from ..utility.file_tools import dump_pickle
-            dump_pickle(obj=results, path=path)
+            dump_pickle(
+                obj={
+                'bs_record': self.bs_record,
+                'summary': self.summary
+                },
+                path=output_dir.joinpath('results.pkl')
+            )
 
     @classmethod
-    def from_pickle(cls, fitter, path):
+    def from_pickle(cls, path_to_pickle, fitter=None):
         """Create a `BatchFitResults` instance with results loaded from pickle
         Notice:
             this will take a very long time if the pickle is large
         """
-        inst = cls(fitter=fitter)
-        from ..utility.file_tools import read_pickle
-        results = read_pickle(path=path)
-        inst.bs_record = results['bs_record']
-        inst.summary = results['summary']
-        return inst
+        return cls(fitter=fitter, result_path=path_to_pickle)
 
     def to_json(self, path=None):
         """Save fitting results as a JSON file
@@ -716,7 +809,7 @@ class BatchFitter(EstimatorType):
     """Fitter for least squared batch fitting
 
     Attributes:
-        y_data_batch (`pd.DataFrame`): a dataframe table containing y values to fit (e.g. reacted fraction in each sample)
+        y_data_batch (pd.DataFrame): a table containing y values to fit (e.g. reacted fraction in each sample)
     {attr}
         keep_single_fitters (bool): if each single fitter is saved, default False to save storage
         note (str): note about this fitting job
@@ -740,7 +833,7 @@ class BatchFitter(EstimatorType):
     def __init__(self, y_data_batch, x_data, model, sigma=None, bounds=None, seq_to_fit=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', grouper=None,
                  opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
-                 curve_fit_params=None, keep_single_fitters=False, note=None, silent=False):
+                 curve_fit_params=None, keep_single_fitters=False, note=None, result_path=None, silent=False):
         """
         Args:
             y_data_batch (pd.DataFrame or str): a set of y_data to fit form rows of y_data_batch, can be a string
@@ -830,7 +923,7 @@ class BatchFitter(EstimatorType):
             silent=True
         )
 
-        self.results = BatchFitResults(fitter=self)
+        self.results = BatchFitResults(fitter=self, result_path=result_path)
 
         # TODO: recover the visualizer
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
@@ -984,12 +1077,25 @@ class BatchFitter(EstimatorType):
             self.seq_to_fit = self._seq_to_fit_dup.copy()
             del self._seq_to_fit_dup
 
-    def save_model(self, model_path, result_path=None, table_path=None):
-        """Save models to disk as pickled dictionary,
-        except for y_data_batch, and sigma which is large data
+    def save_model(self, output_dir, results=True, sep_files=True, tables=True):
+        """Save model to a given directory
+        model_config will be saved as a pickled dictionary to recover the model
+            - except for y_data_batch, and sigma which are too large
+
+        Args:
+            output_dir (str): path to save the model, create if the path does not exist
+            results (bool): if save estimation results to `results` as well, to be load by `BatchFitResults`,
+                Default True
+            sep_files (bool): if save the record of bootstrap as separate files in a subfolder `results/bs_record`
+                Default True
+            tables (bool): if save tables (y_data_batch, sigma) in the folder. Default True
         """
         from ..utility.file_tools import dump_pickle
+        from pathlib import Path
 
+        output_dir = Path(output_dir)
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
         dump_pickle(
             obj={
                 **{'parameters': self.parameters,
@@ -998,42 +1104,48 @@ class BatchFitter(EstimatorType):
                    'seq_to_fit': self.seq_to_fit},
                 **self.fit_params.__dict__
             },
-            path=model_path
+            path=str(output_dir) + '/model_config.pkl'
         )
-        if result_path is not None:
-            self.results.to_pickle(path=result_path)
-        if table_path is not None:
-            dump_pickle(obj=self.y_data_batch, path=table_path)
+        if results:
+            self.results.to_pickle(output_dir=str(output_dir), sep_files=sep_files)
+        if tables is not None:
+            dump_pickle(obj=self.y_data_batch, path=str(output_dir) + '/y_data.pkl')
+            if self.sigma is not None:
+                dump_pickle(obj=self.sigma, path=str(output_dir) + '/sigma.pkl')
 
-    def save_results(self, result_path):
+    def save_results(self, result_path, sep_files=True):
         """Save results to disk as pickled dict"""
-        self.results.to_pickle(result_path)
+        self.results.to_pickle(result_path, sep_files=sep_files)
 
     @classmethod
-    def load_model(cls, model_path, y_data_batch, sigma=None, result_path=None):
-        """Create a model from picked file on disk
+    def load_model(cls, model_path, y_data_batch=None, sigma=None, result_path=None):
+        """Create a model from pickled config file
 
         Args:
-            model_path (str): path to picked model configuration file
+            model_path (str): path to picked model configuration file or the saved folder
             y_data_batch (pd.DataFrame or str): y_data table for fitting
             sigma (pd.DataFrame or str): optional sigma table for fitting
             result_path (str): path to fitting results
+
+        Returns:
+            a BatchFitter instance
         """
 
         from ..utility.file_tools import read_pickle
+        from pathlib import Path
 
-        model_config = read_pickle(model_path)
-        if isinstance(y_data_batch, str):
-            y_data_batch = read_pickle(y_data_batch)
+        config_file = model_path if Path(model_path).is_file() else model_path + '/model_config.pkl'
+        model_config = read_pickle(config_file)
+        if y_data_batch is None:
+            # try infer from the folder
+            y_data_batch = read_pickle(model_path + '/y_data.pkl')
+        else:
+            if isinstance(y_data_batch, str):
+                y_data_batch = read_pickle(y_data_batch)
         if sigma is not None:
             if isinstance(sigma, str):
                 sigma = read_pickle(sigma)
-        inst = cls(y_data_batch=y_data_batch, sigma=sigma, **model_config)
-        if result_path is not None:
-            results = read_pickle(result_path)
-            inst.results.bs_record = results['bs_record']
-            inst.results.summary = results['summary']
-        return inst
+        return cls(y_data_batch=y_data_batch, sigma=sigma, result_path=result_path, **model_config)
 
 
 def _work_fn(worker):
