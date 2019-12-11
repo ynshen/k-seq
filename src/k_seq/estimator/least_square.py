@@ -744,7 +744,7 @@ class BatchFitResults:
             output_dir.mkdir(parents=True)
         if sep_files:
             output_dir = output_dir.joinpath('results/')
-            output_dir.mkdir()
+            output_dir.mkdir(exist_ok=True, parents=True)
             dump_pickle(obj=self.summary, path=output_dir.joinpath('summary.pkl'))
             [dump_pickle(obj=record, path=output_dir.joinpath(seq + '.pkl')) for seq, record in self.bs_record.items()]
         else:
