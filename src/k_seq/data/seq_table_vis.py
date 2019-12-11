@@ -8,8 +8,6 @@ todo:
 from .seq_table import SeqTable
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import numpy as np
-import pandas as pd
 
 
 def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=None, figsize=None, barplot_kwargs=None):
