@@ -71,8 +71,9 @@ class PoolModel(ModelBase):
         count_params = {key: item for key, item in params.items() if key in self.count_params}
 
         pt = self.kinetic_model(**kinetic_params)
-
-        return pt, self.count_model(pt / np.sum(pt), **count_params)
+        if np.sum(pt) != 1:
+            pt = pt / np.sum(pt)
+        return self.count_model(pt, **count_params)
 
     def predict(self, **params):
         """Wrapper over func, can accept parameters to overwrite current ones if exist"""

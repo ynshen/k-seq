@@ -73,7 +73,7 @@ class BYOModel(ModelBase):
     @staticmethod
     def composition_first_order(c, p0, k, A):
         """Function of pool composition w.r.t. BYO concentration (x)
-        if c < 0, output is p0
+        if x < 0, output is p0
 
         Parameters:
             - p0: initial pool composition
@@ -99,7 +99,7 @@ class BYOModel(ModelBase):
     @staticmethod
     def composition_first_order_w_bias(c, p0, k, A, b):
         """Function of pool composition w.r.t. BYO concentration (x)
-        if c < 0, output is p0
+        if x < 0, output is p0
 
         Parameters:
             c: concentration
@@ -130,28 +130,3 @@ class BYOModel(ModelBase):
         k = np.array(k)
         A = np.array(A)
         return first_order(c=c, k=k, A=A, alpha=0.479, t=90)
-
-    @staticmethod
-    def amount_first_order(c, p0, k, A):
-        """Absolute amount change w.r.t. BYO concentration (x)
-        if c < 0, output is p0
-
-        Parameters:
-            c: concentration
-            p0: initial pool composition
-            k: kinetic coefficient
-            A: maximal conversion ratio
-        """
-
-        import numpy as np
-
-        p0 = np.array(p0)
-        k = np.array(k)
-        A = np.array(A)
-
-        if c < 0:
-            return p0
-        else:
-            return p0 * first_order(c=c, k=k, A=A, alpha=0.479, t=90)
-
-
