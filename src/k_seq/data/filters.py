@@ -1,5 +1,9 @@
+"""This module defines utility filter object to apply on
+
+"""
 
 from .seq_table import slice_table
+import pandas as pd
 
 
 class FilterBase(object):
@@ -66,8 +70,45 @@ class FilterBase(object):
 
 
 class FilterCollection(object):
-    """Applies a collection of filters to the object in sequence, with sev"""
+    """Applies a collection of filters to the object in sequence, Not implemented yet"""
     pass
+
+
+class SampleFilter(FilterBase):
+
+    def __init__(self, target, samples_to_keep=None, samples_to_remove=None, axis=1):
+        super().__init__(target, axis)
+        if isinstance(target, pd.DataFrame):
+            self.target = target
+        else:
+            self.target = getattr(target, 'table')
+        self.samples_to_keep = samples_to_keep
+        self.samples_to_remove = samples_to_remove
+        self.axis = axis
+
+    @staticmethod
+    def func(target, samples_to_keep):
+        return target[samples_to_keep]
+
+    def apply(self, target=None, samples_to_keep=None, samples_to_remove=None, axis=None):
+        if target is None:
+            target = self.target
+        elif isinstance(target, pd.DataFrame):
+            pass
+        else:
+            target = getattr(target, 'table')
+        if samples_to_keep is None:
+            samples_to_keep = self.samples_to_keep
+        if samples_to_remove is None:
+            samples_to_remove = self.samples_to_remove
+        if axis is None:
+            axis = self.axis
+        sample_list = target.columns if axis == 1 else target.index
+        if samples_to_keep is not None:
+            sample_list = [sample for sample in sample_list if sample in samples_to_keep]
+        if samples_to_remove is not None:
+            sample_list = [sample for sample in sample_list if sample not in samples_to_remove]
+        return self.func(target, samples_to_keep=sample_list)
 
 
 class SpikeInFilter(FilterBase):
