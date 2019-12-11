@@ -746,7 +746,7 @@ class BatchFitResults:
             output_dir = output_dir.joinpath('results/')
             output_dir.mkdir()
             dump_pickle(obj=self.summary, path=output_dir.joinpath('summary.pkl'))
-            [dump_pickle(obj=record, path=output_dir.joinpath(seq + '.pkl')) for record, seq in self.bs_record.items()]
+            [dump_pickle(obj=record, path=output_dir.joinpath(seq + '.pkl')) for seq, record in self.bs_record.items()]
         else:
             dump_pickle(
                 obj={
