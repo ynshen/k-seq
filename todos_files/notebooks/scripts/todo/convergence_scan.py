@@ -4,7 +4,7 @@ if '/home/yuning/Work/k-seq/src/' not in sys.path:
 
 import util
 import time
-import src.k_seq.
+import k_seq
 
 def func(x, A, k):
     return A * (1 - np.exp(-0.479 * 90 * k * x))
