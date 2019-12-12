@@ -1,9 +1,12 @@
 """
-Module contains the classes to transform tables (`pd.DataFrame` or `SeqTable`) instance including
-    - normalize by spike-in
-    - normalize by total amount
-    - transform to relative abundance
-    - etc
+Module contains the classes to transform tables (`pd.DataFrame` or `SeqTable`) instance as well as related calculation
+    and visualizations
+
+Current available transformers:
+    - SpikeInNormalizer: normalize by spike-in
+    - DnaAmountNormalizer: normalize by total dna amount
+    - ReactedFractionNormalizer: transform to relative abundance
+    - BYOSelectedPoolNormalizerByAbe: curated quantification factor used by Abe
 """
 
 import numpy as np
@@ -307,6 +310,72 @@ class ReactedFractionNormalizer(Transformer):
         self.input_samples = input_samples
         self.reduce_method = reduce_method
         self.remove_zero = remove_zero
+
+    @staticmethod
+    def _func(target, input_samples, reduce_method='median', remove_zero=True):
+
+        method_mapper = {
+            'med': np.nanmedian,
+            'median': np.nanmedian,
+            'mean': np.nanmean,
+            'avg': np.nanmean
+        }
+        if callable(reduce_method):
+            base = reduce_method(target[input_samples])
+        else:
+            if reduce_method.lower() not in method_mapper.keys():
+                raise ValueError('Unknown reduce_method')
+            else:
+                base = method_mapper[reduce_method](target[input_samples], axis=1)
+
+        mask = base > 0 # if any does not exist in input samples
+        reacted_frac = target.loc[mask, ~target.columns.isin(input_samples)].divide(base[mask], axis=0)
+        if remove_zero:
+            return reacted_frac[reacted_frac.sum(axis=1) > 0]
+        else:
+            return reacted_frac
+
+    def apply(self, target=None, input_samples=None, reduce_method=None, remove_zero=None):
+        """Convert absolute amount to reacted fraction
+            Args:
+                target (pd.DataFrame): the table with absolute amount to normalize on inputs, including input pools
+                input_samples (list of str): list of indices of input pools
+                reduce_method (str or callable): 'mean' or 'median' or a callable apply on a pd.DataFrame to list-like
+                remove_zero (bool): if will remove all-zero seqs from output table
+
+            Returns:
+                pd.DataFrame
+        """
+        if target is None:
+            target = self.target
+        if target is None:
+            raise ValueError('No valid target found')
+        if input_samples is None:
+            input_samples = self.input_samples
+        if input_samples is None:
+            raise ValueError('No input_samples found')
+        if reduce_method is None:
+            reduce_method = self.reduce_method
+        if not isinstance(target, pd.DataFrame):
+            target = getattr(target, 'table')
+        if remove_zero is None:
+            remove_zero = self.remove_zero
+
+        return self._func(target=target, input_samples=input_samples,
+                          reduce_method=reduce_method, remove_zero=remove_zero)
+
+
+class BYOSelectedPoolNormalizerByAbe(Transformer):
+    """This normalizer contains the quantification factor used by Abe"""
+
+    def __init__(self, target=None):
+        super().__init__()
+        self.target = target
+        self.q_factors = {'0.0005,
+                    0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133,
+                    0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812,
+                    0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207,
+                    0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596]
 
     @staticmethod
     def _func(target, input_samples, reduce_method='median', remove_zero=True):
