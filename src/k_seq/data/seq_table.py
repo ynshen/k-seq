@@ -357,109 +357,11 @@ class SeqTable(object):
           - BFO: not implemented
         """
         if dataset.lower() in ['byo_doped', 'byo-doped', 'doped']:
-            return cls._load_byo_doped(from_count_file=from_count_file)
+            return _load_byo_doped(from_count_file=from_count_file)
         else:
             raise NotImplementedError(f'Dataset {dataset} is not implemented')
 
-    @classmethod
-    def _load_byo_doped(cls, from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None):
-        """todo: add dataset description"""
-        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
-        BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
-            else count_file_path
-        BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
-            else doped_norm_path
 
-        if from_count_file:
-            import numpy as np
-            import pandas as pd
-
-            print('Generate SeqTable instance for BYO-doped pool...')
-            print(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
-            # parse dna amount file
-            dna_amount = pd.read_table(BYO_DOPED_NORM_FILE, header=None).rename(columns={0: 'dna_inv'})
-            dna_amount['dna_amount'] = 1 / dna_amount['dna_inv']
-            indices = ['R0']
-            for sample in 'ABCDE':
-                for rep in range(3):
-                    indices.append(f'{sample}{rep + 1}')
-            dna_amount = {name: dna_amount['dna_amount'][ix] for ix, name in enumerate(indices)}
-
-            byo_doped = cls.from_count_files(
-                file_root=BYO_DOPED_COUNT_FILE,
-                pattern_filter='counts-',
-                name_pattern='counts-d-[{byo}{exp_rep}].txt',
-                dry_run=False,
-                sort_by='name',
-                x_values=np.concatenate((
-                    np.repeat([1250, 250, 50, 10, 2], repeats=3) * 1e-6,
-                    np.array([np.nan])), axis=0
-                ),
-                x_unit='mol',
-                spike_in_seq='AAAAACAAAAACAAAAACAAA',
-                spike_in_amount=np.concatenate((
-                    np.repeat([2, 2, 1, 0.2, .04], repeats=3),
-                    np.array([10])), axis=0    # input pool sequenced is 3-times of actual initial pool
-                ),
-                radius=4,
-                dna_unit='ng',
-                dna_amount=dna_amount,
-                input_sample_name=['R0']
-            )
-
-            # Add standard filters
-            from . import filters
-            spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
-            seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove non-21 nt seq
-            # singleton_filter = filters.SingletonFilter(target=byo_doped)  # we keep even singletons
-
-            # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
-            byo_doped.table_filtered = seq_length_filter.get_filtered_table(
-                    target=spike_in_filter.get_filtered_table()
-            )
-
-            # Add replicates grouper
-            byo_doped.grouper.add({'byo': {
-                1250: ['A1', 'A2', 'A3'],
-                250: ['B1', 'B2', 'B3'],
-                50: ['C1', 'C2', 'C3'],
-                10: ['D1', 'D2', 'D3'],
-                2: ['E1', 'E2', 'E3']
-            }}, target=byo_doped.table_filtered)
-
-            # normalized using spike-in
-            byo_doped.table_filtered_abs_amnt_spike_in = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
-
-            # normalized using total dna amount
-            byo_doped.table_filtered_abs_amnt_total_dna = byo_doped.dna_amount.apply(target=byo_doped.table_filtered)
-
-            # calculate reacted faction, remove seqs are not in input pools
-            from .transform import ReactedFractionNormalizer
-            reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
-                                                     reduce_method='median',
-                                                     remove_zero=True)
-            byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(
-                target=byo_doped.table_filtered_abs_amnt_spike_in
-            )
-
-            byo_doped.table_filtered_reacted_frac_total_dna = reacted_frac.apply(
-                target=byo_doped.table_filtered_abs_amnt_total_dna
-            )
-            # further filter out sequences that are not detected in all samples
-            min_detected_times_filter = filters.DetectedTimesFilter(
-                target=byo_doped.table_filtered_reacted_frac_spike_in,
-                min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
-            )
-            byo_doped.table_in_all_samples = min_detected_times_filter.get_filtered_table()
-            print('Finished!')
-        else:
-            print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
-            import pickle
-            from ..utility.file_tools import read_pickle
-            byo_doped = read_pickle(BYO_DOPED_PKL)
-            print('Imported!')
-
-        return byo_doped
 
     #     def add_norm_table(self, norm_fn, table_name, axis=0):
     #         setattr(self, table_name, self.table.apply(norm_fn, axis=axis))
@@ -689,3 +591,206 @@ class SeqTable(object):
         import pickle
         with open(path, 'rb') as handle:
             return pickle.load(handle)
+
+
+@classmethod
+def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None):
+    """todo: add dataset description"""
+    BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
+    BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
+        else count_file_path
+    BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
+        else doped_norm_path
+
+    if from_count_file:
+        import numpy as np
+        import pandas as pd
+
+        print('Generate SeqTable instance for BYO-doped pool...')
+        print(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
+        # parse dna amount file
+        dna_amount = pd.read_table(BYO_DOPED_NORM_FILE, header=None).rename(columns={0: 'dna_inv'})
+        dna_amount['dna_amount'] = 1 / dna_amount['dna_inv']
+        indices = ['R0']
+        for sample in 'ABCDE':
+            for rep in range(3):
+                indices.append(f'{sample}{rep + 1}')
+        dna_amount = {name: dna_amount['dna_amount'][ix] for ix, name in enumerate(indices)}
+
+        byo_doped = SeqTable.from_count_files(
+            file_root=BYO_DOPED_COUNT_FILE,
+            pattern_filter='counts-',
+            name_pattern='counts-d-[{byo}{exp_rep}].txt',
+            dry_run=False,
+            sort_by='name',
+            x_values=np.concatenate((
+                np.repeat([1250, 250, 50, 10, 2], repeats=3) * 1e-6,
+                np.array([np.nan])), axis=0
+            ),
+            x_unit='mol',
+            spike_in_seq='AAAAACAAAAACAAAAACAAA',
+            spike_in_amount=np.concatenate((
+                np.repeat([2, 2, 1, 0.2, .04], repeats=3),
+                np.array([10])), axis=0    # input pool sequenced is 3-times of actual initial pool
+            ),
+            radius=4,
+            dna_unit='ng',
+            dna_amount=dna_amount,
+            input_sample_name=['R0']
+        )
+
+        # Add standard filters
+        from . import filters
+        spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
+        seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove non-21 nt seq
+        # singleton_filter = filters.SingletonFilter(target=byo_doped)  # we keep even singletons
+
+        # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
+        byo_doped.table_filtered = seq_length_filter.get_filtered_table(
+                target=spike_in_filter.get_filtered_table()
+        )
+
+        # Add replicates grouper
+        byo_doped.grouper.add({'byo': {
+            1250: ['A1', 'A2', 'A3'],
+            250: ['B1', 'B2', 'B3'],
+            50: ['C1', 'C2', 'C3'],
+            10: ['D1', 'D2', 'D3'],
+            2: ['E1', 'E2', 'E3']
+        }}, target=byo_doped.table_filtered)
+
+        # normalized using spike-in
+        byo_doped.table_filtered_abs_amnt_spike_in = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
+
+        # normalized using total dna amount
+        byo_doped.table_filtered_abs_amnt_total_dna = byo_doped.dna_amount.apply(target=byo_doped.table_filtered)
+
+        # calculate reacted faction, remove seqs are not in input pools
+        from .transform import ReactedFractionNormalizer
+        reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
+                                                 reduce_method='median',
+                                                 remove_zero=True)
+        byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(
+            target=byo_doped.table_filtered_abs_amnt_spike_in
+        )
+
+        byo_doped.table_filtered_reacted_frac_total_dna = reacted_frac.apply(
+            target=byo_doped.table_filtered_abs_amnt_total_dna
+        )
+        # further filter out sequences that are not detected in all samples
+        min_detected_times_filter = filters.DetectedTimesFilter(
+            target=byo_doped.table_filtered_reacted_frac_spike_in,
+            min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
+        )
+        byo_doped.table_reacted_frac_seq_in_all_samples = min_detected_times_filter.get_filtered_table()
+        print('Finished!')
+    else:
+        print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
+        import pickle
+        from ..utility.file_tools import read_pickle
+        byo_doped = read_pickle(BYO_DOPED_PKL)
+        print('Imported!')
+
+    return byo_doped
+
+
+@classmethod
+def _load_byo_selected(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None):
+    """Load k-seq results for BYO selected pool
+    todo: add dataset description
+    """
+    PICKLED_PATH = '/mnt/storage/projects/k-seq/datasets/byo_selected.pkl' if pickled_path is None else pickled_path
+    COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_counts/' if count_file_path is None else count_file_path
+    BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
+        else doped_norm_path
+
+    if from_count_file:
+        import numpy as np
+        import pandas as pd
+
+        print('Generate SeqTable instance for BYO-doped pool...')
+        print(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
+        # parse dna amount file
+        dna_amount = pd.read_table(BYO_DOPED_NORM_FILE, header=None).rename(columns={0: 'dna_inv'})
+        dna_amount['dna_amount'] = 1 / dna_amount['dna_inv']
+        indices = ['R0']
+        for sample in 'ABCDE':
+            for rep in range(3):
+                indices.append(f'{sample}{rep + 1}')
+        dna_amount = {name: dna_amount['dna_amount'][ix] for ix, name in enumerate(indices)}
+
+        byo_doped = SeqTable.from_count_files(
+            file_root=BYO_DOPED_COUNT_FILE,
+            pattern_filter='counts-',
+            name_pattern='counts-d-[{byo}{exp_rep}].txt',
+            dry_run=False,
+            sort_by='name',
+            x_values=np.concatenate((
+                np.repeat([1250, 250, 50, 10, 2], repeats=3) * 1e-6,
+                np.array([np.nan])), axis=0
+            ),
+            x_unit='mol',
+            spike_in_seq='AAAAACAAAAACAAAAACAAA',
+            spike_in_amount=np.concatenate((
+                np.repeat([2, 2, 1, 0.2, .04], repeats=3),
+                np.array([10])), axis=0    # input pool sequenced is 3-times of actual initial pool
+            ),
+            radius=4,
+            dna_unit='ng',
+            dna_amount=dna_amount,
+            input_sample_name=['R0']
+        )
+
+        # Add standard filters
+        from . import filters
+        spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
+        seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove non-21 nt seq
+        # singleton_filter = filters.SingletonFilter(target=byo_doped)  # we keep even singletons
+
+        # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
+        byo_doped.table_filtered = seq_length_filter.get_filtered_table(
+            target=spike_in_filter.get_filtered_table()
+        )
+
+        # Add replicates grouper
+        byo_doped.grouper.add({'byo': {
+            1250: ['A1', 'A2', 'A3'],
+            250: ['B1', 'B2', 'B3'],
+            50: ['C1', 'C2', 'C3'],
+            10: ['D1', 'D2', 'D3'],
+            2: ['E1', 'E2', 'E3']
+        }}, target=byo_doped.table_filtered)
+
+        # normalized using spike-in
+        byo_doped.table_filtered_abs_amnt_spike_in = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
+
+        # normalized using total dna amount
+        byo_doped.table_filtered_abs_amnt_total_dna = byo_doped.dna_amount.apply(target=byo_doped.table_filtered)
+
+        # calculate reacted faction, remove seqs are not in input pools
+        from .transform import ReactedFractionNormalizer
+        reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
+                                                 reduce_method='median',
+                                                 remove_zero=True)
+        byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(
+            target=byo_doped.table_filtered_abs_amnt_spike_in
+        )
+
+        byo_doped.table_filtered_reacted_frac_total_dna = reacted_frac.apply(
+            target=byo_doped.table_filtered_abs_amnt_total_dna
+        )
+        # further filter out sequences that are not detected in all samples
+        min_detected_times_filter = filters.DetectedTimesFilter(
+            target=byo_doped.table_filtered_reacted_frac_spike_in,
+            min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
+        )
+        byo_doped.table_reacted_frac_seq_in_all_samples = min_detected_times_filter.get_filtered_table()
+        print('Finished!')
+    else:
+        print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
+        import pickle
+        from ..utility.file_tools import read_pickle
+        byo_doped = read_pickle(BYO_DOPED_PKL)
+        print('Imported!')
+
+    return byo_doped

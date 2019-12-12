@@ -9,6 +9,7 @@ Several functions are included:
   - weighted fitting depends on the customized weights
   - confidence interval estimation using bootstrap
 
+todo: directly save bootstrap record to disk, consider the hash results
 todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
 from ..estimator import EstimatorType
