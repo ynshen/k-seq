@@ -76,13 +76,6 @@ def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_parti
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    logging.basicConfig(filename=f"{output_dir}/app_run.log",
-                        format='%(asctime)s %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',
-                        level=logging.DEBUG,
-                        filemode='w')
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-
     import json
     with open(f"{output_dir}/config.txt", 'w') as handle:
         json.dump(obj={
@@ -105,7 +98,7 @@ def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_parti
 
 def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None,
-         stream_results=False, overwrite=False,
+         stream=False, overwrite=False,
          **kwargs):
 
     from k_seq.estimator.least_square import BatchFitter
@@ -130,12 +123,12 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
         model=BYOModel.func_react_frac, exclude_zero=exclude_zero, grouper=grouper,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
     )
-    stream_to_disk = f"{output_dir}/results/seqs/" if stream_results else None
+    stream_to_disk = f"{output_dir}/results" if stream else None
     batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num,
                      stream_to_disk=stream_to_disk, overwrite=overwrite)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
-    if stream_results:
+    if stream:
         batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=False, sep_files=True, tables=True)
     else:
         batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=True, sep_files=True, tables=True)
@@ -180,11 +173,18 @@ def parse_args():
 
 
 if __name__ == '__main__':
+
     args = parse_args()
     if args['pkg_path'] not in sys.path:
         sys.path.insert(0, args['pkg_path'])
-    if args['create-folder']:
+    if args['create_folder']:
         args['output_dir'] = create_output_dir(**args)
+    logging.basicConfig(filename=f"{args['output_dir']}/app_run.log",
+                        format='%(asctime)s %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',
+                        level=logging.DEBUG,
+                        filemode='w')
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     from k_seq.utility.log import Timer
     with Timer():
         sys.exit(main(**args))

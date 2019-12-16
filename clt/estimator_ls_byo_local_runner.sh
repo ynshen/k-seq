@@ -8,7 +8,7 @@
 #####################################################################
 
 SAMPLE_NAME='byo_doped.pkl'
-TABLE='total_dna'
+TABLE='spike_in'
 OUTPUT_BASE='/mnt/storage/projects/k-seq/working/tmp'
 TABLE_NAME=table_filtered_reacted_frac_$TABLE
 CORE=6
@@ -18,17 +18,17 @@ CORE=6
 ###########################################################################
 
 PREFIX=''
-FIT_NUM=-1
-BS_NUM=0
-BS_SAVE_NUM=0
+FIT_NUM=20
+BS_NUM=100
+BS_SAVE_NUM=20
 BS_MTD="data"
 NO_ZERO=''
 INV_WEIGHT=''
 POSTFIX=''
 
-############## RUN BELOW
+############## RUN BELOW #####################
 
-FOLDER_NAME= echo $( [ -z $PREFIX ] && echo '' || echo $PREFIX\_ )table-$TABLE\_bs-num-$BS_NUM\_bs-mtd-$BS_MTD\_no-zero-$( [ -z $NO_ZERO ] && echo true || echo false )_inv-weight-$( [ -z $INV_WEIGHT ] && echo true || echo false )_core-$CORE$( [ -z $POSTFIX ] && echo '' || echo _$POSTFIX )
+FOLDER_NAME=$( [ -z $PREFIX ] && echo '' || echo $PREFIX\_ )table-$TABLE\_bs-num-$BS_NUM\_bs-mtd-$BS_MTD\_no-zero-$( [ -z $NO_ZERO ] && echo true || echo false )_inv-weight-$( [ -z $INV_WEIGHT ] && echo true || echo false )_core-$CORE$( [ -z $POSTFIX ] && echo '' || echo _$POSTFIX )
 
 OUTPUT_DIR=$OUTPUT_BASE/$FOLDER_NAME
 mkdir -p $OUTPUT_DIR
@@ -39,8 +39,10 @@ mkdir -p $OUTPUT_DIR
 # --table_name
 # --exclude_zero
 # --inverse_weight
+# --stream-results
+# --overwrite
 
-python /home/yshen/k-seq/clt/estimator_ls_byo_runner.py \
+python /home/yuning/research/k-seq/clt/estimator_ls_byo_runner.py \
     --pkg_path /home/yuning/research/k-seq/src/ \
     --seq_table /mnt/storage/projects/k-seq/datasets/$SAMPLE_NAME \
     --table_name $TABLE_NAME \
@@ -48,9 +50,10 @@ python /home/yshen/k-seq/clt/estimator_ls_byo_runner.py \
     --bootstrap_num $BS_NUM \
     --bs_record_num $BS_SAVE_NUM \
     --bs_method $BS_MTD \
+    --deduplicate \
+    --stream-results \
     --core_num $CORE \
     ${NO_ZERO:+--exclude_zero} \
     ${INV_WEIGHT:+--inverse_weight} \
     --output_dir $OUTPUT_DIR \
-    &> $OUTPUT_DIR/sys.log
 

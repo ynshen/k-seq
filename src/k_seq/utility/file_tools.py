@@ -227,5 +227,5 @@ def check_dir(path):
     if Path(path).exists():
         return True
     else:
-        path(path).mkdir(parent=True)
+        Path(path).mkdir(parents=True)
         return False

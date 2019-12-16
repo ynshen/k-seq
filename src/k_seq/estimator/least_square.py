@@ -248,6 +248,7 @@ class SingleFitter(EstimatorType):
         from pathlib import Path
         if self.save_to is not None and self.overwrite is False:
             if Path(self.save_to).exists():
+                self.results = FitResults.from_json(self.save_to, fitter=self)
                 return None
 
         if self.config.rnd_seed is not None:
@@ -494,7 +495,7 @@ class FitResults:
                     json_data = json.load(handle)
             except:
                 raise TypeError(f'Can not parse json record from {json_path}')
-        results = cls(fitter=None)
+        results = cls(fitter=fitter)
 
         if 'point_estimation' in json_data.keys():
             if json_data['point_estimation']['params'] is not None:
@@ -816,7 +817,7 @@ class BatchFitResults:
             dump_json(obj=self.summary.to_json(), path=f'{output_dir}/results/summary.json')
             if bs_results:
                 check_dir(f'{output_dir}/seqs')
-                for seq, record in self.bs_record:
+                for seq, record in self.bs_record.items():
                     dump_json(obj=record.to_json(), path=f"{output_dir}/results/seqs/{seq}.json")
         else:
             data_to_json = {'summary': self.summary.to_json()}
@@ -991,8 +992,8 @@ class BatchFitter(EstimatorType):
                     name=seq,
                     y_data=self.y_data_batch.loc[seq],
                     sigma=None if self.sigma is None else self.sigma.loc[seq],
-                    save_to=None if stream_to_disk is None else f"{stream_to_disk}/{seq}.json",
-                    overwrite=overwrite
+                    save_to=None if stream_to_disk is None else f"{stream_to_disk}/seqs/{seq}.json",
+                    overwrite=overwrite,
                     **self.fit_params.__dict__
                 )
             except:
