@@ -596,8 +596,24 @@ class SeqTable(object):
             return pickle.load(handle)
 
 
+_byo_doped_description = """
+        contains k-seq results for seqs from BYO doped-pool, this dataset contains following pre-computed tables to use
+
+            - table: original count table contains all sequences detected in any samples and all the samples
+            - table_filtered: count table with non-21 nt sequences and spike-in sequences filtered
+            - table_filtered_abs_amnt_spike_in: absolute amount in ng for seqs quantified by spike-in
+            - table_filtered_abs_amnt_total_dna: absolute amount in ng for seqs quantified by total DNA amount
+            - table_filtered_reacted_frac_spike_in: reacted fraction for valid seqs quantified by spike-in
+            - table_filtered_reacted_frac_total_dna: reacted fraction for valid seqs quantified by total DNA amount
+            - table_filtered_seq_in_all_smpl_reacted_frac_spike_in: only contains seqs with counts >= 1 in all samples
+            - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples 
+    """
+
 def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None):
-    """todo: add dataset description"""
+    """BYO doped pool k-seq datatable
+    {} 
+    """.format(_byo_doped_description)
+
     BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
     BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
         else count_file_path
@@ -608,9 +624,10 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
         import numpy as np
         import pandas as pd
 
-        print('Generate SeqTable instance for BYO-doped pool...')
-        print(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
-        # parse dna amount file
+        logging.info('Generate SeqTable instance for BYO-doped pool...')
+        logging.info(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
+
+        # parse dna amount file, original data is 1/total_dna
         dna_amount = pd.read_table(BYO_DOPED_NORM_FILE, header=None).rename(columns={0: 'dna_inv'})
         dna_amount['dna_amount'] = 1 / dna_amount['dna_inv']
         indices = ['R0']
@@ -645,7 +662,6 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
         from . import filters
         spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
         seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove non-21 nt seq
-        # singleton_filter = filters.SingletonFilter(target=byo_doped)  # we keep even singletons
 
         # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
         byo_doped.table_filtered = seq_length_filter.get_filtered_table(
@@ -684,27 +700,30 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
             target=byo_doped.table_filtered_reacted_frac_spike_in,
             min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
         )
-        byo_doped.table_reacted_frac_seq_in_all_samples = min_detected_times_filter.get_filtered_table()
-        print('Finished!')
+        byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_spike_in = min_detected_times_filter(
+            byo_doped.table_filtered_reacted_frac_spike_in
+        )
+        byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_total_dna = min_detected_times_filter(
+            byo_doped.table_filtered_reacted_frac_total_dna
+        )
+        logging.info('Finished!')
     else:
-        print(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
+        logging.info(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
         import pickle
         from ..utility.file_tools import read_pickle
         byo_doped = read_pickle(BYO_DOPED_PKL)
-        print('Imported!')
+        logging.info('Imported!')
 
     return byo_doped
 
 
 _byo_selected_description = """
-        BYO-selected contains k-seq results, this dataset contains following pre-computed tables to use
+        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed tables to use
 
-            - table: original count table contains all sequences detected in any samples and all samples
+            - table: original count table contains all sequences detected in any samples and all the samples
             - table_no_failed: count table with sample `2C`, `3D`, `3E`, `3F`, `4D`, `4F` removed (failed in sequencing)
 
             Tables based on curated quantification factor
-            - table_nf_abs_amnt_curated: absolute amount table quantified by the curated quantification factors, see
-                transformer (failed samples are removed)
             - table_nf_reacted_frac_curated: reacted fraction of sequences (failed samples are removed, sequences only
                 detected input or reacted samples are removed)
             - table_nf_filtered_reacted_frac_curated: reacted fraction for only sequences that are not spike-in and
@@ -804,10 +823,10 @@ def _load_byo_selected(from_count_file=False, count_file_path=None, norm_path=No
         min_detected_times_filter = filters.DetectedTimesFilter(
             min_detected_times=byo_selected.table_nf_filtered_reacted_frac.shape[1]
         )
-        byo_selected.table_nf_filtered_reacted_frac_seq_in_all_samples = min_detected_times_filter(
+        byo_selected.table_nf_filtered_seq_in_all_smpl_reacted_frac = min_detected_times_filter(
             target=byo_selected.table_nf_filtered_reacted_frac
         )
-        byo_selected.table_nf_filtered_reacted_frac_seq_curated_seq_in_all_samples = min_detected_times_filter(
+        byo_selected.table_nf_filtered_seq_in_all_smpl_reacted_frac_curated = min_detected_times_filter(
             target=byo_selected.table_nf_filtered_reacted_frac_curated
         )
         logging.info('Finished!')

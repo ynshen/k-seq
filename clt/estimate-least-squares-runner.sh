@@ -1,11 +1,4 @@
 #!/bin/bash -l
-# ask for 40 cores on 1 node
-#SBATCH --nodes=1 --ntasks-per-node=40
-#SBATCH --time=12:00:00
-#SBATCH --mail-user=yuningshen@ucsb.edu
-#SBATCH --mail-type=start,end
-
-cd $SLURM_SUBMIT_DIR
 
 #############################################  Define task ####################################################
 #  Sample options:
@@ -25,23 +18,23 @@ cd $SLURM_SUBMIT_DIR
 # output nameing: prefix _ table _  bs-num _ bs-mtd _ no-zero _ inv-weight _ core _ postfix
 ###############################################################################################################
 
-DATA_DIR='/home/yshen/k-seq/datasets/'
+DATA_DIR='/mnt/storage/projects/k-seq/datasets/'
 SAMPLE_NAME='byo-selected.pkl'
 SAMPLE_DIR=$DATA_DIR/$SAMPLE_NAME
-TABLE="table_nf_filtered_reacted_frac_curated"
+TABLE=table_nf_filtered_reacted_frac_curated
 TABLE_TAG='byo-selected-curated'
 
 PREFIX=''
 FIT_NUM=-1
 BS_NUM=0
 BS_SAVE_NUM=0
-BS_MTD=''
+BS_MTD="data"
 NO_ZERO=''
 INV_WEIGHT=''
 POSTFIX=''
-CORE=40
+CORE=6
 
-OUTPUT_BASE='/home/yshen/k-seq/results/byo-selected'
+OUTPUT_BASE='/mnt/storage/projects/k-seq/working/spike_in'
 
 ####################################### CREATE OUTPUT DIR AND RUN ESTIMATION ##################################
 
@@ -65,8 +58,8 @@ mkdir -p $OUTPUT_DIR
 # --stream-results
 # --overwrite
 
-python /home/yshen/k-seq/clt/estimate-least-squares.py \
-    --pkg_path /home/yshen/k-seq/src/ \
+python /home/yuning/research/k-seq/clt/estimate-least-squares.py \
+    --pkg_path /home/yuning/research/k-seq/src/ \
     --seq_table $SAMPLE_DIR \
     --table_name $TABLE \
     --fit_partial $FIT_NUM \
@@ -79,4 +72,5 @@ python /home/yshen/k-seq/clt/estimate-least-squares.py \
     ${NO_ZERO:+--exclude_zero} \
     ${INV_WEIGHT:+--inverse_weight} \
     --output_dir $OUTPUT_DIR \
+    &> $OUTPUT_DIR/stdout.log
 
