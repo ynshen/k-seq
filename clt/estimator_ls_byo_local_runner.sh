@@ -9,7 +9,7 @@
 
 SAMPLE_NAME='byo_doped.pkl'
 TABLE='spike_in'
-OUTPUT_BASE='/mnt/storage/projects/k-seq/working/tmp'
+OUTPUT_BASE='/mnt/storage/projects/k-seq/working/spike_in'
 TABLE_NAME=table_filtered_reacted_frac_$TABLE
 CORE=6
 
@@ -18,12 +18,12 @@ CORE=6
 ###########################################################################
 
 PREFIX=''
-FIT_NUM=20
-BS_NUM=100
-BS_SAVE_NUM=20
+FIT_NUM=-1
+BS_NUM=0
+BS_SAVE_NUM=0
 BS_MTD="data"
 NO_ZERO=''
-INV_WEIGHT=''
+INV_WEIGHT='True'
 POSTFIX=''
 
 ############## RUN BELOW #####################
@@ -56,4 +56,5 @@ python /home/yuning/research/k-seq/clt/estimator_ls_byo_runner.py \
     ${NO_ZERO:+--exclude_zero} \
     ${INV_WEIGHT:+--inverse_weight} \
     --output_dir $OUTPUT_DIR \
+    &> $OUTPUT_DIR/stdout.log
 
