@@ -1,21 +1,28 @@
 #!/bin/bash -l
 
-############################  Define task sample ####################
-#   table name options for BYO-doped
+#############################################  Define task sample #############################################
+#  Sample options:
+#    - byo-doped.pkl
+#    - byo-selected.pkl
+#  Table name options for BYO-doped
 #      - table_filtered_reacted_frac_total_dna
 #      - table_filtered_reacted_frac_spike_in
 #      - table_in_all_samples
-#####################################################################
+################################################################################################################
 
-SAMPLE_NAME='byo_doped.pkl'
+DATA_DIR=/mnt/storage/projects/k-seq/datasets/
+SAMPLE_NAME='byo-doped.pkl'
+SAMPLE_DIR=$DATA_DIR/$SAMPLE_NAME
+
 TABLE='spike_in'
 OUTPUT_BASE='/mnt/storage/projects/k-seq/working/tmp'
+
 TABLE_NAME=table_filtered_reacted_frac_$TABLE
 CORE=6
 
-############################ Define estimator details ##############################
+######################################## Define estimator details #############################################
 # output nameing: prefix _ table _  bs-num _ bs-mtd _ no-zero _ inv-weight _ core _ postfix
-###########################################################################
+###############################################################################
 
 PREFIX=''
 FIT_NUM=20
@@ -44,7 +51,7 @@ mkdir -p $OUTPUT_DIR
 
 python /home/yuning/research/k-seq/clt/estimator_ls_byo_runner.py \
     --pkg_path /home/yuning/research/k-seq/src/ \
-    --seq_table /mnt/storage/projects/k-seq/datasets/$SAMPLE_NAME \
+    --seq_table $SAMPLE_DIR \
     --table_name $TABLE_NAME \
     --fit_partial $FIT_NUM \
     --bootstrap_num $BS_NUM \
