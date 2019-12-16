@@ -2,6 +2,7 @@ import sys
 from time import time
 import logging
 
+
 class Logger:
     """A simple logger to log data"""
 

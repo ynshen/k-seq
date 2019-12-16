@@ -1,9 +1,13 @@
 """
-Module contains the classes to transform tables (`pd.DataFrame` or `SeqTable`) instance including
-    - normalize by spike-in
-    - normalize by total amount
-    - transform to relative abundance
-    - etc
+Module contains the classes to transform tables (`pd.DataFrame` or `SeqTable`) instance as well as related calculation
+    and visualizations
+
+Current available transformers:
+    - SpikeInNormalizer: normalize by spike-in
+    - DnaAmountNormalizer: normalize by total dna amount
+    - ReactedFractionNormalizer: transform to relative abundance
+    - BYOSelectedPoolNormalizerByAbe: curated quantification factor used by Abe
+todo: method signature overriding - not a problem here but any better way to code it
 """
 
 import numpy as np
@@ -21,16 +25,16 @@ class Transformer(object):
         - A `apply` function to wrap func
     """
 
-    def __init__(self, target=None):
+    def __init__(self, target=None, *args, **kwargs):
         self.target = target
         pass
 
     @staticmethod
-    def _func(target):
+    def _func(target, *args, **kwargs):
         """core function, input an `pd.Dataframe`, output an transformed `pd.Dataframe`. Should NOT be used alone"""
         raise NotImplementedError()
 
-    def apply(self, target=None):
+    def apply(self, target=None, *args, **kwargs):
         """Run the transformation, with class attributes or arguments
         Logic and preprocessing of data and arguments should be done here
         """
@@ -51,11 +55,11 @@ class SpikeInNormalizer(Transformer):
     def __repr__(self):
         return f"Spike-in normalizer (seq: {self.spike_in_seq}, radius= {self.radius})"
 
-    def __init__(self, spike_in_seq, spike_in_amount, target, radius=None, unit='ng', blacklist=None):
-        super().__init__(target)
+    def __init__(self, spike_in_seq, spike_in_amount, base_table, radius=None, unit='ng', blacklist=None):
+        super().__init__(base_table)
         self.spike_in_seq = spike_in_seq
         self.unit = unit
-        self.target = target
+        self.target = base_table
         self.blacklist = blacklist
         self.spike_in_amount = spike_in_amount
         if isinstance(self.target, pd.DataFrame):
@@ -110,34 +114,36 @@ class SpikeInNormalizer(Transformer):
                 self._radius = value
                 self.spike_in_members = self.dist_to_center[self.dist_to_center <= value].index.values
                 if isinstance(self.target, pd.DataFrame):
-                    self.norm_factor = self.target.apply(self._get_norm_factor, axis=0)
+                    self.norm_factor = self.target[list(self.spike_in_amount.keys())].apply(self._get_norm_factor,
+                                                                                            axis=0)
                 else:
-                    self.norm_factor = self.target.table.apply(self._get_norm_factor, axis=0)
+                    self.norm_factor = self.target.table[list(self.spike_in_amount.keys())].apply(
+                        self._get_norm_factor, axis=0
+                    )
         else:
             self._radius = None
             self.spike_in_members = None
             self.norm_factor = None
 
     @staticmethod
-    def _func(target, norm_factor, **kwargs):
+    def _func(target, norm_factor, *args, **kwargs):
 
-        def sample_normalize_wrapper(norm_factor):
-
-            def sample_normalizer(sample):
-                if sample.name in norm_factor.keys():
-                    return sample * norm_factor[sample.name]
-                else:
-                    import warnings
-                    warnings.warn(
-                        f'Sample {sample.name} is not found in the normalizer, normalization is not performed')
-                    return sample
-
-            return sample_normalizer
+        def sample_normalizer(sample):
+            return sample * norm_factor[sample.name]
 
         import pandas as pd
         if not isinstance(target, pd.DataFrame):
             raise TypeError('target needs to be pd.DataFrame')
-        return target.apply(sample_normalize_wrapper(norm_factor=norm_factor), axis=0)
+
+        import warnings
+        sample_list = []
+        for sample in target.columns:
+            if sample in norm_factor.keys():
+                sample_list.append(sample)
+            else:
+                warnings.warn(f'Sample {sample} is not found in the normalizer, normalization is not performed')
+
+        return target[sample_list].apply(sample_normalizer, axis=0)
 
     def apply(self, target=None, norm_factor=None):
         if target is None:
@@ -265,7 +271,15 @@ class DnaAmountNormalizer(Transformer):
         def sample_normalize(sample):
             return sample * norm_factor[sample.name]
 
-        return target.apply(sample_normalize, axis=0)
+        import warnings
+        sample_list = []
+        for sample in target.columns:
+            if sample in norm_factor.keys():
+                sample_list.append(sample)
+            else:
+                warnings.warn(f'Sample {sample} is not found in the normalizer, normalization is not performed')
+
+        return target[sample_list].apply(sample_normalize, axis=0)
 
     def apply(self, target=None, dna_amount=None):
         """Transform counts to absolute amount based on given total DNA amount
@@ -360,3 +374,47 @@ class ReactedFractionNormalizer(Transformer):
 
         return self._func(target=target, input_samples=input_samples,
                           reduce_method=reduce_method, remove_zero=remove_zero)
+
+
+class BYOSelectedCuratedNormalizerByAbe(Transformer):
+    """This normalizer contains the quantification factor used by Abe"""
+
+    def __init__(self, q_factor=None, target=None):
+        super().__init__()
+        self.target = target
+        # import curated quantification factor by Abe
+        # q_facter is defined in this way: abs_amnt = q * counts / total_counts
+        self.q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
+
+        # q_factor should be:
+        # self.q_factors = {'0.0005,
+        #             0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133,
+        #             0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812,
+        #             0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207,
+        #             0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596]
+
+    @staticmethod
+    def _func(target, q_factor):
+        total_counts = target.sum(axis=0)
+        if isinstance(q_factor, pd.DataFrame):
+            q_factor = q_factor.iloc[:, 0]
+        q_factor = q_factor.reindex(total_counts.index)
+        return target / total_counts / q_factor
+
+    def apply(self, target=None, q_factor=None):
+        """Normalize counts using Abe's curated quantification factor
+            Args:
+                target (pd.DataFrame): this should be the original count table from BYO-selected k-seq exp.
+                q_factor (pd.DataFrame or str): table contains first col as q-factor with sample as index
+                    or path to stored csv file
+
+            Returns:
+                A normalized table of absolute amount of sequences in each sample
+        """
+        if target is None:
+            target = self.target
+        if q_factor is None:
+            q_factor = self.q_factor
+        q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
+
+        return self._func(target=target, q_factor=q_factor)

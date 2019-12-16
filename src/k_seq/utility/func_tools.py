@@ -135,6 +135,13 @@ def param_to_dict(key_list, **kwargs):
     return {key:parse_args(kwargs, key, ix) for ix,key in enumerate(key_list)}
 
 
+def check_attr_value(obj, **attr):
+    for name, value in attr.items():
+        if value is None:
+            attr[name] = getattr(obj, name)
+    return attr
+
+
 def dict_flatten(d, parent_key='', sep='_'):
 
     items = []
