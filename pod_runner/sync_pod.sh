@@ -1,3 +1,2 @@
-echo 'Sync k-seq pakcage'
-rsync -arvP /home/yuning/research/k-seq/src/pkg/k_seq/ yshen@pod-login1.cnsi.ucsb.edu:/home/yshen/k-seq/k_seq/
-
+echo 'Sync k-seq datasets'
+rsync -arvP /mnt/storage/projects/k-seq/datasets/ yshen@pod-login1.cnsi.ucsb.edu:/home/yshen/k-seq/datasets/
