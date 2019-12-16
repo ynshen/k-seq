@@ -182,7 +182,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename=f"{args['output_dir']}/app_run.log",
                         format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
-                        level=logging.DEBUG,
+                        level=logging.INFO,
                         filemode='w')
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     from k_seq.utility.log import Timer
