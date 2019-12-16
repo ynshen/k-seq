@@ -57,10 +57,9 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, 
 
 def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False,
                       inverse_weight=False, bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1,
-                      output_dir=None, pkg_path=None):
+                      output_dir=None, pkg_path=None, **kwargs):
     """Create the output dir and logging/config files
     Logic:
-      TODO: resolve bash/python double folder create problem
     """
 
     from pathlib import Path
@@ -105,7 +104,9 @@ def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_parti
 
 
 def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
-         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None):
+         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None,
+         stream_results=False, overwrite=False,
+         **kwargs):
 
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
@@ -127,15 +128,17 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
     batch_fitter = BatchFitter(
         y_data_batch=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.func_react_frac, exclude_zero=exclude_zero, grouper=grouper,
-        bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method
+        bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
     )
-    batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num)
+    stream_to_disk = f"{output_dir}/results/seqs/" if stream_results else None
+    batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num,
+                     stream_to_disk=stream_to_disk, overwrite=overwrite)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
-    batch_fitter.save_model(output_dir=output_dir,
-                            results=True,
-                            sep_files=True,
-                            tables=True)
+    if stream_results:
+        batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=False, sep_files=True, tables=True)
+    else:
+        batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=True, sep_files=True, tables=True)
 
 
 def parse_args():
@@ -164,6 +167,12 @@ def parse_args():
                         help='Bootstrap method')
     parser.add_argument('--deduplicate', dest='deduplicate', default=False, action='store_true',
                         help='If deduplicate seq with same data')
+    parser.add_argument('--stream-results', dest='stream', default=False, action='store_true',
+                        help="If stream fitting results to disk")
+    parser.add_argument('--overwrite', dest='overwrite', default=False, action='store_true',
+                        help="If overwrite results when streaming")
+    parser.add_argument('--create-folder', dest='create_folder', default=False, action='store_true',
+                        help="If create subfolder with specs as name under the output_dir")
     parser.add_argument('--core_num', '-c', dest='core_num', type=int, help='Number of process to use in parallel')
     parser.add_argument('--output_dir', '-o', type=str, default='./')
 
@@ -174,9 +183,8 @@ if __name__ == '__main__':
     args = parse_args()
     if args['pkg_path'] not in sys.path:
         sys.path.insert(0, args['pkg_path'])
-    output_dir = create_output_dir(**args)
-    _ = args.pop('output_dir')
-    _ = args.pop('pkg_path')
+    if args['create-folder']:
+        args['output_dir'] = create_output_dir(**args)
     from k_seq.utility.log import Timer
     with Timer():
-        sys.exit(main(output_dir=output_dir, **args))
+        sys.exit(main(**args))

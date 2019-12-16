@@ -205,3 +205,27 @@ def dump_pickle(obj, path):
 
     with open(path, 'wb') as handle:
         pickle.dump(obj, handle)
+
+
+def read_json(path):
+    import json
+
+    with open(path, 'r') as handle:
+        return json.load(handle)
+
+
+def dump_json(obj, path):
+    import json
+
+    with open(path, 'w') as handle:
+        json.dump(obj, handle)
+
+
+def check_dir(path):
+    """Check if a path exists, create if not"""
+    from pathlib import Path
+    if Path(path).exists():
+        return True
+    else:
+        path(path).mkdir(parent=True)
+        return False
