@@ -58,7 +58,7 @@ mkdir -p $OUTPUT_DIR
 # --stream-results
 # --overwrite
 
-python /home/yuning/research/k-seq/clt/estimator_ls_byo_runner.py \
+python /home/yuning/research/k-seq/clt/estimate-least-squares.py \
     --pkg_path /home/yuning/research/k-seq/src/ \
     --seq_table $SAMPLE_DIR \
     --table_name $TABLE \
