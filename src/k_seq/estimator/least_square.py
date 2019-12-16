@@ -13,6 +13,7 @@ todo: creating all the single fitters for BYO-doped will cost 20 min along - tim
 """
 from ..estimator import EstimatorType
 from ..utility.func_tools import DocHelper
+from ..utility.file_tools import read_json, dump_json, check_dir
 import logging
 
 doc_helper = DocHelper(
@@ -73,11 +74,13 @@ class SingleFitter(EstimatorType):
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, grouper=None,
-                 bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_params=None, silent=False):
+                 bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_params=None,
+                 save_to=None, overwrite=False, silent=False):
         """Initialize a `SingleFitter` instance
         
         Args:
             {}
+            save_to (str): save results to the given path when fitting finishes, if not None
         """.format(doc_helper.get(self.__init__))
 
         import numpy as np
@@ -138,6 +141,8 @@ class SingleFitter(EstimatorType):
 
         self.config.metrics = metrics
         self.results = FitResults(fitter=self)
+        self.save_to = save_to
+        self.overwrite = overwrite
         # TODO: check visualizers work
         from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
         from ..utility.func_tools import FuncToMethod
@@ -240,6 +245,11 @@ class SingleFitter(EstimatorType):
 
         import numpy as np
         import pandas as pd
+        from pathlib import Path
+        if self.save_to is not None and self.overwrite is False:
+            if Path(self.save_to).exists():
+                self.results = FitResults.from_json(self.save_to, fitter=self)
+                return None
 
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
@@ -264,6 +274,11 @@ class SingleFitter(EstimatorType):
                              f"{self.bootstrap_config.bootstrap_num} and "
                              f"save {self.bootstrap_config.bs_record_num} records")
             self.bootstrap.run()
+
+        if self.save_to is not None:
+            from pathlib import Path
+            check_dir(Path(self.save_to).parent)
+            self.results.to_json(self.save_to)
 
     def summary(self):
         """Return a pd.series as fitting summary"""
@@ -302,10 +317,8 @@ class SingleFitter(EstimatorType):
                         json.dump(config_dict, handle)
                 elif path.suffix == '':
                     # its a path
-                    if not path.exists():
-                        path.mkdir(parents=True)
-                    with open(str(path) + '/config.json', 'w') as handle:
-                        json.dump(config_dict, handle)
+                    check_dir(path)
+                    dump_json(obj=config_dict, path=str(path) + '/config.json')
                 else:
                     raise NameError('Unrecognized saving path')
 
@@ -318,10 +331,7 @@ class SingleFitter(EstimatorType):
 
             model (callable): as callable is not json-able, need to reassign
         """
-
-        import json
-        with open(file_path, 'r') as handle:
-            config_dict = json.load(handle)
+        config_dict = read_json(file_path)
         return cls(model=model, **config_dict)
 
     # @classmethod
@@ -368,7 +378,6 @@ class SingleFitter(EstimatorType):
 
 
 class FitResults:
-    # todo: export a dictionary to pass results through multiprocesser
     """A class to store, format, fitting fitting results for single fitter
 
     Attributes:
@@ -422,7 +431,7 @@ class FitResults:
             return pd.Series(res)
 
     def to_dict(self, include_pcov=False, include_record=True):
-        """Pass results as dictionary"""
+        """Convert fitting results to dictionary"""
         results = {
             'point_estimation': {
                 'params': self.point_estimation.params
@@ -438,22 +447,35 @@ class FitResults:
         return results
 
     def to_json(self, path=None):
-        """Convert results into a json file contains
-            - fitter: str representation of fitter project
-            - point_estimation
-            - uncertainty
+        """Convert results into a json string/file contains
+            {
+              point_estimation:
+                {
+                  params,
+                  pcov
+                }
+              uncertainty:
+                {
+                  summary
+                  record
+                }
         """
         import json
 
+        def jsonfy(target):
+            try:
+                return target.to_json()
+            except:
+                return None
+
         data_to_dump = {
-            'fitter': str(self.fitter),
             'point_estimation': {
-                'params': self.point_estimation.params.to_json(),
-                'pcov': self.point_estimation.pcov.to_json()
+                'params': jsonfy(self.point_estimation.params),
+                'pcov': jsonfy(self.point_estimation.pcov)
             },
             'uncertainty': {
-                'summary': self.uncertainty.summary.to_json(),
-                'record': self.uncertainty.record.to_json()
+                'summary': jsonfy(self.uncertainty.summary),
+                'record': jsonfy(self.uncertainty.record)
             }
         }
         if path is None:
@@ -462,30 +484,36 @@ class FitResults:
             with open(path, 'w') as handle:
                 json.dump(data_to_dump, fp=handle)
 
-    def load_json(self, json_o_path):
-        """load fitting results from json"""
+    @classmethod
+    def from_json(cls, json_path, fitter=None):
+        """load fitting results from json
+        Note: no fitter info if fitter is None
+        """
 
         import pandas as pd
         import json
         try:
             # first consider it is a json string
-            json_data = json.loads(json_o_path)
+            json_data = json.loads(json_path)
         except json.JSONDecodeError:
             try:
-                with open(json_o_path, 'r') as handle:
+                with open(json_path, 'r') as handle:
                     json_data = json.load(handle)
             except:
-                raise TypeError(f'Can not parse json record for {self.__repr__()}')
+                raise TypeError(f'Can not parse json record from {json_path}')
+        results = cls(fitter=fitter)
+
         if 'point_estimation' in json_data.keys():
             if json_data['point_estimation']['params'] is not None:
-                self.point_estimation.params = pd.read_json(json_data['point_estimation']['params'], typ='series')
+                results.point_estimation.params = pd.read_json(json_data['point_estimation']['params'], typ='series')
             if json_data['point_estimation']['pcov'] is not None:
-                self.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
+                results.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
         if 'uncertainty' in json_data.keys():
             if json_data['uncertainty']['summary'] is not None:
-                self.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'])
+                results.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'])
             if json_data['uncertainty']['record'] is not None:
-                self.uncertainty.record = pd.read_json(json_data['uncertainty']['record'])
+                results.uncertainty.record = pd.read_json(json_data['uncertainty']['record'])
+        return results
 
 
 class Bootstrap:
@@ -618,78 +646,196 @@ class Bootstrap:
 
 
 class BatchFitResults:
-    """Store, convert, and visualize BatchFitter results
-    Only save results (detached from fitter), corresponding fitter should be found by sequence
+    """Parse, store, and visualize BatchFitter results
+    Only save results (detached from each fitter), corresponding fitter should be found by sequence
 
     Attributes:
         fitter: proxy to the `BatchFitter`
-        bs_record (dict of pd.DataFrame): {seq: `SingleFitter.results.uncertainty.record`}
         summary (`pd.DataFrame`): summarized results with each sequence as index
+        bs_record (dict of pd.DataFrame): {seq: `SingleFitter.results.uncertainty.record`}
 
     Methods:
         summary_to_csv: export summary dataframe as csv file
         to_pickle: save results as pickled dictionary
         from_pickle: load bootstrapping results from picked dictionary
-
-
+        from_folder: link results to a saved folder
+        from_record: overall method to infer either load `BatchFitResults` from pickled or a folder
     """
 
-    def __init__(self, fitter):
-        """Parse results from fitter_list which the first is """
+    def __init__(self, fitter=None, result_path=None):
+        """Init a BatchFitResults instance
+        Args:
+            fitter (BatchFitter): corresponding fitter
+            result_path (str): path to saved results
+        """
         self.fitter = fitter
         self.bs_record = None
         self.summary = None
+        self.result_path = result_path
+        self.sep_files = None
+        if result_path:
+            self.parse_saved_results()
+
+    def parse_saved_results(self):
+        """Load/link data from `self.result_path`"""
+
+        from pathlib import Path
+        result_path = Path(self.result_path)
+        if result_path.is_dir():
+            if result_path.joinpath('results.pkl').exists():
+                self.sep_files = False
+                result_path = result_path.joinpath('results.pkl')
+            elif result_path.joinpath('results').is_dir():
+                self.sep_files = True
+                result_path = result_path.joinpath('results/')
+            elif result_path.joinpath('summary.pkl').exists():
+                self.sep_files = True
+                result_path = result_path
+            else:
+                raise ValueError('Can not parse result_path.')
+        else:
+            self.sep_files = False
+            result_path = result_path
+        from ..utility.file_tools import read_pickle
+        if self.sep_files:
+            # record the results root
+            self.result_path = result_path
+            self.summary = read_pickle(result_path.joinpath('summary.pkl'))
+        else:
+            results = read_pickle(result_path)
+            self.summary = results['summary']
+            if 'bs_record' in results.keys():
+                self.bs_record = results['bs_record']
+
+    @property
+    def bs_record(self):
+        if self.sep_files is True:
+            print('Bootstrap records are saved as separate files, use `get_bs_record` instead')
+        else:
+            return self._bs_record
+
+    @bs_record.setter
+    def bs_record(self, value):
+        self._bs_record = value
+        self.sep_files = False
+
+    def get_bs_record(self, seq=None):
+        """Load bootstrap records for seq from files
+        Args:
+            seq (str or a list of str): a sequence or a list of sequence
+
+        Returns:
+            a pd.DataFrame of bootstrap record if seq is str
+            a dict of pd.DataFrame contains bootstrap records if seq is a list of str
+        """
+        import pandas as pd
+        import numpy as np
+        from ..utility.file_tools import read_pickle
+
+        if isinstance(seq, (list, pd.Series, np.ndarray)):
+            return {seq: read_pickle(str(self.result_path) + '/' + s + '.pkl') for s in seq}
+        else:
+            return read_pickle(str(self.result_path) + '/' + seq + '.pkl')
 
     def summary_to_csv(self, path):
         """Save summary table as csv file"""
         self.summary.to_csv(path)
 
-    def to_pickle(self, path=None):
-        """Serialize results as a pickled `dict`"""
+    def to_pickle(self, output_dir, bs_results=True, sep_files=True):
+        """Serialize results as a pickled `dict`
+        Args:
+             output_dir (str): path to saved results, should be the parent of target location
+             include_bs_results (bool): if output bs_results as well
+             sep_files (bool): if save bs_records as separate files
+                 If True:
+                     |path/results/
+                         |- summary.pkl
+                         |- seqs
+                             |- seq1.pkl
+                             |- seq2.pkl
+                              ...
+                if False:
+                     save to path/results.pkl contains
+                     {
+                         summary: pd.DataFrame
+                         bs_records: {
+                            seq1 (pd.DataFrame)
+                            seq2 (pd.DataFrame)
+                            ...
+                       }
+                     }
+        """
+        from pathlib import Path
+        from ..utility.file_tools import dump_pickle
 
-        import pickle
-        results = {
-            'bs_record': self.bs_record,
-            'summary': self.summary
-        }
-        if path is None:
-            return pickle.dumps(results)
+        output_dir = Path(output_dir)
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
+        if sep_files:
+            output_dir = output_dir.joinpath('results/')
+            output_dir.mkdir(exist_ok=True, parents=True)
+            dump_pickle(obj=self.summary, path=output_dir.joinpath('summary.pkl'))
+            [dump_pickle(obj=record, path=output_dir.joinpath(seq + '.pkl')) for seq, record in self.bs_record.items()]
         else:
-            from ..utility.file_tools import dump_pickle
-            dump_pickle(obj=results, path=path)
+            dump_pickle(
+                obj={
+                'bs_record': self.bs_record,
+                'summary': self.summary
+                },
+                path=output_dir.joinpath('results.pkl')
+            )
 
     @classmethod
-    def from_pickle(cls, fitter, path):
-        """Create a `BatchFitResults` instance with results loaded from pickle"""
-        inst = cls(fitter=fitter)
-        from ..utility.file_tools import read_pickle
-        results = read_pickle(path=path)
-        inst.bs_record = results['bs_record']
-        inst.summary = results['summary']
-        return inst
-
-    def to_json(self, path=None):
-        """Save fitting results as a JSON file
-        Structure:
-
-          - fitter: a string representation of the fitter
-          - record: {seq: JSON of single fitter results}
-
+    def from_pickle(cls, path_to_pickle, fitter=None):
+        """Create a `BatchFitResults` instance with results loaded from pickle
+        Notice:
+            this will take a very long time if the pickle is large
         """
-        import json
-        data_to_json = {
-            'bs_record': {seq: record.to_json() for seq, record in self.bs_record},
-            'summary': self.summary.to_json()
-        }
+        return cls(fitter=fitter, result_path=path_to_pickle)
 
-        if path is None:
-            return json.dumps(data_to_json)
+    def to_json(self, output_dir, bs_results=True, sep_files=True):
+        """Serialize results as json format
+        Args:
+             output_dir (str): path to save results, should be the parent of target location
+             bs_results (bool): if output bs_results as well
+             sep_files (bool): if save bs_records as separate files
+                 If True:
+                     |path/results/
+                         |- summary.json
+                         |- seqs
+                             |- seq1.json
+                             |- seq2.json
+                              ...
+                if False:
+                     save to path/results.json contains
+                     {
+                         summary: pd.DataFrame.json
+                         bs_records: {
+                            seq1 (pd.DataFrame.json)
+                            seq2 (pd.DataFrame.json)
+                            ...
+                       }
+                     }
+        """
+        check_dir(output_dir)
+        if sep_files:
+            check_dir(output_dir + '/results/')
+            dump_json(obj=self.summary.to_json(), path=f'{output_dir}/results/summary.json')
+            if bs_results:
+                check_dir(f'{output_dir}/seqs')
+                for seq, record in self.bs_record.items():
+                    dump_json(obj=record.to_json(), path=f"{output_dir}/results/seqs/{seq}.json")
         else:
-            json.dump(data_to_json, path)
+            data_to_json = {'summary': self.summary.to_json()}
+            if bs_results:
+                data_to_json['bs_record'] = {seq: record.to_json() for seq, record in self.bs_record}
+            dump_json(obj=data_to_json, path=f"{output_dir}/results.json")
 
     @classmethod
     def from_json(cls, fitter, json_o_path):
-        """Load results from JSON"""
+        """Load results from JSON
+        TODO: parse JSON results
+        """
 
         import pandas as pd
         import json
@@ -713,7 +859,7 @@ class BatchFitter(EstimatorType):
     """Fitter for least squared batch fitting
 
     Attributes:
-        y_data_batch (`pd.DataFrame`): a dataframe table containing y values to fit (e.g. reacted fraction in each sample)
+        y_data_batch (pd.DataFrame): a table containing y values to fit (e.g. reacted fraction in each sample)
     {attr}
         keep_single_fitters (bool): if each single fitter is saved, default False to save storage
         note (str): note about this fitting job
@@ -737,7 +883,7 @@ class BatchFitter(EstimatorType):
     def __init__(self, y_data_batch, x_data, model, sigma=None, bounds=None, seq_to_fit=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', grouper=None,
                  opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
-                 curve_fit_params=None, keep_single_fitters=False, note=None, silent=False):
+                 curve_fit_params=None, keep_single_fitters=False, note=None, result_path=None):
         """
         Args:
             y_data_batch (pd.DataFrame or str): a set of y_data to fit form rows of y_data_batch, can be a string
@@ -827,7 +973,8 @@ class BatchFitter(EstimatorType):
             silent=True
         )
 
-        self.results = BatchFitResults(fitter=self)
+        self.results = BatchFitResults(fitter=self, result_path=result_path)
+
 
         # TODO: recover the visualizer
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
@@ -840,7 +987,7 @@ class BatchFitter(EstimatorType):
         #                                   ])
         logging.info('BatchFitter created')
 
-    def worker_generator(self):
+    def worker_generator(self, stream_to_disk=None, overwrite=False):
         if self.seq_to_fit is None:
             seq_list = self.y_data_batch.index.values
         else:
@@ -851,17 +998,21 @@ class BatchFitter(EstimatorType):
                     name=seq,
                     y_data=self.y_data_batch.loc[seq],
                     sigma=None if self.sigma is None else self.sigma.loc[seq],
+                    save_to=None if stream_to_disk is None else f"{stream_to_disk}/seqs/{seq}.json",
+                    overwrite=overwrite,
                     **self.fit_params.__dict__
                 )
             except:
                 raise Exception(f'Can not create fitting worker for {seq}')
 
-    def fit(self, deduplicate=False, parallel_cores=1, dry_run=False):
+    def fit(self, deduplicate=False, parallel_cores=1, stream_to_disk=None, overwrite=False,):
         """Run the estimation
         Args:
             deduplicate (bool): hash the y_data_batch to deduplicate before fitting if True
             parallel_cores (int): number of parallel cores to use. Default 1
-            dry_run (bool): only create the worker without fitting if True
+            stream_to_disk (str): Directly stream fitting results to disk if output path is given
+                will create a folder with name of seq/hash with pickled dict of fitting results
+            overwrite (bool): if overwrite existing results when stream to disk. Default False.
         """
         import pandas as pd
 
@@ -869,17 +1020,20 @@ class BatchFitter(EstimatorType):
 
         if deduplicate:
             self._hash()
+            if stream_to_disk:
+                check_dir(stream_to_disk + '/seqs/')
+                dump_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
 
-        if dry_run:
-            workers = [worker for worker in self.worker_generator()]
+        worker_generator = self.worker_generator(stream_to_disk=stream_to_disk, overwrite=overwrite)
+        if parallel_cores > 1:
+            import multiprocessing as mp
+            pool = mp.Pool(processes=int(parallel_cores))
+            logging.info('Use multiprocessing to fit in {} parallel threads...'.format(parallel_cores))
+            workers = pool.map(_work_fn, worker_generator)
         else:
-            if parallel_cores > 1:
-                import multiprocessing as mp
-                pool = mp.Pool(processes=int(parallel_cores))
-                workers = pool.map(_work_fn, self.worker_generator())
-            else:
-                # single thread
-                workers = [_work_fn(fitter) for fitter in self.worker_generator()]
+            # single thread
+            logging.info('Fitting in a single thread...')
+            workers = [_work_fn(fitter) for fitter in worker_generator]
 
         if self.keep_single_fitters:
             self.fitters = {worker.name: worker for worker in workers}
@@ -930,13 +1084,21 @@ class BatchFitter(EstimatorType):
 
         self._y_data_batch_dup = self.y_data_batch.copy()
         if self.seq_to_fit is not None:
+            # filter the seq to fit
             self._seq_to_fit_dup = self.seq_to_fit.copy()
             self.y_data_batch = self.y_data_batch.loc[self.seq_to_fit]
+        # find seq to hash mapping
         self._seq_to_hash = self.y_data_batch.apply(hash_series, axis=1).to_dict()
-        if isinstance(self.sigma, pd.DataFrame):
-            self._sigma_dup = self.sigma.copy()
-            self.sigma.rename(index=self._seq_to_hash, inplace=True)
+        # only keep the first instance of each hash
         self.y_data_batch = self.y_data_batch[~self.y_data_batch.duplicated(keep='first')]
+        if isinstance(self.sigma, pd.DataFrame):
+            # only accept sigma as an pd.DataFrame
+            self._sigma_dup = self.sigma.copy()
+            # filter sigma table for only the first instance of each hash
+            self.sigma = self.sigma.loc[self.y_data_batch.index]
+            # convert seq --> hash
+            self.sigma.rename(index=self._seq_to_hash, inplace=True)
+        # convert seq --> hash
         self.y_data_batch.rename(index=self._seq_to_hash, inplace=True)
         if self.seq_to_fit is not None:
             self.seq_to_fit = [self._seq_to_hash[seq] for seq in self.seq_to_fit]
@@ -952,26 +1114,42 @@ class BatchFitter(EstimatorType):
         def get_summary(seq):
             return self.results.summary.loc[self._seq_to_hash[seq]]
 
+        # map hash --> seq for results summary
         self.results.summary = pd.Series(data=list(self._seq_to_hash.keys()),
                                          index=list(self._seq_to_hash.keys())).apply(get_summary)
+        # map hash --> seq for bs_record
         if self.results.bs_record is not None:
             self.results.bs_record = {seq: self.results.bs_record[seq_hash]
                                       for seq, seq_hash in self._seq_to_hash.items()}
+        # recover the original y_data_batch
         self.y_data_batch = self._y_data_batch_dup.copy()
         del self._y_data_batch_dup
+        # recover the original sigma if exists
         if hasattr(self, '_sigma_dup'):
             self.sigma = self._sigma_dup.copy()
             del self._sigma_dup
+        # recover the original seq_to_fit if exists
         if hasattr(self, '_seq_to_fit'):
             self.seq_to_fit = self._seq_to_fit_dup.copy()
             del self._seq_to_fit_dup
 
-    def save_model(self, model_path, result_path=None, table_path=None):
-        """Save models to disk as pickled dictionary,
-        except for y_data_batch, and sigma which is large data
+    def save_model(self, output_dir, results=True, bs_results=True, sep_files=True, tables=True):
+        """Save model to a given directory
+        model_config will be saved as a pickled dictionary to recover the model
+            - except for y_data_batch, and sigma which are too large
+
+        Args:
+            output_dir (str): path to save the model, create if the path does not exist
+            results (bool): if save estimation results to `results` as well, to be load by `BatchFitResults`,
+                Default True
+            sep_files (bool): if save the record of bootstrap as separate files in a subfolder `results/seqs/`
+                Default True
+            tables (bool): if save tables (y_data_batch, sigma) in the folder. Default True
         """
         from ..utility.file_tools import dump_pickle
+        from pathlib import Path
 
+        check_dir(output_dir)
         dump_pickle(
             obj={
                 **{'parameters': self.parameters,
@@ -980,42 +1158,51 @@ class BatchFitter(EstimatorType):
                    'seq_to_fit': self.seq_to_fit},
                 **self.fit_params.__dict__
             },
-            path=model_path
+            path=str(output_dir) + '/model_config.pkl'
         )
-        if result_path is not None:
-            self.results.to_pickle(path=result_path)
-        if table_path is not None:
-            dump_pickle(obj=self.y_data_batch, path=table_path)
+        if results:
+            self.save_results(result_path=str(output_dir), bs_results=bs_results, sep_files=sep_files)
+        if tables is not None:
+            dump_pickle(obj=self.y_data_batch, path=str(output_dir) + '/y_data.pkl')
+            if self.sigma is not None:
+                dump_pickle(obj=self.sigma, path=str(output_dir) + '/sigma.pkl')
 
-    def save_results(self, result_path):
+    def save_results(self, result_path, bs_results=True, sep_files=True, use_pickle=False):
         """Save results to disk as pickled dict"""
-        self.results.to_pickle(result_path)
+        if use_pickle:
+            self.results.to_pickle(result_path, bs_results=bs_results, sep_files=sep_files)
+        else:
+            self.results.to_json(result_path, bs_results=bs_results, sep_files=sep_files)
 
     @classmethod
-    def load_model(cls, model_path, y_data_batch, sigma=None, result_path=None):
-        """Create a model from picked file on disk
+    def load_model(cls, model_path, y_data_batch=None, sigma=None, result_path=None):
+        """Create a model from pickled config file
 
         Args:
-            model_path (str): path to picked model configuration file
+            model_path (str): path to picked model configuration file or the saved folder
             y_data_batch (pd.DataFrame or str): y_data table for fitting
             sigma (pd.DataFrame or str): optional sigma table for fitting
             result_path (str): path to fitting results
+
+        Returns:
+            a BatchFitter instance
         """
 
         from ..utility.file_tools import read_pickle
+        from pathlib import Path
 
-        model_config = read_pickle(model_path)
-        if isinstance(y_data_batch, str):
-            y_data_batch = read_pickle(y_data_batch)
+        config_file = model_path if Path(model_path).is_file() else model_path + '/model_config.pkl'
+        model_config = read_pickle(config_file)
+        if y_data_batch is None:
+            # try infer from the folder
+            y_data_batch = read_pickle(model_path + '/y_data.pkl')
+        else:
+            if isinstance(y_data_batch, str):
+                y_data_batch = read_pickle(y_data_batch)
         if sigma is not None:
             if isinstance(sigma, str):
                 sigma = read_pickle(sigma)
-        inst = cls(y_data_batch=y_data_batch, sigma=sigma, **model_config)
-        if result_path is not None:
-            results = read_pickle(result_path)
-            inst.results.bs_record = results['bs_record']
-            inst.results.summary = results['summary']
-        return inst
+        return cls(y_data_batch=y_data_batch, sigma=sigma, result_path=result_path, **model_config)
 
 
 def _work_fn(worker):

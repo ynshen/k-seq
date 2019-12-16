@@ -1,38 +1,77 @@
+"""This module contains filters to apply on SeqTable
+"""
 
 from .seq_table import slice_table
+import pandas as pd
 
 
 class FilterBase(object):
-    """Base type for filters"""
+    """Abstract template for constructing filters"""
 
-    def __init__(self, target, axis=0):
-
+    def __init__(self, target=None, axis=0, *args, **kwargs):
+        """A filter should contains at least target, axis, and reverse info for conducting filtering
+        They could be assigned during instantiation or later
+        """
         self.target = target
         self.axis = axis
 
     @staticmethod
-    def func(**kwargs):
-        """Standalone static methods that return a boolean pd.Series as mask"""
+    def func(target, *args, **kwargs):
+        """Core method for filtering
+        Returns a boolean pd.Series with same shape and order of the given axis in the target
+        True for passed item, False for filtered item
+        *reverse should apply outside this method
+        """
         pass
 
-    def apply(self, **kwargs):
-        """Wrapper over func that can run with class/optional info"""
-        self.func(**kwargs)
+    def mask(self, *args, **kwargs):
+        """Return the the boolean mask for given target table
+        Wrapper over func to for formatting and preprocessing over `func`
+        """
+        return self.func(*args, **kwargs)
 
-    def get_passed_item(self, target=None, **kwargs):
+    def get_passed_item(self, target=None, reverse=None, *args, **kwargs):
+        """Return the items that pass the filter when reverse is False
+        """
         if target is None:
             target = self.target
-        mask = self.apply(target)
+        mask = self.mask(target)
+        if reverse:
+            mask = ~mask
         if self.axis == 1:
-            return target.columns[mask]
+            return list(target.columns[mask])
         else:
-            return target.index[mask]
+            return list(target.index[mask])
+
+    def __call__(self, *args, **kwargs):
+        """Directly call on the filter returns a filtered table"""
+        return self.get_filtered_table(*args, **kwargs)
+
+    def get_filtered_table(self, target=None, remove_zero=True, reverse=False, axis=None, *args, **kwargs):
+        """Return a filtered table
+
+        Args:
+            target (pd.DataFrame): target table to filter
+            remove_zero (bool): if remove all-zero items from another axis after filtering. Default True.
+            reverse (bool): if return filtered items instead of items passed the filter. Default False.
+            axis (0 or 1): if apply filter on index (0) or columns (1)
+        """
+        if target is None:
+            target = self.target
+        if hasattr(target, 'table'):
+            target = target.table
+        axis = self.axis if axis is None else axis
+        return slice_table(table=target,
+                           keys=self.get_passed_item(target=target, reverse=reverse, *args, **kwargs),
+                           axis=axis,
+                           remove_zero=remove_zero)
 
     def summary(self, target=None, **kwargs):
+        """Returns a pd.DataFrame as the summary"""
         import pandas as pd
         if target is None:
             target = self.target
-        mask = self.apply(target, **kwargs)
+        mask = self.mask(target, **kwargs)
         if self.axis == 1:
             summary = pd.DataFrame(index=target.columns)
             summary['unique'] = (target > 0).sum(0)
@@ -48,17 +87,6 @@ class FilterBase(object):
             summary['total_passed'] = target[mask].sum(1)
         return summary
 
-    def get_filtered_table(self, target=None, remove_zero=False):
-        """Return the table with only True mask"""
-        if target is None:
-            target = self.target
-        if hasattr(target, 'table'):
-            target = target.table
-        return slice_table(table=target,
-                           keys=self.get_passed_item(target=target),
-                           axis=self.axis,
-                           remove_zero=remove_zero)
-
     @classmethod
     def from_func(cls, func, target=None, axis=0):
         inst = cls(target=target, axis=axis)
@@ -67,15 +95,59 @@ class FilterBase(object):
 
 
 class FilterCollection(object):
-    """Applies a collection of filters to the object in sequence, with sev"""
+    """Applies a collection of filters to the object in sequence, Not implemented yet
+    todo: add a pipeline for filters
+    """
     pass
 
 
-class SpikeInFilter(FilterBase):
+class SampleFilter(FilterBase):
 
-    def __init__(self, target, center_seq=None, radius=None, reverse=True, axis=0):
+    def __init__(self, target=None, samples_to_keep=None, samples_to_remove=None, axis=1):
         super().__init__(target, axis)
-        import pandas as pd
+        if target is not None:
+            if isinstance(target, pd.DataFrame):
+                self.target = target
+            else:
+                self.target = getattr(target, 'table')
+        self.samples_to_keep = samples_to_keep
+        self.samples_to_remove = samples_to_remove
+        self.axis = axis
+
+    @staticmethod
+    def func(target, samples_to_keep, axis=1):
+        if axis == 0:
+            return target.index.isin(samples_to_keep)
+        else:
+            return target.columns.isin(samples_to_keep)
+
+    def mask(self, target=None, samples_to_keep=None, samples_to_remove=None, axis=None):
+        if target is None:
+            target = self.target
+        elif isinstance(target, pd.DataFrame):
+            pass
+        else:
+            target = getattr(target, 'table')
+        if samples_to_keep is None:
+            samples_to_keep = self.samples_to_keep
+        if samples_to_remove is None:
+            samples_to_remove = self.samples_to_remove
+        if axis is None:
+            axis = self.axis
+        sample_list = target.columns if axis == 1 else target.index
+        if samples_to_keep is not None:
+            sample_list = [sample for sample in sample_list if sample in samples_to_keep]
+        if samples_to_remove is not None:
+            sample_list = [sample for sample in sample_list if sample not in samples_to_remove]
+        return self.func(target, samples_to_keep=sample_list)
+
+
+class SpikeInFilter(FilterBase):
+    """Filter out seqs that are spike-in
+    """
+
+    def __init__(self, target=None, center_seq=None, radius=None, reverse=False, axis=0):
+        super().__init__(target, axis)
 
         if isinstance(target, pd.DataFrame):
             self.target = target
@@ -92,6 +164,7 @@ class SpikeInFilter(FilterBase):
             self.target = target.table
             if center_seq is None:
                 try:
+                    # infer from SeqTable object
                     self.center_seq = target.spike_in.spike_in_seq
                     self.dist_to_center = target.spike_in.dist_to_center
                     if radius is None:
@@ -124,22 +197,18 @@ class SpikeInFilter(FilterBase):
         return distance(seq, self.center_seq)
 
     @staticmethod
-    def func(target, center_seq, radius, dist_to_center=None, reverse=True):
+    def func(target, center_seq, radius, dist_to_center=None):
         from Levenshtein import distance
 
         def within_peak(seq):
-            return distance(center_seq, seq) <= radius
+            return distance(center_seq, seq)
 
         if dist_to_center is None:
-            mask = target.index.to_series().apply(within_peak)
-        else:
-            mask = dist_to_center <= radius
-        if reverse:
-            return ~mask
-        else:
-            return mask
+            dist_to_center = target.index.to_series().apply(within_peak)
+        non_peak_seq = dist_to_center[dist_to_center > radius]
+        return target.index.isin(non_peak_seq.index)
 
-    def apply(self, target=None, center_seq=None, radius=None, dist_to_center=None, reverse=True):
+    def mask(self, target=None, center_seq=None, radius=None, dist_to_center=None, reverse=True):
         if target is None:
             target = self.target
         if center_seq is None:
@@ -149,13 +218,12 @@ class SpikeInFilter(FilterBase):
         if dist_to_center is None:
             dist_to_center = self.dist_to_center
         return self.func(target=target, center_seq=center_seq, dist_to_center=dist_to_center,
-                         radius=radius, reverse=reverse)
+                         radius=radius)
 
 
 class SeqLengthFilter(FilterBase):
 
     def __init__(self, target, min_len=None, max_len=None, axis=0):
-        import pandas as pd
 
         super().__init__(target)
         if isinstance(target, pd.DataFrame):
@@ -167,7 +235,7 @@ class SeqLengthFilter(FilterBase):
         self.axis = axis
 
     @staticmethod
-    def func(target, min_len, max_len):
+    def func(target, min_len=None, max_len=None):
         import numpy as np
         seq_len = target.index.to_series().apply(len)
         mask = np.repeat(True, len(seq_len))
@@ -177,7 +245,7 @@ class SeqLengthFilter(FilterBase):
             mask = mask & (seq_len <= max_len)
         return mask
 
-    def apply(self, target=None, min_len=None, max_len=None):
+    def mask(self, target=None, min_len=None, max_len=None):
         if target is None:
             target = self.target
         if min_len is None:
@@ -189,209 +257,47 @@ class SeqLengthFilter(FilterBase):
 
 class SingletonFilter(FilterBase):
 
-    def __init__(self, target, axis=0, reverse=True):
-        import pandas as pd
+    def __init__(self, target, axis=0):
 
         super().__init__(target)
         if isinstance(target, pd.DataFrame):
             self.target = target
         else:
             self.target = target.table
-        self.reverse = reverse
         self.axis = axis
 
     @staticmethod
-    def func(target, reverse=True):
-        mask = target.sum(axis=1) == 1
-        if reverse:
-            return ~mask
-        else:
-            return mask
+    def func(target, axis=1):
+        mask = target.sum(axis=axis) == 1
+        return ~mask
 
-    def apply(self, target=None, reverse=None):
+    def mask(self, target=None):
         if target is None:
             target = self.target
-        if reverse is None:
-            reverse = self.reverse
-        return self.func(target, reverse)
+        return self.func(target)
 
 
 class DetectedTimesFilter(FilterBase):
 
-    def __init__(self, target, min_detected_times=6, axis=0, reverse=False):
-        import pandas as pd
+    def __init__(self, target=None, min_detected_times=6, axis=0):
 
         super().__init__(target)
-        if isinstance(target, pd.DataFrame):
-            self.target = target
-        else:
-            self.target = target.table
+        if target is not None:
+            if isinstance(target, pd.DataFrame):
+                self.target = target
+            else:
+                self.target = target.table
         self.min_detected_times = min_detected_times
-        self.reverse = reverse
         self.axis = axis
 
     @staticmethod
-    def func(target, min_detected_times, reverse=True):
-        mask = (target > 0).sum(axis=1) >= min_detected_times
-        if reverse:
-            return ~mask
-        else:
-            return mask
+    def func(target, min_detected_times):
+        return (target > 0).sum(axis=1) >= min_detected_times
 
-    def apply(self, target=None, min_detected_times=None, reverse=None):
+    def mask(self, target=None, min_detected_times=None):
         if target is None:
             target = self.target
         if min_detected_times is None:
             min_detected_times = self.min_detected_times
-        if reverse is None:
-            reverse = self.reverse
-        return self.func(target=target, min_detected_times=min_detected_times, reverse=reverse)
+        return self.func(target=target, min_detected_times=min_detected_times)
 
-
-class SampleFilter(FilterBase):
-
-    def __init__(self, target, sample_to_keep=None, sample_to_remove=None):
-        import pandas as pd
-
-        super().__init__(target)
-        if isinstance(target, pd.DataFrame):
-            self.target = target
-        else:
-            self.target = target.table
-
-        self.sample_to_keep = sample_to_keep
-        self.sample_to_remove = sample_to_remove
-        self.reverse = False
-        self.axis = 1
-
-    @staticmethod
-    def func(target, sample_to_keep, reverse=False):
-        mask = target.columns.isin(sample_to_keep)
-        if reverse:
-            return ~mask
-        else:
-            return mask
-
-    def apply(self, target=None, sample_to_keep=None, sample_to_remove=None):
-        if target is None:
-            target = self.target
-        if sample_to_keep is None:
-            sample_to_keep = self.sample_to_keep
-        if sample_to_remove is None:
-            sample_to_remove = self.sample_to_remove
-
-        if sample_to_keep is None:
-            sample_to_keep = list(self.target.columns)
-        if sample_to_remove is not None:
-            sample_to_keep = [sample for sample in sample_to_keep if sample not in sample_to_remove]
-
-        return self.func(target=target, sample_to_keep=sample_to_keep, reverse=False)
-
-# class SeqFilter:
-#
-#     class Filter:
-#         def __init__(self, func, value):
-#             self.func = func
-#             self.value = value
-#
-#     def __init__(self, seq_table, seq_length_range=None, max_edit_dist_to_seqs=None,
-#                  min_occur_input=None, min_occur_reacted=None,
-#                  min_counts_input=None, min_counts_reacted=None,
-#                  min_rel_abun_input=None, min_rel_abun_reacted=None):
-#         """
-#         Filter object with some built-in filter options
-#
-#         Use `SeqFilter.filter_fn` to get the `callable` function
-#
-#         Use `SeqFilter.seq_to_keep` to get a list of sequences passed the filters
-#
-#         Args:
-#             seq_table (`SeqTable`): the `SeqTable` instance to apply filters on
-#             seq_length_range ([min, max]): only keep sequences within range [min, max]
-#             max_edit_dist_to_seqs (`int`):
-#             min_counts_input (`int`):
-#             min_counts_reacted (`int`):
-#             min_rel_abun_input (`float`): relative abundance is only based on valid sequences
-#             min_rel_abun_reacted (`float`): relative abundance is only based on valid sequences
-#         """
-#
-#         import numpy as np
-#         import pandas as pd
-#
-#         self.seq_table = seq_table
-#
-#         if seq_length_range is not None:
-#             self.seq_length_range = self.Filter(
-#                 func=lambda seq: seq_length_range[0] <= len(seq) <= seq_length_range[1],
-#                 value = seq_length_range)
-#
-#         if max_edit_dist_to_seqs is not None:
-#             if isinstance(max_edit_dist_to_seqs, list) or isinstance(max_edit_dist_to_seqs, tuple):
-#                 max_edit_dist_to_seqs = {seq[0]: int(seq[1]) for seq in max_edit_dist_to_seqs}
-#
-#             def edit_dist_filter_fn(seq):
-#                 import Levenshtein
-#                 flag = True
-#                 for target, max_dist in max_edit_dist_to_seqs.items():
-#                     flag = flag and Levenshtein.distance(seq, target) <= max_dist
-#                 return flag
-#
-#             self.max_edit_dist_to_seqs = self.Filter(
-#                 func=edit_dist_filter_fn,
-#                 value=max_edit_dist_to_seqs
-#             )
-#
-#         if min_occur_input is not None:
-#             self.min_occur_input = self.Filter(
-#                 func=lambda seq: np.sum(self.seq_table.count_table_input.loc[seq] > 0) >= min_occur_input,
-#                 value=min_occur_input
-#             )
-#         if min_occur_reacted is not None:
-#             self.min_occur_reacted = self.Filter(
-#                 func=lambda seq: np.sum(self.seq_table.count_table_reacted.loc[seq] > 0) >= min_occur_reacted,
-#                 value=min_occur_reacted
-#             )
-#
-#
-#         if min_counts_input is not None:
-#             self.min_counts_input = self.Filter(
-#                 func=lambda seq: self.seq_table.count_table_input.loc[seq].mean() >= min_counts_input,
-#                 value=min_counts_input
-#             )
-#
-#         if min_counts_reacted is not None:
-#             self.min_counts_reacted = self.Filter(
-#                 func=lambda seq: self.seq_table.count_table_reacted.loc[seq].mean() >= min_counts_reacted,
-#                 value=min_counts_reacted
-#             )
-#
-#         if min_rel_abun_input is not None:
-#             self.min_rel_abun_input = self.Filter(
-#                 func=lambda seq: (self.seq_table.count_table_input.loc[seq]/self.seq_table.count_table_input.sum(axis=0)).mean() >= min_rel_abun_input,
-#                 value=min_rel_abun_input
-#             )
-#
-#         if min_rel_abun_reacted is not None:
-#             self.min_rel_abun_reacted = self.Filter(
-#                 func=lambda seq: (self.seq_table.count_table_reacted.loc[seq]/self.seq_table.count_table_reacted.sum(axis=0)).mean() >= min_rel_abun_reacted,
-#                 value=min_rel_abun_reacted
-#             )
-#
-#     def print_filters(self):
-#         print('Following filter added:')
-#         for filter,content in self.__dict__.items():
-#             if isinstance(content, self.Filter):
-#                 print('\t{}:{}'.format(filter, content.value))
-#
-#     def apply_filters(self):
-#         seq_to_keep = self.seq_table.count_table_reacted.index
-#         self.seq_to_keep = seq_to_keep[seq_to_keep.map(self.filter_fn)]
-#
-#     @property
-#     def filter_fn(self):
-#         def _filter_fn(seq):
-#             import numpy as np
-#             flags = [filter.func(seq) for filter in self.__dict__.values()
-#                      if isinstance(filter, self.Filter)]
-#             return np.all(flags)
-#         return _filter_fn

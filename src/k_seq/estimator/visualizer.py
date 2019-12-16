@@ -1,53 +1,53 @@
-# def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-#     from .least_square import SingleFitting, BatchFitting
-#     from ..data.seq_table import SeqTable
-#
-#     def extract_info_from_SingleFitting(single_res):
-#         data = {
-#             'x_data': single_res.x_data,
-#             'y_data': single_res.y_data,
-#             'params': single_res.point_est.params[:len(single_res.config['parameters'])]
-#         }
-#         if num_bootstrap_records is not None:
-#             if single_res.bootstrap.records.shape[0] > num_bootstrap_records:
-#                 data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
-#                     axis=0,
-#                     n=num_bootstrap_records
-#                 )
-#             else:
-#                 data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])]
-#         return data
-#
-#     if num_bootstrap_records == 0:
-#         num_bootstrap_records = None
-#     if isinstance(fitting_res, SeqTable):
-#         fitting_res = fitting_res.fitting
-#     if isinstance(fitting_res, BatchFitting):
-#         if seq_ix is None:
-#             raise Exception('Please provide the names of sequences to plot')
-#         else:
-#             if isinstance(seq_ix, str):
-#                 seq_ix = [seq_ix]
-#             if seq_name is None:
-#                 seq_name = seq_ixs
-#             if model is None:
-#                 model = fitting_res.model
-#             data_to_plot = {
-#                 name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
-#                 for name, seq_ix in zip(seq_name, seq_ix)
-#             }
-#     elif isinstance(fitting_res, SingleFitting):
-#         if seq_name is None:
-#             seq_name = fitting_res.name
-#         if model is None:
-#             model = fitting_res.model
-#         data_to_plot = {
-#             seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
-#         }
-#     else:
-#         raise Exception('The input fitting_res should be SeqTable, SingleFitting or BatchFitting')
-#
-#     return model, data_to_plot
+def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
+    from .least_square import SingleFitting, BatchFitting
+    from ..data.seq_table import SeqTable
+
+    def extract_info_from_SingleFitting(single_res):
+        data = {
+            'x_data': single_res.x_data,
+            'y_data': single_res.y_data,
+            'params': single_res.point_est.params[:len(single_res.config['parameters'])]
+        }
+        if num_bootstrap_records is not None:
+            if single_res.bootstrap.records.shape[0] > num_bootstrap_records:
+                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
+                    axis=0,
+                    n=num_bootstrap_records
+                )
+            else:
+                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])]
+        return data
+
+    if num_bootstrap_records == 0:
+        num_bootstrap_records = None
+    if isinstance(fitting_res, SeqTable):
+        fitting_res = fitting_res.fitting
+    if isinstance(fitting_res, BatchFitting):
+        if seq_ix is None:
+            raise Exception('Please provide the names of sequences to plot')
+        else:
+            if isinstance(seq_ix, str):
+                seq_ix = [seq_ix]
+            if seq_name is None:
+                seq_name = seq_ixs
+            if model is None:
+                model = fitting_res.model
+            data_to_plot = {
+                name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
+                for name, seq_ix in zip(seq_name, seq_ix)
+            }
+    elif isinstance(fitting_res, SingleFitting):
+        if seq_name is None:
+            seq_name = fitting_res.name
+        if model is None:
+            model = fitting_res.model
+        data_to_plot = {
+            seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
+        }
+    else:
+        raise Exception('The input fitting_res should be SeqTable, SingleFitting or BatchFitting')
+
+    return model, data_to_plot
 
 
 def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, show_bootstrap_curves=50,
@@ -149,7 +149,6 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
                      line_postfix='', line_color='#2C73B4', line_marker='',
                      show_shade=True, upper_postfix='_97.5%', lower_postfix='_2.5%',
                      shade_color='#2C73B4', shade_alpha=0.3,
-                     highlight_seq=None, highlight_color='#F39730',
                      sort_by=None, y_log=False, save_fig_to=None, **kwargs):
     """Plot of given estimated parameter values across selected sequences"""
 
@@ -219,24 +218,20 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(1, 1, figsize=kwargs.pop('figsize', (12, 6)))
 
-    param_values['pos'] = np.arange(param_values.shape[0])
-    ax.plot(param_values['pos'], param_values[line_col], marker=line_marker, color=line_color, ls='-')
+    pos = np.arange(param_values.shape[0])
+    ax.plot(pos, param_values[line_col], marker=line_marker, color=line_color, ls='-')
     if show_shade:
-        ax.fill_between(param_values['pos'], y1=param_values[upper_col], y2=param_values[lower_col],
+        ax.fill_between(pos, y1=param_values[upper_col], y2=param_values[lower_col],
                         facecolor=shade_color, alpha=shade_alpha)
-    if highlight_seq is not None:
-        ax.errorbar(x=param_values.loc[highlight_seq, 'pos'], y=param_values.loc[highlight_seq, line_col],
-                    yerr=[param_values.loc[highlight_seq, line_col] - param_values.loc[highlight_seq, lower_col],
-                          param_values.loc[highlight_seq, upper_col] - param_values.loc[highlight_seq, line_col]],
-                    color=highlight_color, ecolor=highlight_color, capsize=3, capthick=1, marker='o', ls='')
     if y_log:
         ax.set_yscale('log')
     ax.set_xlabel('Sequences', fontsize=14)
     ax.set_ylabel(param, fontsize=14)
 
     if save_fig_to:
-        fig.patch.set_alpha(0)
         fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+
+    return ax
 
 
 # def get_loss(x, y, params, func=, weights=None):
