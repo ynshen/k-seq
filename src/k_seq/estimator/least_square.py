@@ -462,14 +462,20 @@ class FitResults:
         """
         import json
 
+        def jsonfy(target):
+            try:
+                return target.to_json()
+            except:
+                return None
+
         data_to_dump = {
             'point_estimation': {
-                'params': self.point_estimation.params.to_json(),
-                'pcov': self.point_estimation.pcov.to_json()
+                'params': jsonfy(self.point_estimation.params),
+                'pcov': jsonfy(self.point_estimation.pcov)
             },
             'uncertainty': {
-                'summary': self.uncertainty.summary.to_json(),
-                'record': self.uncertainty.record.to_json()
+                'summary': jsonfy(self.uncertainty.summary),
+                'record': jsonfy(self.uncertainty.record)
             }
         }
         if path is None:
