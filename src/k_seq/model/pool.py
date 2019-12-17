@@ -1,4 +1,4 @@
-from ..model import ModelBase
+from . import ModelBase
 
 
 class PoolModel(ModelBase):
