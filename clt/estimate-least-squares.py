@@ -76,23 +76,6 @@ def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_parti
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    import json
-    with open(f"{output_dir}/config.txt", 'w') as handle:
-        json.dump(obj={
-            'seq_table': seq_table,
-            'table_name': table_name,
-            'simu_data': simu_data,
-            'fit_partial': fit_partial,
-            'exclude_zero': exclude_zero,
-            'inverse_weight': inverse_weight,
-            'bootstrap_num': bootstrap_num,
-            'bs_record_num': bs_record_num,
-            'bs_method': bs_method,
-            'core_num': core_num,
-            'output_dir': str(output_dir),
-            'pkg_path': pkg_path
-        }, fp=handle)
-
     return str(output_dir)
 
 
@@ -179,6 +162,8 @@ if __name__ == '__main__':
         sys.path.insert(0, args['pkg_path'])
     if args['create_folder']:
         args['output_dir'] = create_output_dir(**args)
+    from k_seq.utility.file_tools import dump_json
+    dump_json(obj=args, path=f"{args['output_dir']}/config.json")
     logging.basicConfig(filename=f"{args['output_dir']}/app_run.log",
                         format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
