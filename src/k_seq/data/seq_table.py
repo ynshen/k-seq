@@ -50,7 +50,6 @@ class SeqTable(object):
         """
         todo:
           - use hidden variable and seq/sample list for masking count table, amount table, dna amount
-          - separate spike-in from sample metadata, make it optional
         Initialize from a ``SeqSampleSet`` instance
         Find all valid sequences that occur at least once in any 'input' sample and once in any 'reacted' sample
         """
@@ -66,7 +65,7 @@ class SeqTable(object):
                                     'reads': 'count',
                                     'amount': 'amount'}
         from ..utility import allowed_units
-        allowed_data_unit_mapper.update({unit:unit for unit in allowed_units})
+        allowed_data_unit_mapper.update({unit: unit for unit in allowed_units})
         if data_unit.lower() not in allowed_data_unit_mapper.keys():
             raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_unit_mapper.keys()))
 
@@ -354,7 +353,7 @@ class SeqTable(object):
         """Load default dataset
         Available dataset:
           - BYO-doped: 'byo-doped'
-          - BYO: not implemented
+          - BYO-selected: 'byo-selected'
           - BFO: not implemented
         """
         if dataset.lower() in ['byo_doped', 'byo-doped', 'doped']:

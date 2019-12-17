@@ -176,11 +176,11 @@ class PoolParamSimulator:
         return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
 
 
-def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
-                          kinetic_model=None, count_model=None, dna_amount_error=None,
-                          sample_from_table=None, weights=None, replace=True,
-                          reps=1, seed=None,
-                          save_to=None, **param_generator):
+def simulate_counts(pool_size, c_list, N_list, p0=None,
+                    kinetic_model=None, count_model=None, dna_amount_error=None,
+                    sample_from_table=None, weights=None, replace=True,
+                    reps=1, seed=None, note=None,
+                    save_to=None, **param_generator):
     """Simulate a k-seq count data given kinetic and count model
 
     Args:
@@ -190,7 +190,7 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
         p0 (list, generator, or callable returns generator): composition of initial pool
         kinetic_model(callable or ModelBase):
         count_model(callable or ModelBase):
-        dna_amount_error (float or callable): a Gaussian error with std. dev. as the float
+        dna_amount_error (float or callable): a fixed Gaussian error with std. dev. as the float
             or any error function on the DNA amount
         sample_from_table (pd.DataFrame): optional to sample sequences from given table
         weights (list or str): weights/col of weight for sampling from table
@@ -204,14 +204,17 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
         X (pd.DataFrame): c, n value for samples
         y (pd.DataFrame): sequence counts for sequence samples
         param_table (pd.DataFrame): table list the parameters of simulated pool
-
+        seq_table (data.SeqTable): a SeqTable object stores all the data
     """
 
     from ..model import pool
     import pandas as pd
+    if seed is not None:
+        import numpy as np
+        np.random.seed(seed)
 
     if kinetic_model is None:
-        # default use BYO first-order compositional model
+        # default use BYO first-order model returns absolute amount
         from k_seq.model import kinetic
         kinetic_model = kinetic.BYOModel.amount_first_order
         logging.info('No kinetic model provided, use BYOModel.amount_first_order')
@@ -224,7 +227,6 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
     if sample_from_table is None:
         param_table = PoolParamSimulator.sample_from_ind_dist(
             p0=p0,
-            seed=seed,
             size=pool_size,
             **param_generator
         )
@@ -233,8 +235,7 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
             df=sample_from_table,
             size=pool_size,
             replace=replace,
-            weights=weights,
-            seed=seed
+            weights=weights
         )
 
     param_table.index.name = 'seq'
@@ -266,6 +267,22 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
     Y.index.name = 'seq'
     dna_amount.index.name = 'amount'
 
+    from .seq_table import SeqTable
+
+    seq_table = SeqTable(data_mtx=Y, x_values=x, note=note, grouper={'input': list(x.loc[x['c'] < 0].index),
+                                                                     'reacted': list(x.loc[x['c'] < 0].index)})
+    seq_table.add_total_dna_amount(dna_amount=dna_amount.to_dict())
+    seq_table.table_abs_amnt = seq_table.dna_amount.apply(target=seq_table.table)
+    from .transform import ReactedFractionNormalizer
+    reacted_frac = ReactedFractionNormalizer(input_samples=list(x.loc[x['c'] < 0].index),
+                                             reduce_method='median',
+                                             remove_zero=True)
+    seq_table.table_reacted_frac = reacted_frac.apply(seq_table.table_abs_amnt)
+    from .filters import DetectedTimesFilter
+    seq_table.table_seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
+        min_detected_times=seq_table.table_reacted_frac.shape[1]
+    )(seq_table.table_reacted_frac)
+
     if save_to is not None:
         from pathlib import Path
         save_path = Path(save_to)
@@ -275,6 +292,7 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
             x.to_csv(f'{save_path}/x.csv')
             Y.to_csv(f'{save_path}/Y.csv')
             param_table.to_csv(f'{save_path}/truth.csv')
+            seq_table.to_pickle(f"{save_path}/seq_table.pkl")
         else:
             logging.error('save_to should be a directory')
             raise TypeError('save_to should be a directory')
@@ -282,109 +300,109 @@ def pool_counts_simulator(pool_size, c_list, N_list, p0=None,
     return x, Y, dna_amount, param_table
 
 
-def reacted_frac_simulator(c_list, kinetic_model=None, percent_noise=0.2, pool_size=None,
-                           sample_from_table=None, weights=None, replace=True,
-                           reps=1, allow_zero=False, seed=None, save_to=None, **param_generator):
-    """Simulate reacted fraction of a pool of molecules (ribozymes), given substrate concentration, kinetic model
-
-    Args:
-        c_list (list): list of substrate concentration
-        kinetic_model (callable): kinetic model of the reaction
-        percent_noise (float or list): percent variance of Gaussian noise, if list, should have same shape as c_list,
-            default: 0.2
-        sample_from_table (pd.DataFrame): optional to sample sequences from given table
-        weights (list or str): weights/col of weight for sampling from table
-        replace (bool): if sample with replacement
-        reps (int): number of replicates for each c, N
-        allow_zero (bool): if allow reacted fraction to be zero after noise. If False, repeated sampling until a
-            positive reacted fraction is achieved, else bottomed by zero
-        seed (int): global random seed to use
-        save_to (path): path to the folder to save simulated results
-        **param_generator: keyword arguments of list, generator or callable returns generator to draw parameters
-
-    Returns:
-        x (pd.Series): c_list with replication
-        Y (pd.DataFrame): a table of reacted fraction
-        param_table (pd.DataFrame): a table of parameter truth
-    """
-
-    def add_noise(mean, noise, allow_zero=False):
-        """Add Gaussian noise on given mean
-        Note:
-            here is absolute noise, to inject percent noise, assign noise = mean * pct_noise
-
-        Args:
-            mean (float or list-like): mean values
-            noise (float or list-list): noise level, variance of Gaussian noise,
-                if list-like should have same shape as mean
-            allow_zero (bool): if allow zero in noised inject data, if False, repeated sampling until non-negative value
-                observed
-
-        Returns:
-            data_w_noise (float or np.ndarray): data with injected noise, same shape as mean
-        """
-        import numpy as np
-
-        y = np.random.normal(loc=mean, scale=noise)
-        if isinstance(mean, float):
-            while y < 0 and not allow_zero:
-                y = np.random.normal(loc=y, scale=y_noise)
-            return max(y, 0)
-        else:
-            while (y < 0).any() and not allow_zero:
-                y = np.random.normal(loc=y, scale=y_noise)
-            y[y < 0] = 0
-            return y
-
-    if kinetic_model is None:
-        # default use BYO first-order compositional model
-        from k_seq.model import kinetic
-        kinetic_model = kinetic.BYOModel.react_frac
-        print('No kinetic model provided, use BYOModel.amount_first_order')
-
-    if sample_from_table is None:
-
-        results = pd.DataFrame(
-            data={**{'p0': list(generate_params(p0))},
-                  **{param: generate_params(gen) for param, gen in param_generators.items()}}
-        )
-
-        return  results
-
-        param_table = sample_from_ind_dist(
-            seed=seed,
-            **param_generator
-        )
-    else:
-        param_table =
-            df=sample_from_table,
-            size=pool_size,
-            replace=replace,
-            weights=weights,
-            seed=seed
-        )
-
-    param_table.index.name = 'seq'
-
-    x_true = np.array(x_true)
-
-
-    if isinstance(params, list):
-        y_true = model(x_true, *params.values())
-    elif isinstance(params, dict):
-        y_true = model(x_true, **params)
-
-    if type(percent_noise) is float or type(percent_noise) is int:
-        y_noise = [percent_noise * y for y in y_true]
-    else:
-        y_noise = [tmp[0] * tmp[1] for tmp in zip(y_true, percent_noise)]
-
-    y_ = np.array([[add_noise(yt[0], yt[1], y_allow_zero) for yt in zip(y_true, y_noise)] for _ in range(replicates)])
-    if average:
-        return (x_true, np.mean(y_, axis=0))
-    else:
-        x_ = np.array([x_true for _ in range(replicates)])
-        return (x_.reshape(x_.shape[0] * x_.shape[1]), y_.reshape(y_.shape[0] * y_.shape[1]))
+# def reacted_frac_simulator(c_list, kinetic_model=None, percent_noise=0.2, pool_size=None,
+#                            sample_from_table=None, weights=None, replace=True,
+#                            reps=1, allow_zero=False, seed=None, save_to=None, **param_generator):
+#     """Simulate reacted fraction of a pool of molecules (ribozymes), given substrate concentration, kinetic model
+#
+#     Args:
+#         c_list (list): list of substrate concentration
+#         kinetic_model (callable): kinetic model of the reaction
+#         percent_noise (float or list): percent variance of Gaussian noise, if list, should have same shape as c_list,
+#             default: 0.2
+#         sample_from_table (pd.DataFrame): optional to sample sequences from given table
+#         weights (list or str): weights/col of weight for sampling from table
+#         replace (bool): if sample with replacement
+#         reps (int): number of replicates for each c, N
+#         allow_zero (bool): if allow reacted fraction to be zero after noise. If False, repeated sampling until a
+#             positive reacted fraction is achieved, else bottomed by zero
+#         seed (int): global random seed to use
+#         save_to (path): path to the folder to save simulated results
+#         **param_generator: keyword arguments of list, generator or callable returns generator to draw parameters
+#
+#     Returns:
+#         x (pd.Series): c_list with replication
+#         Y (pd.DataFrame): a table of reacted fraction
+#         param_table (pd.DataFrame): a table of parameter truth
+#     """
+#
+#     def add_noise(mean, noise, allow_zero=False):
+#         """Add Gaussian noise on given mean
+#         Note:
+#             here is absolute noise, to inject percent noise, assign noise = mean * pct_noise
+#
+#         Args:
+#             mean (float or list-like): mean values
+#             noise (float or list-list): noise level, variance of Gaussian noise,
+#                 if list-like should have same shape as mean
+#             allow_zero (bool): if allow zero in noised inject data, if False, repeated sampling until non-negative value
+#                 observed
+#
+#         Returns:
+#             data_w_noise (float or np.ndarray): data with injected noise, same shape as mean
+#         """
+#         import numpy as np
+#
+#         y = np.random.normal(loc=mean, scale=noise)
+#         if isinstance(mean, float):
+#             while y < 0 and not allow_zero:
+#                 y = np.random.normal(loc=y, scale=y_noise)
+#             return max(y, 0)
+#         else:
+#             while (y < 0).any() and not allow_zero:
+#                 y = np.random.normal(loc=y, scale=y_noise)
+#             y[y < 0] = 0
+#             return y
+#
+#     if kinetic_model is None:
+#         # default use BYO first-order compositional model
+#         from k_seq.model import kinetic
+#         kinetic_model = kinetic.BYOModel.react_frac
+#         print('No kinetic model provided, use BYOModel.amount_first_order')
+#
+#     if sample_from_table is None:
+#
+#         results = pd.DataFrame(
+#             data={**{'p0': list(generate_params(p0))},
+#                   **{param: generate_params(gen) for param, gen in param_generators.items()}}
+#         )
+#
+#         return  results
+#
+#         param_table = sample_from_ind_dist(
+#             seed=seed,
+#             **param_generator
+#         )
+#     else:
+#         param_table =
+#             df=sample_from_table,
+#             size=pool_size,
+#             replace=replace,
+#             weights=weights,
+#             seed=seed
+#         )
+#
+#     param_table.index.name = 'seq'
+#
+#     x_true = np.array(x_true)
+#
+#
+#     if isinstance(params, list):
+#         y_true = model(x_true, *params.values())
+#     elif isinstance(params, dict):
+#         y_true = model(x_true, **params)
+#
+#     if type(percent_noise) is float or type(percent_noise) is int:
+#         y_noise = [percent_noise * y for y in y_true]
+#     else:
+#         y_noise = [tmp[0] * tmp[1] for tmp in zip(y_true, percent_noise)]
+#
+#     y_ = np.array([[add_noise(yt[0], yt[1], y_allow_zero) for yt in zip(y_true, y_noise)] for _ in range(replicates)])
+#     if average:
+#         return (x_true, np.mean(y_, axis=0))
+#     else:
+#         x_ = np.array([x_true for _ in range(replicates)])
+#         return (x_.reshape(x_.shape[0] * x_.shape[1]), y_.reshape(y_.shape[0] * y_.shape[1]))
 #
 #
 # def data_simulator_convergence_map(A_range, k_range, x, save_dir=None, percent_noise=0.0, func=func_default, replicates=5, A_res=100, k_res=100, A_log=False, k_log=True):
