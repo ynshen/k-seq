@@ -64,16 +64,20 @@ class PoolModel(ModelBase):
         self.note = note
 
     def func(self, **params):
-        """Draw counts from given parameters"""
+        """Draw counts from given parameters
+
+        Returns:
+            output sum from kinetic model: reacted amount if not normalized
+            counts
+
+        """
         import numpy as np
 
         kinetic_params = {key: item for key, item in params.items() if key in self.kinetic_params}
         count_params = {key: item for key, item in params.items() if key in self.count_params}
 
         pt = self.kinetic_model(**kinetic_params)
-        if np.sum(pt) != 1:
-            pt = pt / np.sum(pt)
-        return self.count_model(pt, **count_params)
+        return np.sum(pt), self.count_model(pt / np.sum(pt), **count_params)
 
     def predict(self, **params):
         """Wrapper over func, can accept parameters to overwrite current ones if exist"""

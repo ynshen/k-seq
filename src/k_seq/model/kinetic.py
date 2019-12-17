@@ -4,7 +4,7 @@ import numpy as np
 from ..utility.func_tools import DocHelper
 
 doc_helper = DocHelper(
-    c=('float or 1-D list-like', 'Concentration of substrates'),
+    c=('float or 1-D list-like', 'Concentration of substrates, return input pool if negative'),
     k=('float or 1-D list-like', 'Kinetic coefficient for each sequence in first-order kinetics, with length as number '
                                  'of sequences'),
     A=('float or 1-D list-like', 'Asymptotic conversion for each sequence in first-order kinetics, with length as '
@@ -12,8 +12,7 @@ doc_helper = DocHelper(
     alpha=('float', 'degradation coefficient for substrates'),
     t=('float', 'Reaction time in the experiments'),
     b=('float or 1-D list-like', 'Bias for each sequences, with length as number of sequences'),
-    p0=('1-D list-like', 'Composition of sequences in the input pool. sum(p0) == 1'),
-    x0=('1-D list-like', 'Initial amount of sequences in the input pool'),
+    p0=('1-D list-like', 'Amount or composition of sequences in the input pool'),
 
 )
 
@@ -32,18 +31,32 @@ def to_scaler(value):
 
 
 def first_order(c, k, A, alpha, t):
-    """Base first-order kinetic model
+    """Base first-order kinetic model, returns reacted fraction of input seqs given parameters
+    for c_i < 0, returns all ones as it is input pool
+    
     Args:
     {}
     """.format(doc_helper.get(first_order), indent=4)
 
-    if check_scaler(k) or check_scaler(c):
+    c = np.array(c)
+    if check_scaler(c):
+        if to_scaler(c) < 0:
+            return np.ones_like(k)
+        else:
+            return to_scaler(A) * (1 - np.exp(- alpha * t * to_scaler(k) * c))
+    elif check_scaler(k) or check_scaler(c):
         # Two 1-D array, compute outer product
-        return to_scaler(A) * (1 - np.exp(- alpha * t * to_scaler(k) * to_scaler(c)))
+        y = np.zeros_like(to_scaler(c))
+        y[c >= 0] = to_scaler(A) * (1 - np.exp(- alpha * t * to_scaler(k) * c[c >= 0]))
+        y[c < 0] = 1
+        return y
     else:
+        y = np.zeros((len(k), len(c)))
         if len(np.shape(A)) == 1:
             A = np.expand_dims(A, axis=-1)
-        return np.multiply(A, (1 - np.exp(- alpha * t * np.outer(k, c))))
+        y[:, c >= 0] = np.multiply(A, (1 - np.exp(- alpha * t * np.outer(k, c[c >= 0]))))
+        y[:, c < 0] = 1
+        return y
 
 
 def first_order_w_bias(c, k, A, alpha, t, b):
@@ -115,13 +128,10 @@ class BYOModel:
             float, 1-D or 2-D np.ndarray with shape (seq_num, sample_num)
         """.format(doc_helper.get(BYOModel.reacted_frac))
 
-        c = np.array(c)
-        k = np.array(k)
-        A = np.array(A)
         return first_order(c=c, k=k, A=A, alpha=0.479, t=90)
 
     @staticmethod
-    def amount_first_order(c, x0, k, A):
+    def amount_first_order(c, p0, k, A):
         """Absolute amount of reacted pool, if c is negative, return x0
 
         Args:
@@ -134,16 +144,10 @@ class BYOModel:
         """.format(doc_helper.get(BYOModel.amount_first_order))
         reacted_frac = BYOModel.reacted_frac(c=c, k=k, A=A)
 
-        if check_scaler(c):
-            if to_scaler(c) < 0:
-                reacted_frac[:] = 1
-        else:
-            reacted_frac[:, c < 0] = 1
-
         if len(np.shape(reacted_frac)) == 1:
-            return np.array(x0) * reacted_frac
+            return np.array(p0) * reacted_frac
         else:
-            np.expand_dims(x0, -1) * reacted_frac
+            return np.expand_dims(p0, -1) * reacted_frac
 
     @staticmethod
     def composition_first_order(c, p0, k, A):
@@ -158,7 +162,7 @@ class BYOModel:
             float, 1-D or 2-D np.ndarray with shape (seq_num, sample_num)
         """.format(BYOModel.composition_first_order)
 
-        amounts = BYOModel.amount_first_order(c=c, x0=p0, k=k, A=A)
+        amounts = BYOModel.amount_first_order(c=c, p0=p0, k=k, A=A)
 
         return amounts / np.sum(amounts, axis=0)
 

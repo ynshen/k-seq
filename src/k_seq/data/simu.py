@@ -1,4 +1,6 @@
 import logging
+import numpy as np
+
 
 class DistGenerators:
     """A collection of random value generators from preset distributions
@@ -32,8 +34,6 @@ class DistGenerators:
             a draw from distribution with given size
         """
 
-        import numpy as np
-
         if c95 is None:
             if loc is None:
                 loc = 0
@@ -55,8 +55,6 @@ class DistGenerators:
     @staticmethod
     def uniform(low=None, high=None, size=None, seed=None):
         """Sample from a uniform distribution"""
-
-        import numpy as np
 
         if seed is not None:
             np.random.seed(seed)
@@ -81,8 +79,6 @@ class DistGenerators:
             seed: random seed
 
         """
-
-        import numpy as np
 
         if c95 is None:
             if loc is None or scale is None:
@@ -126,7 +122,6 @@ class PoolParamSimulator:
             param_generators (kwargs): keyword generator to generate parameters
 
         """
-        import numpy as np
         import pandas as pd
 
         def generate_params(param_input):
@@ -173,7 +168,7 @@ class PoolParamSimulator:
     def sample_from_dataframe(cls, df, size, replace=True, weights=None, seed=None):
         """Simulate parameter by resampling rows of a given data frame"""
 
-        return df.sample(n=size, replace=replace, weights=weights, random_state=seed)
+        return df.sample(n=int(size), replace=replace, weights=weights, random_state=seed)
 
 
 def simulate_counts(pool_size, c_list, N_list, p0=None,
@@ -189,7 +184,7 @@ def simulate_counts(pool_size, c_list, N_list, p0=None,
         N_list (list): a list of total reads in for each sample
         p0 (list, generator, or callable returns generator): composition of initial pool
         kinetic_model(callable or ModelBase):
-        count_model(callable or ModelBase):
+        count_model(callable or ModelBase): Default, MultiNomial model. Should return (total_dna, counts)
         dna_amount_error (float or callable): a fixed Gaussian error with std. dev. as the float
             or any error function on the DNA amount
         sample_from_table (pd.DataFrame): optional to sample sequences from given table
@@ -256,10 +251,8 @@ def simulate_counts(pool_size, c_list, N_list, p0=None,
     # return x, Y, dna_amount, param_table
     x = pd.DataFrame.from_dict(x, orient='columns')
     Y = pd.DataFrame.from_dict(Y, orient='columns')
-    dna_amount = pd.DataFrame.from_dict(dna_amount, orient='columns')
-    dna_amount = dna_amount.sum(axis=0)
+    dna_amount = pd.Series(dna_amount)
     if isinstance(dna_amount_error, float):
-        import numpy as np
         dna_amount += np.random.normal(loc=0, scale=dna_amount_error, size=len(dna_amount))
     elif callable(dna_amount_error):
         dna_amount = dna_amount.apply(dna_amount_error)
@@ -269,12 +262,15 @@ def simulate_counts(pool_size, c_list, N_list, p0=None,
 
     from .seq_table import SeqTable
 
-    seq_table = SeqTable(data_mtx=Y, x_values=x, note=note, grouper={'input': list(x.loc[x['c'] < 0].index),
-                                                                     'reacted': list(x.loc[x['c'] < 0].index)})
+    input_samples = x.loc['c']
+    input_samples = list(input_samples[input_samples < 0].index)
+    seq_table = SeqTable(data_mtx=Y, x_values=x.loc['c'].to_dict(), note=note,
+                         grouper={'input': input_samples,
+                                  'reacted': [sample for sample in x.columns if sample not in input_samples]})
     seq_table.add_total_dna_amount(dna_amount=dna_amount.to_dict())
     seq_table.table_abs_amnt = seq_table.dna_amount.apply(target=seq_table.table)
     from .transform import ReactedFractionNormalizer
-    reacted_frac = ReactedFractionNormalizer(input_samples=list(x.loc[x['c'] < 0].index),
+    reacted_frac = ReactedFractionNormalizer(input_samples=input_samples,
                                              reduce_method='median',
                                              remove_zero=True)
     seq_table.table_reacted_frac = reacted_frac.apply(seq_table.table_abs_amnt)
@@ -297,7 +293,134 @@ def simulate_counts(pool_size, c_list, N_list, p0=None,
             logging.error('save_to should be a directory')
             raise TypeError('save_to should be a directory')
 
-    return x, Y, dna_amount, param_table
+    return x, Y, dna_amount, param_table, seq_table
+
+
+def simulate_from_distribution(seq_num, depth, p0_loc, p0_scale, k_95, dna_amount_error, save_to=None):
+    """Preset simulation of pool dataset from random variables
+    TODO: add description
+    """
+
+    c_list = [-1] + list(np.repeat(
+        np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
+    ))
+
+    N_list = [seq_num * depth if c >= 0 else seq_num * depth * 3 for c in c_list]
+
+    x, Y, dna_amount, truth, seq_table = simulate_counts(
+        pool_size=seq_num,
+        c_list=c_list,
+        N_list=N_list,
+        p0=DistGenerators.compo_lognormal(loc=p0_loc, scale=p0_scale, size=seq_num),
+        k=DistGenerators.lognormal(c95=k_95, size=seq_num),
+        A=DistGenerators.uniform(low=0, high=1, size=seq_num),
+        dna_amount_error=dna_amount_error,
+        reps=1,
+        save_to=save_to,
+        seed=23
+    )
+
+    if save_to:
+        with open(save_to + '/config.txt', 'w') as handle:
+            handle.write(
+                f'seq_num: {seq_num}\ndepth: {depth}\np0: loc:{p0_loc} scale: {p0_scale}\n'
+                f'k_95: {k_95}\ndna_amount_error:{dna_amount_error}'
+            )
+
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 4, figsize=(16, 3))
+    init_pools = Y.loc[:, x.loc['c'] < 0]
+    p0 = (init_pools / init_pools.sum(axis=0)).sum(axis=1)
+    axes[0].hist(p0, bins=20)
+    axes[0].set_xlabel('p0, init count avg', fontsize=14)
+    axes[1].hist(truth.A, bins=20)
+    axes[1].set_xlabel('a', fontsize=14)
+    bins = np.logspace(np.log10(truth.k.min()) - 0.5, np.log10(truth.k.max()) + 0.5, 20)
+    axes[2].hist(truth.k, bins=bins)
+    axes[2].set_xscale('log')
+    axes[2].set_xlabel('k', fontsize=14)
+    ka = truth.k * truth.A
+    bins = np.logspace(np.log10(ka.min()) - 0.5, np.log10(ka.max()) + 0.5, 20)
+    axes[3].hist(ka, bins=bins)
+    axes[3].set_xscale('log')
+    axes[3].set_xlabel('k * a', fontsize=14)
+    plt.show()
+
+    return x, Y, dna_amount, truth, seq_table
+
+
+def dna_amount_error(amount):
+    """For DNA amount, assign a 10% normal error"""
+
+    return amount + np.random.normal(scale=amount * 0.1)
+
+
+def get_sample_table(seq_table, estimation):
+    """Compose table for simulation by sampling from seq_table (for p0) and estimated results (for k, A)
+    """
+
+    from .seq_table import SeqTable
+    import pandas as pd
+
+    if isinstance(seq_table, str):
+        from pathlib import Path
+        if Path(seq_table).exists():
+            from ..utility.file_tools import read_pickle
+            seq_table = read_pickle(seq_table)
+        else:
+            seq_table = SeqTable.load_dataset(dataset=seq_table)
+    if isinstance(estimation, str):
+        estimation = pd.read_csv(estimation, index_col=0)
+
+    # survey initial pool composition from byo_doped and add to ls_point_est
+    if hasattr(seq_table.grouper, 'input'):
+        inputs = seq_table.grouper.input.group
+    else:
+        inputs = ['R0']  # default
+    counts = seq_table.table[inputs].loc[estimation.index]
+    counts = counts.sparse.to_dense().mean(axis=1)
+    estimation['mean_counts'] = counts
+    estimation['p0'] = counts / counts.sum()
+    estimation = estimation[~estimation.isna().any(axis=1)]
+    estimation['ka'] = estimation['k'] * estimation['A']
+    return estimation[['k', 'A', 'p0', 'ka']]
+
+
+def simulate_from_sample(sample_table, seq_num, depth=40, dna_amount_error=None, save_to=None):
+
+    c_list = [-1] + list(np.repeat(
+        np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
+    ))
+
+    N_list = [seq_num * depth if c >= 0 else seq_num * depth * 3 for c in c_list]
+
+    x, Y, dna_amount, truth, seq_table = simulate_counts(
+        pool_size=seq_num,
+        c_list=c_list,
+        N_list=N_list,
+        sample_from_table=sample_table,
+        dna_amount_error=dna_amount_error,
+        weights=None,
+        replace=True,
+        reps=1,
+        save_to=save_to,
+        seed=23
+    )
+
+    if save_to is not None:
+        with open(save_to + '/config.txt', 'w') as handle:
+            handle.write(f'seq_num: {seq_num}\ndepth: {depth}\n')
+
+    init_pools = Y.loc[:, x.loc['c'] < 0]
+    truth['p0_from_counts'] = (init_pools / init_pools.sum(axis=0)).sum(axis=1)
+    truth['ka'] = truth.k * truth.A
+    from ..utility.plot_tools import pairplot
+    pairplot(data=truth, vars_name=['p0', 'A', 'k', 'ka'],
+             vars_log=[True, False, True, True], diag_kind='kde')
+
+    return x, Y, dna_amount, truth, seq_table
+
 
 
 # def reacted_frac_simulator(c_list, kinetic_model=None, percent_noise=0.2, pool_size=None,

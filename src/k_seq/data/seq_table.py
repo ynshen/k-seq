@@ -613,7 +613,7 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
     {} 
     """.format(_byo_doped_description)
 
-    BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
+    BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo-doped.pkl' if pickled_path is None else pickled_path
     BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
         else count_file_path
     BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
