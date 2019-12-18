@@ -214,11 +214,11 @@ def read_json(path):
         return json.load(handle)
 
 
-def dump_json(obj, path):
+def dump_json(obj, path, indent=4):
     import json
 
     with open(path, 'w') as handle:
-        json.dump(obj, handle)
+        json.dump(obj, handle, indent=indent)
 
 
 def check_dir(path):

@@ -40,8 +40,8 @@ OUTPUT_BASE='/mnt/storage/projects/k-seq/working/spike_in'
 
 FOLDER_NAME="$( [ -z $PREFIX ] && echo '' || echo ${PREFIX}_ )\
 table-${TABLE_TAG}_bs-num-${BS_NUM}_bs-mtd-${BS_MTD}_\
-no-zero-$( [ -z $NO_ZERO ] && echo true || echo false )_\
-inv-weight-$( [ -z $INV_WEIGHT ] && echo true || echo false )_\
+no-zero-$( [ -z $NO_ZERO ] && echo false || echo true )_\
+inv-weight-$( [ -z $INV_WEIGHT ] && echo false || echo true )_\
 core-$CORE\
 $( [ -z $POSTFIX ] && echo '' || echo _$POSTFIX )"
 
