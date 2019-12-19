@@ -14,25 +14,25 @@
 	# seqkit
 	# bbmap
 
-usage="USAGE: bash proto.pipeline.v3.sh -i [-o -p -q -r -T -h -C]
+usage="USAGE: bash proto.pipeline.v3.sh -i [-o -p -q -r -T -h -c]
 where:
 	REQUIRED
         -i input directory filepath
         
 	OPTIONAL
-	-o output directory filepath
+        -o output directory filepath
         -p forward primer sequence for extraction
         -q reverse primer sequence for extraction
-	-r retain individual lane outputs
-	-T # of threads
-	-h prints this friendly message
-	-C use completely_miss_the_point in pandaSeq joining"
+        -r retain individual lane outputs
+        -T # of threads
+        -h prints this friendly message
+        -c use completely_miss_the_point in pandaSeq joining"
 
 # set home directory
 hdir=$(pwd)
 
 # parse arguments and set global variables
-while getopts h:i:o:p:q:T:C:r option
+while getopts h:i:o:p:q:T:cr option
 do
   case "${option}" in
     h) helpm="TRUE"
@@ -45,14 +45,12 @@ do
     p) fwd=${OPTARG};;
     q) rev=${OPTARG};;
     T) threads=${OPTARG};;
-    C) miss="TRUE" ;;
     r) slanes="TRUE";;
+    c) miss="TRUE";;
     *) echo "Unknown flag"
        exit 1
   esac
 done
-
-echo $miss
 
 # argument report
 # check arguments, print, exit if necessary w/ message
@@ -118,6 +116,15 @@ if [ -z $slanes ];
     echo "-----Individual lane outputs retained." >> "$outdir/log.txt"
 fi
 
+if [ -z $miss ];
+  then
+    echo "-----Don't use completely_miss_the_point module"
+    echo "-----Don't use completely_miss_the_point module" >> "$outdir/log.txt"
+  else
+    echo "-----Use completely_miss_the_point module"
+    echo "-----Use completely_miss_the_point module" >> "$outdir/log.txt"
+fi
+
 if [ -z "$threads" ];
 	then
 		echo "-----# of threads undefined; proceeding with 1 thread, this could take a while..."
@@ -180,18 +187,17 @@ do
 		# NO PRIMERS INCLUDED
 		# Join reads
 		echo "Joining $lbase reads..."
-		echo $miss
 
 		pandaseq -f $R1 -r $R2 -F \
-      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point}
-#      2> $fqdir/$lbase.joined.fastq.log
+      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point:0} \
+      2> $fqdir/$lbase.joined.fastq.log
 	else
 		# WITH PRIMERS INCLUDED
 		# Join reads & extract insert
     echo "Joining $lbase reads & extracting insert..."
     pandaseq -f $R1 -r $R2 -F \
       -p $fwd -q $rev \
-      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point} \
+      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point:0} \
       2> $fqdir/$lbase.joined.fastq.log
 	fi
 	
@@ -202,69 +208,71 @@ do
 	# Combine sequences from each lane into single files
 	echo "Adding $lbase reads to total $sbase reads..."
 	cat $fqdir/$lbase.joined.fastq >> $dir/$sbase.joined.fastq
-        cat $fadir/$lbase.joined.fasta >> $dir/$sbase.joined.fasta
+  cat $fadir/$lbase.joined.fasta >> $dir/$sbase.joined.fasta
 
-	# Generate indiv lane  nt length distributions
+	# Generate indiv lane nt length distributions
 	if [ -z $slanes ];
-        	then :
+    then :
 		else
-		echo "Generating $lbase nt length distribution..."
+      echo "Generating $lbase nt length distribution..."
 		readlength.sh in=$fadir/$lbase.joined.fasta out=$lhist/$lbase.joined.nt.histo bin=1 2>/dev/null
 	fi
 done
 
-
-cd ${outdir}/joined.reads
+cd "${outdir}/joined.reads" || exit 1
 
 # loop through directories and generate count files
+# temporaraly modify PATH to
+
+export PATH=/home/yuning/tools/bbmap:$PATH
 
 ls -1 | while read d
 do
-        test -d "$d" || continue
-        echo $d
-        # define variables
-        base=$(basename ${d})
-        (cd $d ;
+  test -d "$d" || continue
+  echo $d
+  # define variables
+  base=$(basename ${d})
+  (cd $d ;
 
-        # Generate nt length distribution for all lanes combined
-	echo "Generating $base nt length distribution..."
-	readlength.sh in=$base.joined.fasta out=$base.nt.histo bin=1 2>/dev/null
+    # Generate nt length distribution for all lanes combined
+    echo "Generating $base nt length distribution..."
+    readlength.sh in=$base.joined.fasta out=$base.nt.histo bin=1 2>/dev/null
 
-	# NT SEQ COUNTS
-        # convert fasta to tab delimmed file
-	# re-write this with gnu
-        seqkit fx2tab $base.joined.fasta -o $base.fasta.tab ;
+    # NT SEQ COUNTS
+          # convert fasta to tab delimmed file
+    # re-write this with gnu
+    seqkit fx2tab $base.joined.fasta -o $base.fasta.tab ;
 
-        # extract seqs only, no header
-        awk '{print $2}' $base.fasta.tab > $base.seqs.only ;
+    # extract seqs only, no header
+    awk '{print $2}' $base.fasta.tab > $base.seqs.only ;
 
-        # Get unique seq counts (requires fastq seqs ONLY, no fasta headers!)
-        sort $base.seqs.only | uniq -c | sort -bgr > $base.nt.counts ;
+    # Get unique seq counts (requires fastq seqs ONLY, no fasta headers!)
+    sort $base.seqs.only | uniq -c | sort -bgr > $base.nt.counts ;
 
-        # remove temps
-        rm $base.seqs.only $base.fasta.tab
-		
-	# calculate unique and total
-	echo "Calculating unique & total reads for $base..."
-	unique=$(awk 'END {print NR}' $base.nt.counts)
-	total=$(awk '{s+=$1}END{print s}' $base.nt.counts)
+    # remove temps
+    rm $base.seqs.only $base.fasta.tab
 
-	echo "number of unique sequences = $unique" 
-	echo "total number of molecules = $total"  
-		
-	# collect unique, total and sequences with counts in the counts file
-	echo "number of unique sequences = $unique" >> $outdir/counts/$base\_counts.txt
-	echo "total number of molecules = $total"   >> $outdir/counts/$base\_counts.txt
-	echo  >>  $outdir/counts/$base\_counts.txt
-	awk '{ print $2, $1 }' $base.nt.counts | column -t  >>  $outdir/counts/$base\_counts.txt
+    # calculate unique and total
+    echo "Calculating unique & total reads for $base..."
+    unique=$(awk 'END {print NR}' $base.nt.counts)
+    total=$(awk '{s+=$1}END{print s}' $base.nt.counts)
 
-	# redirect outputs
-	mv $base.joined.fasta $outdir/fastas/$base.joined.fasta
-	mv $base.joined.fastq $outdir/fastqs/$base.joined.fastq
-	mv $base.nt.histo $outdir/histos/$base.nt.histo
-	rm $base.nt.counts
+    echo "number of unique sequences = $unique"
+    echo "total number of molecules = $total"
+
+    # collect unique, total and sequences with counts in the counts file
+    echo "number of unique sequences = $unique" >> $outdir/counts/$base\_counts.txt
+    echo "total number of molecules = $total"   >> $outdir/counts/$base\_counts.txt
+    echo  >>  $outdir/counts/$base\_counts.txt
+    awk '{ print $2, $1 }' $base.nt.counts | column -t  >>  $outdir/counts/$base\_counts.txt
+
+    # redirect outputs
+    mv $base.joined.fasta $outdir/fastas/$base.joined.fasta
+    mv $base.joined.fastq $outdir/fastqs/$base.joined.fastq
+    mv $base.nt.histo $outdir/histos/$base.nt.histo
+    rm $base.nt.counts
 	
-        )
+  )
 done
 
 # cleanup indiv lanes
@@ -272,10 +280,10 @@ done
 if [ -z $slanes ];
 	then
 		echo "Cleaning up $base individual lane outputs..."
-                cd $outdir
-                rm -r joined.reads/
-        else
-               	echo "Individual lane outputs will be retained."
+      cd $outdir
+      rm -r joined.reads/
+    else
+      echo "Individual lane outputs will be retained."
 fi
 
 #################################
@@ -291,21 +299,21 @@ echo "sample" "fastq_R1" "fastq_R2" "unique" "total" "recovered(%)"| column -t >
 
 
 # Add log file with number of sequences in fastq files and count files
+alias gzcat=zcat
 
 for R1 in *R1*
 do
+  basename=$(basename ${R1})
+  lbase=${basename//_R*}
+  sbase=${basename//_L00*}
+  R2=${R1//R1_001.fastq*/R2_001.fastq*}
 
-        basename=$(basename ${R1})
-        lbase=${basename//_R*}
-        sbase=${basename//_L00*}
-        R2=${R1//R1_001.fastq*/R2_001.fastq*}
-        
-        echo $sbase \
-        $(gzcat $R1 | awk 'END {print NR/4}') \
-        $(gzcat $R2 | awk 'END {print NR/4}')  \
-        $(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==1{print $6}' ) \
-        $(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==2{print $6}' ) \
-        | column -t >> $outdir/log_temp.txt
+  echo $sbase \
+    $(gzcat $R1 | awk 'END {print NR/4}') \
+    $(gzcat $R2 | awk 'END {print NR/4}')  \
+    $(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==1{print $6}' ) \
+    $(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==2{print $6}' ) \
+    | column -t >> $outdir/log_temp.txt
 					
 done
 
