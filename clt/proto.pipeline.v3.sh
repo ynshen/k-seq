@@ -14,7 +14,7 @@
 	# seqkit
 	# bbmap
 
-usage="USAGE: bash proto.pipeline.v3.sh -i [-o -p -q -r -T -h -c]
+usage="USAGE: bash proto.pipeline.v3.sh -i [-o -p -q -r -T -h -c -a]
 where:
 	REQUIRED
         -i input directory filepath
@@ -26,13 +26,14 @@ where:
         -r retain individual lane outputs
         -T # of threads
         -h prints this friendly message
-        -c use completely_miss_the_point in pandaSeq joining"
+        -c use completely_miss_the_point in pandaSeq joining
+        -a Strip the primers after assembly in pandaSeq joining for heavily overlapped region. Slower"
 
 # set home directory
 hdir=$(pwd)
 
 # parse arguments and set global variables
-while getopts h:i:o:p:q:T:cr option
+while getopts h:i:o:p:q:T:cra option
 do
   case "${option}" in
     h) helpm="TRUE"
@@ -47,6 +48,7 @@ do
     T) threads=${OPTARG};;
     r) slanes="TRUE";;
     c) miss="TRUE";;
+    a) assembly_first="TRUE";;
     *) echo "Unknown flag"
        exit 1
   esac
@@ -125,6 +127,15 @@ if [ -z $miss ];
     echo "-----Use completely_miss_the_point module" >> "$outdir/log.txt"
 fi
 
+if [ -z $assembly_first ];
+  then
+    echo "-----Trim primers before assemply"
+    echo "-----Trim primers before assemply" >> "$outdir/log.txt"
+  else
+    echo "-----Trim primers after assemply"
+    echo "-----Trim primers after assemply" >> "$outdir/log.txt"
+fi
+
 if [ -z "$threads" ];
 	then
 		echo "-----# of threads undefined; proceeding with 1 thread, this could take a while..."
@@ -189,7 +200,9 @@ do
 		echo "Joining $lbase reads..."
 
 		pandaseq -f $R1 -r $R2 -F \
-      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point:0} \
+      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms \
+      ${miss:+-C completely_miss_the_point:0} \
+      ${assembly_first:+-a} \
       2> $fqdir/$lbase.joined.fastq.log
 	else
 		# WITH PRIMERS INCLUDED
@@ -197,7 +210,9 @@ do
     echo "Joining $lbase reads & extracting insert..."
     pandaseq -f $R1 -r $R2 -F \
       -p $fwd -q $rev \
-      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point:0} \
+      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms \
+      ${miss:+-C completely_miss_the_point:0} \
+      ${assembly_first:+-a} \
       2> $fqdir/$lbase.joined.fastq.log
 	fi
 	
@@ -295,7 +310,7 @@ echo $wherenow
 cd ..
 
 echo ""  >> $outdir/log.txt
-echo "sample" "fastq_R1" "fastq_R2" "unique" "total" "recovered(%)"| column -t >> $outdir/log.txt
+echo "sample" "fastq_R1" "fastq_R2" "unique" "total" "recovered(%)"| column -t >> "$outdir/log.txt"
 
 
 # Add log file with number of sequences in fastq files and count files
