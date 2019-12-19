@@ -5,6 +5,7 @@
 # by Sam Verbanic and Celia Blanco
 # contact: samuel.verbanic@lifesci.ucsb.edu or cblanco@chem.ucsb.edu
 # this version is updated by Yuning Shen (yuningshen@ucsb.edu)
+
 # Dependencies:
 	# bioconda
 	# pandaseq
@@ -33,142 +34,142 @@ hdir=$(pwd)
 # parse arguments and set global variables
 while getopts h:i:o:p:q:T:C:r option
 do
-case "${option}"
-in
-
-h) 	helpm="TRUE"
-	printf "%`tput cols`s"|tr ' ' '#'
-	echo "$usage"
-	printf "%`tput cols`s"|tr ' ' '#'
-	exit 1;;
-r)	slanes="TRUE";;
-i) inopt=${OPTARG};;
-o) outopt=${OPTARG};;
-p) fwd=${OPTARG};;
-q) rev=${OPTARG};;
-T) threads=${OPTARG};;
-C)      miss="TRUE";;
-*) ;;
-esac
+  case "${option}" in
+    h) helpm="TRUE"
+      printf "%$(tput cols)s"|tr ' ' '#'
+	    echo "$usage"
+	    printf "%$(tput cols)s"|tr ' ' '#'
+	    exit 1;;
+    i) inopt=${OPTARG};;
+    o) outopt=${OPTARG};;
+    p) fwd=${OPTARG};;
+    q) rev=${OPTARG};;
+    T) threads=${OPTARG};;
+    C) miss="TRUE" ;;
+    r) slanes="TRUE";;
+    *) echo "Unknown flag"
+       exit 1
+  esac
 done
+
+echo $miss
 
 # argument report
 # check arguments, print, exit if necessary w/ message
 if [ -z $helpm ];
 	then
-		printf "%`tput cols`s"|tr ' ' '#'
+		printf "%$(tput cols)s"|tr ' ' '#'
 		echo "-----Welcome to the Unnamed Chen Lab Pipeline!-----"
 		echo "--------You passed the following arguments---------"
 fi
 
 
 if [ -z "$inopt" ];
-        then
-                printf "%`tput cols`s"|tr ' ' '#'
+  then
+    printf "%$(tput cols)s"|tr ' ' '#'
 		echo "ERROR: No input filepath supplied." >&2
 		echo "$usage" >&2
-		printf "%`tput cols`s"|tr ' ' '#' 
+		printf "%$(tput cols)s"|tr ' ' '#'
 		exit 1
-        else
-                # define input variable with correct path name
-                cd $inopt || exit
-                fastqs=$(pwd)
-                echo "-----Input directory path: $fastqs"
-                
+  else
+    # define input variable with correct path name
+    cd "$inopt" || exit 1
+    fastqs=$(pwd)
+    echo "-----Input directory path: $fastqs"
 fi
 
 if [ -z "$outopt" ];
-        then
-                outdir=$hdir/pipeline.output
-                mkdir $outdir
+  then
+    outdir=$hdir/pipeline.output
+    mkdir "$outdir"
 		echo "-----No output directory supplied. New output directory is: $outdir"
-        else
-                # define output variable with correct path name
-                mkdir -p $outopt 2>/dev/null
-		cd $outopt || exit
-                outdir=$(pwd)
-                echo "-----Output directory path: $outdir"
-                echo "-----Input directory path: $fastqs" >> $outdir/log.txt
-                echo "-----Output directory path: $outdir" >> $outdir/log.txt
+  else
+    # define output variable with correct path name
+    mkdir -p "$outopt" 2>/dev/null
+		cd "$outopt" || exit 1
+    outdir=$(pwd)
+    echo "-----Output directory path: $outdir"
+    echo "-----Input directory path: $fastqs" >> "$outdir/log.txt"
+    echo "-----Output directory path: $outdir" >> "$outdir/log.txt"
 fi
 
-
-if [ -z $fwd ];
-        then
-                echo "-----WARNING: No forward primer supplied - extraction will be skipped."
+if [ -z "$fwd" ];
+  then
+    echo "-----WARNING: No forward primer supplied - extraction will be skipped."
 	else
 		echo "-----Forward Primer: $fwd"
-		echo "-----Forward Primer: $fwd" >> $outdir/log.txt
+		echo "-----Forward Primer: $fwd" >> "$outdir/log.txt"
 fi
 
-if [ -z $rev ];
-        then
-                echo "-----WARNING: No reverse primer supplied - extraction will be skipped."
+if [ -z "$rev" ];
+  then
+    echo "-----WARNING: No reverse primer supplied - extraction will be skipped."
 	else
 		echo "-----Reverse Primer: $rev"
-		echo "-----Reverse Primer: $rev" >> $outdir/log.txt
+		echo "-----Reverse Primer: $rev" >> "$outdir/log.txt"
 fi
 
 if [ -z $slanes ];
-        then
-                echo "-----Individual lane outputs will be suppressed."
-                echo "-----Individual lane outputs suppressed." >> $outdir/log.txt
-        else
-                echo "-----Individual lane outputs will be retained."
-                echo "-----Individual lane outputs retained." >> $outdir/log.txt
+  then
+    echo "-----Individual lane outputs will be suppressed."
+    echo "-----Individual lane outputs suppressed." >> "$outdir/log.txt"
+  else
+    echo "-----Individual lane outputs will be retained."
+    echo "-----Individual lane outputs retained." >> "$outdir/log.txt"
 fi
 
-if [ -z $threads ];
+if [ -z "$threads" ];
 	then
 		echo "-----# of threads undefined; proceeding with 1 thread, this could take a while..."
-		echo "-----# of threads = 1"  >> $outdir/log.txt
-
+		echo "-----# of threads = 1"  >> "$outdir/log.txt"
 		threads=1
 	else
 		echo "-----# of threads = $threads"
-		echo "-----# of threads = $threads" >> $outdir/log.txt
+		echo "-----# of threads = $threads" >> "$outdir/log.txt"
 fi
 
 # Make sure input directory contains fastqs before proceeding
-cd "$fastqs" || exit
-if [[ -z "$(ls -1 *.fastq* 2>/dev/null | grep fastq)" ]] ;
-then
-	echo "ERROR: Input directory does not contain fastq files."
-	exit 1
-else
-	echo "Input filecheck passed."
-fi
-
+for f in "$fastqs"/*.fastq*
+do
+  if [ -e "$f" ];
+    then
+      echo "Found fastq file $f, input filecheck passed."
+    else
+      echo "ERROR: Input directory does not contain fastq files."
+      exit 1
+  fi
+  break
+done
 
 # move to working directory
 # make output directories
-cd "$outdir" || exit
+cd "$outdir" || exit 1
+
 mkdir counts joined.reads fastqs fastas histos 2>/dev/null
 
 # loop through reads & process them
-for R1 in $fastqs/*R1*
+for R1 in "$fastqs"/*R1*
 do
 	# Define some general use variables
-        ## these will always be set for standard Illumina naming schemes
-        ## it will pretty much break if anything else is used.
-        ## we can think about making a sloppy alternative for whatever weird names people choose.
-        basename=$(basename "$R1")
-        lbase=${basename//_R*}
-        sbase=${basename//_L00*}
-        R2=${R1//R1_001.fastq*/R2_001.fastq*}
+	## these will always be set for standard Illumina naming schemes
+	## it will pretty much break if anything else is used.
+  ## we can think about making a sloppy alternative for whatever weird names people choose.
+  basename=$(basename ${R1})
+  lbase=${basename//_R*}
+  sbase=${basename//_L00*}
+  R2=${R1//R1_001.fastq*/R2_001.fastq*}
 
-        # make a 'sample' directory for all analyses
-        # and combined lane outputs (aka 'sample' outputs)
-        dir=$outdir/joined.reads/$sbase
-        mkdir $dir 2>/dev/null
+  # make a 'sample' directory for all analyses
+  # and combined lane outputs (aka 'sample' outputs)
+  dir=$outdir/joined.reads/$sbase
+  mkdir $dir 2>/dev/null
 
-         # make a directory for indiv lane read & histo outputs
-        ldir=$dir/indiv.lanes
+  # make a directory for indiv lane read & histo outputs
+  ldir=$dir/indiv.lanes
 	lhist=$ldir/histos
 	fadir=$ldir/fastas
 	fqdir=$ldir/fastqs        
 	mkdir $ldir $lhist $fadir $fqdir 2>/dev/null
-
 
 	# check for primers, use corresponding pandaseq command
 	# no primers = join only
@@ -179,18 +180,19 @@ do
 		# NO PRIMERS INCLUDED
 		# Join reads
 		echo "Joining $lbase reads..."
+		echo $miss
 
 		pandaseq -f $R1 -r $R2 -F \
-		-w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point} \
-		2>/dev/null
+      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point}
+#      2> $fqdir/$lbase.joined.fastq.log
 	else
 		# WITH PRIMERS INCLUDED
 		# Join reads & extract insert
-        	echo "Joining $lbase reads & extracting insert..."
-        	pandaseq -f $R1 -r $R2 -F \
-        	-p $fwd -q $rev \
-        	-w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point} \
-		2>/dev/null
+    echo "Joining $lbase reads & extracting insert..."
+    pandaseq -f $R1 -r $R2 -F \
+      -p $fwd -q $rev \
+      -w $fqdir/$lbase.joined.fastq -t 0.6 -T $threads -l 1 -d rbfkms ${miss:+-C completely_miss_the_point} \
+      2> $fqdir/$lbase.joined.fastq.log
 	fi
 	
 	# Convert to fasta	
