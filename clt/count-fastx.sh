@@ -8,7 +8,8 @@
 echo "Survey files in $FILE_DIR"
 OUTPUT_FILE=$OUTPUT_DIR/reads.txt
 
-for fastx in "$FILE_DIR"/*fast*
+FILES=$(find "$FILE_DIR" -type f -name '*fast*' | sort)
+for fastx in $FILES
 do
   if ! [ -f "$fastx" ]
     then
@@ -19,23 +20,22 @@ do
   sample=${fastx_name/_L0*}
   lane=$(echo "$fastx_name" | grep -oP '(?<=_L)\d+')
   direction=$(echo "$fastx_name" | grep -oP '(?<=_R)\d')
-  gz=$(echo "$fastx_name" | grep -oP 'agz')
+  gz=$(echo "$fastx_name" | grep -oP 'gz')
   fasta=$(echo "$fastx_name" | grep -oP 'fasta')
-  [ -z "$gz" ] && reads=$(gunzip -c "$fastx" | wc -l) || reads=$(wc -l "$fastx")
+  [ -z "$gz" ] && reads=$(wc -l "$fastx" | awk '{print $1}') || reads=$(gunzip -c "$fastx" | wc -l)
+  echo $reads
   [ -z "$fasta" ] && reads=$((reads/4)) || reads=$((reads/2))
   echo "$fastx_name:$reads"
-  if [ -f "$OUTPUT_FILE" ]; then
-    printf "$sample\t%s%s$reads\n" \
-      "$([ -z "$lane" ] && echo "" || printf "%s\t" "$lane")" \
-      "$([ -z "$direction" ] && echo "" || printf "%s\t" "$direction")" \
-      >> "$OUTPUT_FILE"
-  else
+  if ! [ -f "$OUTPUT_FILE" ]; then
     printf "file\t%s%sreads\n" \
       "$([ -z "$lane" ] && echo "" || printf "lane\t")" \
       "$([ -z "$direction" ] && echo "" || printf "r\t")" \
       >> "$OUTPUT_FILE"
   fi
-
+  printf "$sample\t%s%s$reads\n" \
+    "$([ -z "$lane" ] && echo "" || printf "%s\t" "$lane")" \
+    "$([ -z "$direction" ] && echo "" || printf "%s\t" "$direction")" \
+    >> "$OUTPUT_FILE"
 done
 
 echo "Results saved to $OUTPUT_FILE"
