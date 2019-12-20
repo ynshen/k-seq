@@ -1,6 +1,8 @@
 """
 Created on Apr 24, 2017
 
+This script was reorganized by Yuning Shen
+
 @author: abepres
 """
 

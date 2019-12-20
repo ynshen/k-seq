@@ -1,5 +1,4 @@
-import k_seq.confidence_estimation
-import numpy as np
+from src import k_seq
 import util
 
 simuSet = util.load_pickle('/mnt/storage/projects/ribozyme_predict/data/k_seq/fit_simu/simuSet_2_full.pkl')
