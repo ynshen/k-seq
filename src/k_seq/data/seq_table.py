@@ -605,8 +605,8 @@ _byo_doped_description = """
             - table_filtered_abs_amnt_total_dna: absolute amount in ng for seqs quantified by total DNA amount
             - table_filtered_reacted_frac_spike_in: reacted fraction for valid seqs quantified by spike-in
             - table_filtered_reacted_frac_total_dna: reacted fraction for valid seqs quantified by total DNA amount
-            - table_seq_in_all_smpl_reacted_frac_spike_in: only contains seqs with counts >= 1 in all samples
-            - table_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples 
+            - table_filtered_seq_in_all_smpl_reacted_frac_spike_in: only contains seqs with counts >= 1 in all samples
+            - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples 
     """
 
 def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
@@ -615,7 +615,7 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
     {} 
     """.format(_byo_doped_description)
 
-    BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo_doped.pkl' if pickled_path is None else pickled_path
+    BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo-doped.pkl' if pickled_path is None else pickled_path
     BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
         else count_file_path
     BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
@@ -704,10 +704,10 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
             target=byo_doped.table_filtered_reacted_frac_spike_in,
             min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
         )
-        byo_doped.table_seq_in_all_smpl_reacted_frac_spike_in = min_detected_times_filter(
+        byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_spike_in = min_detected_times_filter(
             byo_doped.table_filtered_reacted_frac_spike_in
         )
-        byo_doped.table_seq_in_all_smpl_reacted_frac_total_dna = min_detected_times_filter(
+        byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_total_dna = min_detected_times_filter(
             byo_doped.table_filtered_reacted_frac_total_dna
         )
         logging.info('Finished!')
@@ -828,10 +828,10 @@ def _load_byo_selected(from_count_file=False, count_file_path=None, norm_path=No
         min_detected_times_filter = filters.DetectedTimesFilter(
             min_detected_times=byo_selected.table_nf_filtered_reacted_frac.shape[1]
         )
-        byo_selected.table_nf_filtered_reacted_frac_seq_in_all_samples = min_detected_times_filter(
+        byo_selected.table_nf_filtered_seq_in_all_smpl_reacted_frac = min_detected_times_filter(
             target=byo_selected.table_nf_filtered_reacted_frac
         )
-        byo_selected.table_nf_filtered_reacted_frac_seq_curated_seq_in_all_samples = min_detected_times_filter(
+        byo_selected.table_nf_filtered_seq_in_all_smpl_reacted_frac_curated = min_detected_times_filter(
             target=byo_selected.table_nf_filtered_reacted_frac_curated
         )
         logging.info('Finished!')
