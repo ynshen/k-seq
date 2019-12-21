@@ -1,5 +1,5 @@
 """
-This sub-module contains the classic fitting each sequence individually to the kinetic model,
+This sub-module contains the classic least-squares fitting for each sequence individually to the kinetic model,
   using absolute amount or reacted fraction
 
 Several functions are included:
@@ -8,13 +8,13 @@ Several functions are included:
   - option to initialize values
   - weighted fitting depends on the customized weights
   - confidence interval estimation using bootstrap
-
-todo: creating all the single fitters for BYO-doped will cost 20 min along - time consuming
 """
+
 from ..estimator import EstimatorType
 from ..utility.func_tools import DocHelper
-from ..utility.file_tools import read_json, dump_json, check_dir
+from ..utility.file_tools import read_json, to_json, check_dir
 import logging
+import pandas as pd
 
 doc_helper = DocHelper(
     x_data=('list', 'list of x values in fitting'),
@@ -143,11 +143,7 @@ class SingleFitter(EstimatorType):
         self.results = FitResults(fitter=self)
         self.save_to = save_to
         self.overwrite = overwrite
-        # TODO: check visualizers work
-        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
-        from ..utility.func_tools import FuncToMethod
-        self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
-                                                            bootstrap_params_dist_plot])
+
         self.silent = silent
         if not silent:
             logging.info(f"{self.__repr__()} initiated")
@@ -248,12 +244,14 @@ class SingleFitter(EstimatorType):
         from pathlib import Path
         if self.save_to is not None and self.overwrite is False:
             if Path(self.save_to).exists():
+                # don't do fitting if not overwriting results
                 self.results = FitResults.from_json(self.save_to, fitter=self)
                 return None
 
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
 
+        # Point estimation
         point_est = self._fit()
         params = {key: value for key, value in zip(self.parameters, point_est['params'])}
         if point_est['metrics'] is not None:
@@ -264,6 +262,10 @@ class SingleFitter(EstimatorType):
                                                           columns=self.parameters)
         if not self.silent:
             logging.info(f'Point estimation for {self.__repr__()} finished')
+
+        # TODO: add convergence test here
+
+        # Bootstrap
         if self.bootstrap is None:
             if not self.silent:
                 logging.info('Bootstrap not conducted')
@@ -276,6 +278,7 @@ class SingleFitter(EstimatorType):
             self.bootstrap.run()
 
         if self.save_to is not None:
+            # stream to disk as JSON file
             from pathlib import Path
             check_dir(Path(self.save_to).parent)
             self.results.to_json(self.save_to)
@@ -284,10 +287,13 @@ class SingleFitter(EstimatorType):
         """Return a pd.series as fitting summary"""
         return self.results.to_series()
 
-    def to_json(self, save_to_file=None, return_dict=False):
-        """Save the configuration needed to re-initialization the object to JSON
-        Notice: except for model as model object is usually not json-able
+    def to_dict(self, save_as_pickle=None):
+        """Save fitter configuration as a dictionary
+
+        Args:
+            save_as_pickle (str): if not None, save as a pickled dictionary
         """
+
         config_dict = {
             **{
                 'x_data': self.x_data,
@@ -300,61 +306,47 @@ class SingleFitter(EstimatorType):
             **self.config.__dict__,
             **self.bootstrap_config.__dict__
         }
-        if return_dict:
-            return config_dict
+        if save_as_pickle:
+            from ..utility.file_tools import dump_pickle
+            to_json(obj=config_dict, path=save_as_pickle)
         else:
-            import json
-            if save_to_file is None:
-                return json.dumps(config_dict)
+            return config_dict
+
+    def to_json(self, save_to_file=None, return_dict=False):
+        """Save the fitter configuration
+        Notice: except for model as model object is usually not json-able
+        """
+
+        config_dict = self.to_dict()
+        if 'model' in config_dict.keys():
+            config_dict.pop('model')
+
+        if save_to_file is None:
+            return to_json(config_dict)
+        else:
+            from pathlib import Path
+            path = Path(save_to_file)
+            if path.suffix == '.json':
+                # its a named file
+                check_dir(path.parent)
+                to_json(obj=config_dict, path=path)
+            elif path.suffix == '':
+                # its a directory
+                check_dir(path)
+                to_json(obj=config_dict, path=str(path) + '/config.json')
             else:
-                from pathlib import Path
-                path = Path(save_to_file)
-                if path.suffix == '.json':
-                    # its a named file
-                    if not path.parent.exists():
-                        path.parent.mkdir(parents=True)
-                    with open(path, 'w') as handle:
-                        json.dump(config_dict, handle)
-                elif path.suffix == '':
-                    # its a path
-                    check_dir(path)
-                    dump_json(obj=config_dict, path=str(path) + '/config.json')
-                else:
-                    raise NameError('Unrecognized saving path')
+                raise NameError('Unrecognized saving path')
 
     @classmethod
     def from_json(cls, file_path, model):
         """Load a fitter from saved json file
+
         Args:
-
             file_path (str): path to saved json file
-
             model (callable): as callable is not json-able, need to reassign
         """
         config_dict = read_json(file_path)
         return cls(model=model, **config_dict)
-
-    # @classmethod
-    # def from_table(cls, table, seq, model, x_data, sigma=None, bounds=None, bootstrap_num=0, bs_record_num=0,
-    #                bs_method='pct_res', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None, **kwargs):
-    #     """Get data from a row of `pd.DataFrame` table. `SeqTable` is not supported due to multiple tables contained"""
-    #     import numpy as np
-    #     import pandas as pd
-    #
-    #     if isinstance(x_data, (list, np.ndarray)):
-    #         x_data = pd.Series(x_data, index=table.columns)
-    #     elif isinstance(x_data, pd.Series):
-    #         x_data = x_data[table.columns]
-    #
-    #     y_data = table.loc[seq]
-    #     return cls(x_data=x_data, y_data=y_data, model=model, name=seq,
-    #                weights=weights, bounds=bounds,
-    #                bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
-    #                exclude_zero=exclude_zero, init_guess=init_guess, metrics=metrics, rnd_seed=rnd_seed, **kwargs)
-
-    # def load_results(self, json_o_path):
-    #     self.results = FitResults(fitter=self)
-    #     self.results.load_json(json_o_path)
 
     ######################### Not necessary in k-seq implementation ####################
     # @classmethod
@@ -378,23 +370,21 @@ class SingleFitter(EstimatorType):
 
 
 class FitResults:
-    """A class to store, format, fitting fitting results for single fitter
+    """A class to store, process, and visualize fitting results for single fitter
 
     Attributes:
 
          fitter (EstimatorType): proxy to the fitter
 
          point_estimation (AttrScope): a scope stores point estimation results, includes
-
              params (pd.Series): stores the parameter estimation, with extra metrics calculation
-
              pcov (pd.DataFrame): covariance matrix for estimated parameter
 
+         TODO: add storage for convergence
+
          uncertainty (AttrScope): a scope stores uncertainty estimation results, includes
-             summary
-
-             record
-
+             summary (pd.DataFrame): description from record
+             record (pd.DataFrame): records for stored bootstrapping results
     """
 
     def __repr__(self):
@@ -404,9 +394,7 @@ class FitResults:
     def __init__(self, fitter):
         """
         Args:
-
             fitter (EstimatorType): fitter used to generate this fitting result
-
         """
         from ..utility.func_tools import AttrScope
 
@@ -414,14 +402,23 @@ class FitResults:
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'record'])
 
+        # TODO: update to make visualizer work
+        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
+        from ..utility.func_tools import FuncToMethod
+        self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
+                                                            bootstrap_params_dist_plot])
+
     def to_series(self):
-        """Convert `point_estimation.params` and `uncertainty.summary` to a series include flattened info"""
+        """Convert `point_estimation.params` and `uncertainty.summary` to a series include flattened info
+        e.g. columns will include [param1, param2, param1_mean, param1_std, param1_2.5%, ...]
+        """
         import pandas as pd
 
         allowed_stats = ['mean', 'std', '2.5%', '50%', '97.5%']
 
         res = self.point_estimation.params.to_dict()
         if self.uncertainty.summary is not None:
+            # uncertainty estimation results exists
             from ..utility.func_tools import dict_flatten
             res.update(dict_flatten(self.uncertainty.summary.loc[allowed_stats].to_dict()))
 
@@ -430,37 +427,15 @@ class FitResults:
         else:
             return pd.Series(res)
 
-    def to_dict(self, include_pcov=False, include_record=True):
-        """Convert fitting results to dictionary"""
-        results = {
-            'point_estimation': {
-                'params': self.point_estimation.params
-            },
-            'uncertainty': {
-                'summary': self.uncertainty.summary
-            }
-        }
-        if include_pcov:
-            results['point_estimation']['pcov'] = self.point_estimation.pcov
-        if include_record:
-            results['uncertainty']['record'] = self.uncertainty.record
-        return results
-
     def to_json(self, path=None):
         """Convert results into a json string/file contains
             {
-              point_estimation:
-                {
-                  params,
-                  pcov
-                }
-              uncertainty:
-                {
-                  summary
-                  record
-                }
+              point_estimation: { params: jsonfy(pd.Series)
+                                  pcov: jsonfy(pd.DataFrame) }
+              uncertainty: { summary: jsonfy(pd.DataFrame)
+                             record: jsonfy(pd.DataFrame) }
+            }
         """
-        import json
 
         def jsonfy(target):
             try:
@@ -479,28 +454,17 @@ class FitResults:
             }
         }
         if path is None:
-            return json.dumps(data_to_dump)
+            return to_json(data_to_dump)
         else:
-            with open(path, 'w') as handle:
-                json.dump(data_to_dump, fp=handle)
+            to_json(data_to_dump, path=path)
 
     @classmethod
     def from_json(cls, json_path, fitter=None):
-        """load fitting results from json
+        """load fitting results from json record
         Note: no fitter info if fitter is None
         """
 
-        import pandas as pd
-        import json
-        try:
-            # first consider it is a json string
-            json_data = json.loads(json_path)
-        except json.JSONDecodeError:
-            try:
-                with open(json_path, 'r') as handle:
-                    json_data = json.load(handle)
-            except:
-                raise TypeError(f'Can not parse json record from {json_path}')
+        json_data = read_json(json_path)
         results = cls(fitter=fitter)
 
         if 'point_estimation' in json_data.keys():
@@ -656,6 +620,7 @@ class BatchFitResults:
 
     Methods:
         summary_to_csv: export summary dataframe as csv file
+        to_json: preferred format to save results
         to_pickle: save results as pickled dictionary
         from_pickle: load bootstrapping results from picked dictionary
         from_folder: link results to a saved folder
@@ -666,18 +631,22 @@ class BatchFitResults:
         """Init a BatchFitResults instance
         Args:
             fitter (BatchFitter): corresponding fitter
-            result_path (str): path to saved results
+            result_path (str): optional, path to saved results
         """
         self.fitter = fitter
         self.bs_record = None
         self.summary = None
-        self.result_path = result_path
-        self.sep_files = None
+        self._result_path = result_path
+        self._sep_files = None
         if result_path:
             self.parse_saved_results()
 
+        # TODO: add visualization here
+
     def parse_saved_results(self):
-        """Load/link data from `self.result_path`"""
+        """Load/link data from `self.result_path`
+        TODO: Need to set internel trigger of how to load results
+        """
 
         from pathlib import Path
         result_path = Path(self.result_path)
@@ -820,16 +789,16 @@ class BatchFitResults:
         check_dir(output_dir)
         if sep_files:
             check_dir(output_dir + '/results/')
-            dump_json(obj=self.summary.to_json(), path=f'{output_dir}/results/summary.json')
-            if bs_results:
+            to_json(obj=self.summary.to_json(), path=f'{output_dir}/results/summary.json')
+            if bs_results and self.bs_record is not None:
                 check_dir(f'{output_dir}/seqs')
                 for seq, record in self.bs_record.items():
-                    dump_json(obj=record.to_json(), path=f"{output_dir}/results/seqs/{seq}.json")
+                    to_json(obj=record.to_json(), path=f"{output_dir}/results/seqs/{seq}.json")
         else:
             data_to_json = {'summary': self.summary.to_json()}
-            if bs_results:
+            if bs_results and self.bs_record is not None:
                 data_to_json['bs_record'] = {seq: record.to_json() for seq, record in self.bs_record}
-            dump_json(obj=data_to_json, path=f"{output_dir}/results.json")
+            to_json(obj=data_to_json, path=f"{output_dir}/results.json")
 
     @classmethod
     def from_json(cls, fitter, json_o_path):
@@ -1022,7 +991,7 @@ class BatchFitter(EstimatorType):
             self._hash()
             if stream_to_disk:
                 check_dir(stream_to_disk + '/seqs/')
-                dump_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
+                to_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
 
         worker_generator = self.worker_generator(stream_to_disk=stream_to_disk, overwrite=overwrite)
         if parallel_cores > 1:
@@ -1045,29 +1014,6 @@ class BatchFitter(EstimatorType):
         if deduplicate:
             self._hash_inv()
         logging.info('Fitting finished')
-
-    # @classmethod
-    # def from_SeqTable(cls, seq_table, model, seq_to_fit=None, weights=None, bounds=None, bootstrap_depth=0,
-    #                   bs_return_size=None,
-    #                   resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None, **kwargs):
-    #     """I did not really use this """
-    #     raise NotImplementedError('This method is not implemented yet')
-    #     if seq_to_fit is None:
-    #         seq_to_fit = seq_table.reacted_frac_table.index
-    #     if weights is None:
-    #         weights = None
-    #     if bounds is None:
-    #         bounds = None
-    #     if bs_return_size is None:
-    #         bs_return_size = None
-    #     if metrics is None:
-    #         metrics = None
-    #     return cls(seq_to_fit = {seq: seq_table.reacted_frac_table.loc[seq] for seq in seq_to_fit},
-    #                x_data=seq_table.x_data, model=model,
-    #                weights=weights, bounds=bounds,
-    #                bootstrap_depth=bootstrap_depth, bs_return_size=bs_return_size,
-    #                resample_pct_res=resample_pct_res, missing_data_as_zero=missing_data_as_zero,
-    #                random_init=random_init, metrics=metrics, **kwargs)
 
     def summary(self, save_to=None):
         if save_to is None:
@@ -1142,12 +1088,12 @@ class BatchFitter(EstimatorType):
             output_dir (str): path to save the model, create if the path does not exist
             results (bool): if save estimation results to `results` as well, to be load by `BatchFitResults`,
                 Default True
+            bs_results (bool): if save bootstrap results
             sep_files (bool): if save the record of bootstrap as separate files in a subfolder `results/seqs/`
                 Default True
             tables (bool): if save tables (y_data_batch, sigma) in the folder. Default True
         """
         from ..utility.file_tools import dump_pickle
-        from pathlib import Path
 
         check_dir(output_dir)
         dump_pickle(
