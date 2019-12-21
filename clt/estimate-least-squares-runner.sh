@@ -19,22 +19,22 @@
 ###############################################################################################################
 
 DATA_DIR='/mnt/storage/projects/k-seq/datasets/'
-SAMPLE_NAME='byo-selected.pkl'
+SAMPLE_NAME='byo-doped.pkl'
 SAMPLE_DIR=$DATA_DIR/$SAMPLE_NAME
-TABLE=table_nf_filtered_reacted_frac_curated
-TABLE_TAG='byo-selected-curated'
+TABLE='table_filtered_reacted_frac_spike_in'
+TABLE_TAG='spike-in'
 
 PREFIX=''
-FIT_NUM=-1
-BS_NUM=0
-BS_SAVE_NUM=0
+FIT_NUM=100
+BS_NUM=30
+BS_SAVE_NUM=20
 BS_MTD="data"
 NO_ZERO=''
 INV_WEIGHT=''
 POSTFIX=''
 CORE=6
 
-OUTPUT_BASE='/mnt/storage/projects/k-seq/working/spike_in'
+OUTPUT_BASE='/mnt/storage/projects/k-seq/working/byo_doped/least_square/pandaSeq/point-est_2019-12/'
 
 ####################################### CREATE OUTPUT DIR AND RUN ESTIMATION ##################################
 
