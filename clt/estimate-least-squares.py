@@ -7,41 +7,28 @@ def kA(params):
     return params[0] * params[1]
 
 
-def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, inverse_weight=False):
-    """Parse data table source SeqTable or a Simu Folder
+def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=False):
+    """Parse data table source SeqTable
 
     Args:
         seq_table (str): path to a SeqTable instance with x_value
         table_name (str): the table to use in SeqTable
+        fit_partial (int): if fit the first k sequences in the table. Fit all sequences if negative
+        inverse_weight (bool): if weight the data by the inverse of their counts (sigma = counts + 0.5)
 
     Returns:
         work_table (pd.DataFrame): the work table contains sequences to fit
         x_data (list): list of x values (BYO concentration), same order as samples in work_table
+        sigma (pd.DataFrame): sigma same as counts + 0.5 or None if not weighted
     """
     from k_seq.utility.file_tools import read_pickle
 
-    if seq_table is not None:
-        # input is seq_table
-        seq_table = read_pickle(seq_table)
-        count_table = seq_table.table
-        work_table = getattr(seq_table, table_name)
-        work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
-        x_data = seq_table.x_values[work_table.columns]
-    elif simu_data is not None:
-        # input is simu data folder
-        import pandas as pd
-        count_table = pd.read_csv(simu_data + '/Y.csv', index_col='seq')
-        x_data = pd.read_csv(simu_data + '/x.csv', index_col='param').loc['c']
-        input_samples = list(x_data[x_data < 0].index)
-        reacted_samples = list(x_data[x_data >= 0].index)
-        total_dna = pd.read_csv(simu_data + 'dna_amount.csv', header=None, index_col=0)[1]
-        amount_table = (count_table / count_table.sum(axis=0) * total_dna)
-        input_base = amount_table[input_samples].median(axis=1)
-        work_table = amount_table[input_base > 0][reacted_samples].divide(input_base[input_base > 0], axis=0)
-        work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
-        work_table = work_table[work_table.sum(axis=1) > 0]
-    else:
-        raise ValueError('Indicate seq_table or simu_data')
+    # input is seq_table
+    seq_table = read_pickle(seq_table)
+    count_table = seq_table.table
+    work_table = getattr(seq_table, table_name)
+    work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
+    x_data = seq_table.x_values[work_table.columns]
 
     if fit_partial > 0:
         work_table = work_table.iloc[:fit_partial]
@@ -55,40 +42,15 @@ def read_table(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, 
     return work_table, x_data, sigma
 
 
-def create_output_dir(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False,
-                      inverse_weight=False, bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1,
-                      output_dir=None, pkg_path=None, **kwargs):
-    """Create the output dir and logging/config files
-    Logic:
-    """
-
-    from pathlib import Path
-    if Path(output_dir).is_dir():
-        if fit_partial <= 0:
-            name = f'bs-{int(bootstrap_num)}_mtd-{bs_method}_no-zero-{exclude_zero}_' \
-                   f'inv-weight-{inverse_weight}_core-{core_num}/'
-        else:
-            name = f'first-{int(fit_partial)}_bs-{int(bootstrap_num)}_mtd-{bs_method}_no-zero-{exclude_zero}_' \
-                   f'inv-weight-{inverse_weight}_core-{core_num}/'
-        output_dir = Path(f'{output_dir}/{name}')
-        output_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-    return str(output_dir)
-
-
-def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
+def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None,
-         stream=False, overwrite=False,
-         **kwargs):
+         stream=False, overwrite=False, **kwargs):
 
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
     import numpy as np
 
-    work_table, x_data, sigma = read_table(seq_table=seq_table, table_name=table_name, simu_data=simu_data,
+    work_table, x_data, sigma = read_table(seq_table=seq_table, table_name=table_name,
                                            fit_partial=fit_partial, inverse_weight=inverse_weight)
     if bs_method.lower() == 'stratified':
         try:
@@ -114,7 +76,7 @@ def main(seq_table=None, table_name=None, simu_data=None, fit_partial=-1, exclud
     if stream:
         batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=False, sep_files=True, tables=True)
     else:
-        batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=True, sep_files=True, tables=True)
+        batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=True, sep_files=False, tables=True)
 
 
 def parse_args():
@@ -123,8 +85,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Least-squares kinetic model fitting')
     parser.add_argument('--pkg_path', type=str, default=None,
                         help='Path to customize k-seq package')
-    parser.add_argument('--simu_data', type=str,
-                        help='Path to folder of simulated data')
     parser.add_argument('--seq_table', '-T', type=str,
                         help='Path to input seq_table object')
     parser.add_argument('--table_name', '-t', type=str,
@@ -147,8 +107,6 @@ def parse_args():
                         help="If stream fitting results to disk")
     parser.add_argument('--overwrite', dest='overwrite', default=False, action='store_true',
                         help="If overwrite results when streaming")
-    parser.add_argument('--create-folder', dest='create_folder', default=False, action='store_true',
-                        help="If create subfolder with specs as name under the output_dir")
     parser.add_argument('--core_num', '-c', dest='core_num', type=int, help='Number of process to use in parallel')
     parser.add_argument('--output_dir', '-o', type=str, default='./')
 
@@ -160,10 +118,9 @@ if __name__ == '__main__':
     args = parse_args()
     if args['pkg_path'] not in sys.path:
         sys.path.insert(0, args['pkg_path'])
-    if args['create_folder']:
-        args['output_dir'] = create_output_dir(**args)
-    from k_seq.utility.file_tools import dump_json
-    dump_json(obj=args, path=f"{args['output_dir']}/config.json")
+    from k_seq.utility.file_tools import to_json, check_dir
+    check_dir(args['output_dir'])
+    to_json(obj=args, path=f"{args['output_dir']}/config.json")
     logging.basicConfig(filename=f"{args['output_dir']}/app_run.log",
                         format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',

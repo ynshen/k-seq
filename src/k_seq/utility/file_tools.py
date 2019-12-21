@@ -214,11 +214,15 @@ def read_json(path):
         return json.load(handle)
 
 
-def dump_json(obj, path, indent=4):
+def to_json(obj, path=None, indent=4):
+    """Convert object to a JSON file or JSON string"""
     import json
 
-    with open(path, 'w') as handle:
-        json.dump(obj, handle, indent=indent)
+    if path:
+        with open(path, 'w') as handle:
+            json.dump(obj, handle, indent=indent)
+    else:
+        return json.dumps(obj)
 
 
 def check_dir(path):
