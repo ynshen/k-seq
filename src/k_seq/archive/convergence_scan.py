@@ -1,3 +1,8 @@
+"""
+Code for scanning convergence given different true k, A combination
+NOT compatible with version 0.3.0+ 
+"""
+
 import sys
 if '/home/yuning/Work/k-seq/src/' not in sys.path:
     sys.path.append('/home/yuning/Work/k-seq/src/')

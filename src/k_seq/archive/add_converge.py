@@ -1,3 +1,8 @@
+"""
+Archived code to run convergence test
+NOT compatible with version 0.3.0+
+"""
+
 import util
 import numpy as np
 import sys
