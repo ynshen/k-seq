@@ -92,3 +92,7 @@ target/
 
 # Ignore from POD cluster
 results/
+datasets/
+pod_runner/*.out
+dist
+.python-version
