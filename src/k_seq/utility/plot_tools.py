@@ -63,3 +63,22 @@ def barplot(series, ax, label=None, yticklabels=None, barplot_kwargs=None):
     ax.set_xticks(pos)
     ax.set_xticklabels(pos, yticklabels, fontsize=12, rotation=90)
 
+
+def pairplot(data, vars_name=None, vars_lim=None, vars_log=None, figsize=(2, 2), **kwargs):
+    """Wrapper over seaborn.pairplot to visualize pairwise correlationw with log option"""
+    import numpy as np
+    import seaborn as sns
+
+    if vars_name is None:
+        vars_name = list(data.columns)
+    else:
+        data = data[vars_name]
+
+    for var, var_log in zip(vars_name, vars_log):
+        if var_log:
+            data.loc[:, var] = data[var].apply(np.log10)
+            data.rename(columns={var: "$\log_{10}$(%s)" % (var)}, inplace=True)
+
+    return sns.pairplot(data=data, vars=data.columns,
+                        markers='o', plot_kws=dict(s=5, edgecolor=None, alpha=0.3),
+                        height=figsize[1], aspect=figsize[0] / figsize[1], **kwargs)
