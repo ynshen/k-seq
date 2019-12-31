@@ -74,6 +74,7 @@ target/
 
 # Jupyter NB Checkpoints
 .ipynb_checkpoints/
+*/.ipynb_checkpoints/
 
 # exclude data from source control by default
 /data/
@@ -87,4 +88,11 @@ target/
 
 # Mypy cache
 .mypy_cache/
-notebooks/Untitled.ipynb
+
+
+# Ignore from POD cluster
+results/
+datasets/
+pod_runner/*.out
+dist
+.python-version
