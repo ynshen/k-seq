@@ -10,11 +10,12 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 
-def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=None, figsize=None, barplot_kwargs=None):
+def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
+                               figsize=None, label_mapper=None, barplot_kwargs=None):
     """Barplot of unique seqs in each sample"""
     import numpy as np
 
-    if barplot_kwargs is None:
+    if not barplot_kwargs:
         barplot_kwargs = {}
     if hasattr(seq_table, 'table'):
         seq_table = seq_table.table
@@ -30,7 +31,13 @@ def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=
     pos = np.arange(len(uniq_counts))
     ax.bar(pos, uniq_counts, **barplot_kwargs)
     ax.set_xticks(pos)
-    ax.set_xticklabels(list(uniq_counts.index), fontsize=12, rotation=90)
+    if label_mapper:
+        if callable(label_mapper):
+            label_mapper = {sample: label_mapper(sample) for sample in uniq_counts.index}
+    else:
+        label_mapper = {sample: sample for sample in uniq_counts.index}
+
+    ax.set_xticklabels(list([label_mapper[sample] for sample in uniq_counts.index]), fontsize=12, rotation=90)
     ax.set_ylabel('Unique seqs', fontsize=14)
     ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}', ))
     ax.tick_params(axis='both', labelsize=12)
@@ -42,7 +49,8 @@ def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=
     return uniq_counts
 
 
-def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to=None, figsize=None, barplot_kwargs=None):
+def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
+                                figsize=None, label_mapper=None, barplot_kwargs=None):
     """Barplot of total counts in each sample"""
     import numpy as np
 
@@ -62,7 +70,13 @@ def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to
     pos = np.arange(len(total_counts))
     ax.bar(pos, total_counts, **barplot_kwargs)
     ax.set_xticks(pos)
-    ax.set_xticklabels(list(total_counts.index), fontsize=12, rotation=90)
+    if label_mapper:
+        if callable(label_mapper):
+            label_mapper = {sample: label_mapper(sample) for sample in total_counts.index}
+    else:
+        label_mapper = {sample: sample for sample in total_counts.index}
+
+    ax.set_xticklabels([label_mapper[sample] for sample in total_counts.index], fontsize=12, rotation=90)
     ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}', ))
     plt.setp(ax.get_yticklabels()[-1], visible=False)
     ax.set_ylabel('Total counts', fontsize=14)
@@ -75,8 +89,8 @@ def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to
     return total_counts
 
 
-def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_fig_to=None, figsize=None,
-                                      scatter_kwargs=None):
+def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_fig_to=None,
+                                      figsize=None, label_mapper=None, scatter_kwargs=None):
     """Scatter plot of spike in ratio in the pool"""
     import numpy as np
     import pandas as pd
@@ -107,13 +121,17 @@ def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_
     pos = np.arange(len(spike_in_ratio))
     ax.scatter(pos, spike_in_ratio, marker='x', s=70, **scatter_kwargs)
     ax.set_xticks(pos)
-    ax.set_xticklabels(list(spike_in_ratio.index), fontsize=12, rotation=90)
+    if label_mapper:
+        if callable(label_mapper):
+            label_mapper = {sample: label_mapper(sample) for sample in spike_in_ratio.index}
+    else:
+        label_mapper = {sample: sample for sample in spike_in_ratio.index}
+    ax.set_xticklabels([label_mapper[sample] for sample in spike_in_ratio.index], fontsize=12, rotation=90)
     ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.3f}', ))
     ax.set_ylabel('Spike-in percent', fontsize=14)
     ax.tick_params(axis='both', labelsize=12)
     ax.set_ylim([0, ax.get_ylim()[1]])
     yticks = [tick for tick in ax.get_yticks()][:-2]
-    # print(yticks)
     ax.set_yticks(yticks)
     # plt.setp(ax.get_yticklabels()[-1], visible=False)
     ax.tick_params(axis='both', labelsize=12)
@@ -124,7 +142,7 @@ def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_
 
 
 def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=True, plot_spike_in_frac=True,
-                          color_map=None, black_list=None, figsize=None, save_fig_to=None):
+                          color_map=None, black_list=None, figsize=None, label_mapper=None, save_fig_to=None):
     """Overview plot(s) of unique seqs, total counts and spike-in fractions in the samples
 
     Args:
@@ -142,6 +160,8 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
         black_list (list of `str`): list of sample name to exlude from the plots
 
         sep_plot (`bool`): plot separate plots for unique sequences, total counts and spike_in fractions if True
+
+        label_mapper(dict or callable): alternative labels for samples
 
         fig_save_to (`str`): save figure to the directory if not None
 
@@ -161,15 +181,15 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
     if plot_unique_seq:
         ax = next(axes_itr)
         color = [color_map[sample] for sample in seq_table.sample_list] if color_map else '#2C73B4'
-        sample_unique_seqs_barplot(seq_table=seq_table, ax=ax, barplot_kwargs={'color': color})
+        sample_unique_seqs_barplot(seq_table=seq_table, ax=ax, label_mapper=label_mapper, barplot_kwargs={'color': color})
     if plot_total_counts:
         ax = next(axes_itr)
         color = [color_map[sample] for sample in seq_table.sample_list] if color_map else '#F39730'
-        sample_total_counts_barplot(seq_table=seq_table, ax=ax, barplot_kwargs={'color': color})
+        sample_total_counts_barplot(seq_table=seq_table, ax=ax, label_mapper=label_mapper, barplot_kwargs={'color': color})
     if plot_spike_in_frac:
         ax = next(axes_itr)
         color = [color_map[sample] for sample in seq_table.sample_list] if color_map else '#B2112A'
-        sample_spike_in_ratio_scatterplot(seq_table=seq_table, ax=ax, scatter_kwargs={'color': color})
+        sample_spike_in_ratio_scatterplot(seq_table=seq_table, ax=ax, label_mapper=label_mapper, scatter_kwargs={'color': color})
     fig.align_ylabels(axes)
 
     if save_fig_to:

@@ -63,3 +63,26 @@ def barplot(series, ax, label=None, yticklabels=None, barplot_kwargs=None):
     ax.set_xticks(pos)
     ax.set_xticklabels(pos, yticklabels, fontsize=12, rotation=90)
 
+
+def sample_rename_byo_doped(name):
+    """Rename results loaded from raw reads and samples as
+
+    A1/d-A1_S1 --> 1250uM-1
+    ...
+    R/R0 --> input
+    """
+
+    if len(name) > 2:
+        name = name.split('_')[0].split('-')[-1]
+
+    if 'R' in name:
+        return 'Input'
+    else:
+        concen_mapper = {
+            'A': '1250',
+            'B': '250',
+            'C': '50',
+            'D': '10',
+            'E': '2'
+        }
+        return "{} $\mu M$-{}".format(concen_mapper[name[0]], name[1])
