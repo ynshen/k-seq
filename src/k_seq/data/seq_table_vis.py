@@ -8,12 +8,12 @@ todo:
 from .seq_table import SeqTable
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import numpy as np
 
 
 def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
                                figsize=None, label_mapper=None, barplot_kwargs=None):
     """Barplot of unique seqs in each sample"""
-    import numpy as np
 
     if not barplot_kwargs:
         barplot_kwargs = {}
@@ -52,7 +52,6 @@ def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=
 def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
                                 figsize=None, label_mapper=None, barplot_kwargs=None):
     """Barplot of total counts in each sample"""
-    import numpy as np
 
     if barplot_kwargs is None:
         barplot_kwargs = {}
@@ -92,7 +91,6 @@ def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to
 def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_fig_to=None,
                                       figsize=None, label_mapper=None, scatter_kwargs=None):
     """Scatter plot of spike in ratio in the pool"""
-    import numpy as np
     import pandas as pd
 
     if scatter_kwargs is None:
@@ -166,7 +164,6 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
         fig_save_to (`str`): save figure to the directory if not None
 
     """
-    import numpy as np
 
     plot_num = np.sum(np.array([plot_unique_seq, plot_total_counts, plot_spike_in_frac]))
     if black_list is None:
@@ -200,7 +197,6 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
 def sample_rel_abun_hist(seq_table, black_list=None, bins=None, x_log=True, y_log=False,
                          ncol=None, nrow=None, figsize=None, hist_kwargs=None, save_fig_to=None):
     """todo: add pool counts composition curve for straight forward visualization"""
-    import numpy as np
 
     if hist_kwargs is None:
         hist_kwargs = {}
@@ -243,7 +239,6 @@ def sample_rel_abun_hist(seq_table, black_list=None, bins=None, x_log=True, y_lo
 
 
 def sample_entropy_scatterplot(seq_table, black_list=None, normalize=False, base=2, color_map=None, figsize=None, scatter_kwargs=None, save_fig_to=None):
-    import numpy as np
     import pandas as pd
 
     def get_entropy(smpl_col):
@@ -287,7 +282,6 @@ def sample_entropy_scatterplot(seq_table, black_list=None, normalize=False, base
 
 def cross_table_compare(base_table, compare_table, samples=None, ax=None, figsize=None, color_map=None,
                         save_fig_to=None):
-    import matplotlib.pyplot as plt
     plt.style.use('seaborn')
 
     if samples is None:
@@ -316,10 +310,11 @@ def cross_table_compare(base_table, compare_table, samples=None, ax=None, figsiz
         fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
 
 
-def rep_variance_scatter(table, grouper, subsample=None,
+def rep_variance_scatter(table, grouper, xaxis=None, subsample=None,
                          xlog=True, ylog=True, xlim=None, ylim=None, group_title_pos=None,
-                         xlabel=None, ylabel=None,
+                         xlabel=None, ylabel=None, label_map=None,
                          figsize=None, save_fig_to=None):
+
     table_gen = grouper.get_table(target=table, remove_zero=True)
     if figsize is None:
         figsize = (len(grouper.group) * 3, 3)
@@ -334,7 +329,12 @@ def rep_variance_scatter(table, grouper, subsample=None,
     for ix, ((key, subtable), ax) in enumerate(zip(table_gen, axes)):
         if subsample is not None:
             subtable = subtable.sample(subsample, replace=False)
-        ax.scatter(subtable.mean(axis=1), subtable.std(axis=1), s=3, alpha=0.3, zorder=2)
+
+        if xaxis is not None:
+            ax.scatter(xaxis[subtable.columns].loc[subtable.index].mean(axis=1), subtable.std(axis=1),
+                       s=3, alpha=0.3, zorder=2)
+        else:
+            ax.scatter(subtable.mean(axis=1), subtable.std(axis=1), s=3, alpha=0.3, zorder=2)
 
         # plot lines
         line_xlim = ax.get_xlim() if xlim is None else xlim
@@ -345,7 +345,14 @@ def rep_variance_scatter(table, grouper, subsample=None,
 
         if group_title_pos is None:
             group_title_pos = (ax.get_xlim[0], ax.get_ylim[1])
-        ax.text(s=f'{key:d} $\mu mol$', x=group_title_pos[0], y=group_title_pos[1], ha='left', va='top', fontsize=12)
+        if label_map:
+            if callable(label_map):
+                label = label_map(key)
+            else:
+                label = label_map[key]
+        else:
+            label = f'{key:d} $\mu M$'
+        ax.text(s=label, x=group_title_pos[0], y=group_title_pos[1], ha='left', va='top', fontsize=12)
         ax.tick_params(axis='both', labelsize=12)
         if xlog:
             ax.set_xscale('log')
