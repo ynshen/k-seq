@@ -6,8 +6,6 @@ This module contains the methods for input and output
 
 
 
-
-
 def read_table_files(file_path, col_name):
     from pathlib import Path
     import pandas as pd

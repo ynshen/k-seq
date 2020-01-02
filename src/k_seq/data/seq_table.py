@@ -608,7 +608,8 @@ _byo_doped_description = """
             - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples 
     """
 
-def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None):
+def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
+                    pandaseq_joined=False):
     """BYO doped pool k-seq datatable
     {} 
     """.format(_byo_doped_description)
@@ -618,6 +619,9 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
         else count_file_path
     BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
         else doped_norm_path
+
+    pattern_filter = '_counts.' if pandaseq_joined else 'counts-'
+    name_pattern = 'd-[{byo}{exp_rep}]_S{smpl}_counts.txt' if pandaseq_joined else 'counts-d-[{byo}{exp_rep}].txt'
 
     if from_count_file:
         import numpy as np
@@ -637,8 +641,8 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
 
         byo_doped = SeqTable.from_count_files(
             file_root=BYO_DOPED_COUNT_FILE,
-            pattern_filter='counts-',
-            name_pattern='counts-d-[{byo}{exp_rep}].txt',
+            pattern_filter=pattern_filter,
+            name_pattern=name_pattern,
             dry_run=False,
             sort_by='name',
             x_values=np.concatenate((
@@ -735,6 +739,7 @@ _byo_selected_description = """
             - table_nf_filtered_reacted_frac: reacted fractions for sequences that are at least detected in both input
                 pool and one reacted pool
     """
+
 
 def _load_byo_selected(from_count_file=False, count_file_path=None, norm_path=None, pickled_path=None):
     """Load k-seq results for BYO selected pool
