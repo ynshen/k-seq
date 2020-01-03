@@ -605,18 +605,30 @@ _byo_doped_description = """
             - table_filtered_reacted_frac_spike_in: reacted fraction for valid seqs quantified by spike-in
             - table_filtered_reacted_frac_total_dna: reacted fraction for valid seqs quantified by total DNA amount
             - table_filtered_seq_in_all_smpl_reacted_frac_spike_in: only contains seqs with counts >= 1 in all samples
-            - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples 
+            - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples
+        Note:
+           By default, sequences within 2 edit distance (including insertion and deletion) of spike-in sequences were
+             considered as spike-in seq
     """
 
+
 def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
-                    pandaseq_joined=False):
+                    pandaseq_joined=True, radius=2):
     """BYO doped pool k-seq datatable
     {} 
     """.format(_byo_doped_description)
 
-    BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo-doped.pkl' if pickled_path is None else pickled_path
-    BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/counts' if count_file_path is None \
-        else count_file_path
+    if pickled_path:
+        BYO_DOPED_PKL = pickled_path
+    else:
+        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo-doped-pandaSeq.pkl' if pandaseq_joined else \
+            '/mnt/storage/projects/k-seq/datasets/byo-doped-fastq-join.pkl'
+    if count_file_path:
+        BYO_DOPED_COUNT_FILE = count_file_path
+    else:
+        BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/working/byo_doped/read_join/' \
+                               'no-mismatch-assembly-first/counts' if pandaseq_joined else \
+            '/mnt/storage/projects/k-seq/input/byo_doped/counts'
     BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
         else doped_norm_path
 
@@ -655,7 +667,7 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
                 np.repeat([2, 2, 1, 0.2, .04], repeats=3),
                 np.array([10])), axis=0    # input pool sequenced is 3-times of actual initial pool
             ),
-            radius=4,
+            radius=radius,
             dna_unit='ng',
             dna_amount=dna_amount,
             input_sample_name=['R0']

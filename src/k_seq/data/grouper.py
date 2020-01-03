@@ -1,5 +1,7 @@
 from .seq_table import slice_table
 
+# TODO: formalize grouper to allow (1) apply same grouper to different target, (2) return a generator of groups
+
 
 class Group(object):
     # todo: bug: self.target did not change if the linked table change (SeqTable.table)
@@ -60,7 +62,7 @@ class Grouper(object):
         for key, members in groupers.items():
             if isinstance(members, dict):
                 if 'axis' in members.keys():
-                    if len(members) !=2:
+                    if len(members) != 2:
                         raise TypeError(f'Wrong dictionary format for group {key}')
                     else:
                         self.__setattr__(key, Group(members['group'], axis=members['axis'], target=target))
