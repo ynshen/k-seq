@@ -240,7 +240,6 @@ class SingleFitter(EstimatorType):
         """Run fitting, configuration are from the object"""
 
         import numpy as np
-        import pandas as pd
         from pathlib import Path
         if self.save_to is not None and self.overwrite is False:
             if Path(self.save_to).exists():
@@ -262,8 +261,6 @@ class SingleFitter(EstimatorType):
                                                           columns=self.parameters)
         if not self.silent:
             logging.info(f'Point estimation for {self.__repr__()} finished')
-
-        # TODO: add convergence test here
 
         # Bootstrap
         if self.bootstrap is None:
