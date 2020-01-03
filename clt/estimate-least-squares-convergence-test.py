@@ -61,10 +61,11 @@ def kA(params):
 def convergence_test(seq, c, reps=20):
     """seq: a row of reacted frac table"""
     from k_seq.estimator import least_square
+    from k_seq.model.kinetic import BYOModel
 
     fitter = least_square.SingleFitter(
         x_data=c, y_data=seq,
-        model=kinetic.BYOModel.reacted_frac, name=seq.name,
+        model=BYOModel.reacted_frac, name=seq.name,
         sigma=None, bounds=[[0, 0], [np.inf, 1]], init_guess=None,
         opt_method='trf', exclude_zero=False, metrics={'kA': kA},
         bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_params=None, silent=True
@@ -121,7 +122,15 @@ if __name__ == '__main__':
         sys.path.insert(0, args.pkg_path)
     from k_seq.utility.file_tools import check_dir
     check_dir(args.output_dir)
+    logging.basicConfig(filename=f"{args.output_dir}/app_run.log",
+                        format='%(asctime)s %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',
+                        level=logging.INFO,
+                        filemode='w')
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info(f'Results will be saved to {args.output_dir}')
-
-    main(n_seq=args.seq_num, include_1250=args.include_1250, reps=args.reps, core=args.core, output_dir=args.output_dir)
+    from k_seq.utility.log import Timer
+    with Timer():
+        main(n_seq=args.seq_num, include_1250=args.include_1250,
+             reps=args.reps, core=args.core, output_dir=args.output_dir)
 
