@@ -1100,7 +1100,7 @@ class BatchFitter(EstimatorType):
         JSON is preferred for speed, readability, compatibility, and security
         """
         if use_pickle:
-            self.results.to_pickle(result_path, bs_results=bs_results, sep_files=sep_files)
+            self.results.to_pickle(result_path, bs_record=bs_results, sep_files=sep_files)
         else:
             self.results.to_json(result_path, bs_record=bs_results, sep_files=sep_files)
 

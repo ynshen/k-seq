@@ -65,7 +65,7 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
     logging.info(f'deduplicate: {deduplicate}')
     batch_fitter = BatchFitter(
         y_data_batch=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
-        model=BYOModel.func_react_frac, exclude_zero=exclude_zero, grouper=grouper,
+        model=BYOModel.reacted_frac, exclude_zero=exclude_zero, grouper=grouper,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
     )
     stream_to_disk = f"{output_dir}/results" if stream else None
