@@ -3,10 +3,19 @@ import pandas as pd
 import numpy as np
 
 
-class Peaks(object):
-    """A sequence peak defined on edit distance"""
+class Peak(object):
+    """Object to store a peak in a sequence space
+     Peak is defined by Edit (Levenshtein) distance, including insertions and deletions
+    """
 
     def __init__(self, target, center_seq, name=None, radius=None):
+        """Initialize a Peak object
+        Args:
+            target (pd.DataFrame or SeqTable): target table of sequences to compute peak
+            center_seq (str): center sequence for the peak
+            name (str): name of the peak, optional
+            radius (int): the radius of the peak, optional
+        """
         self.target = target
         self.center_seq = center_seq
         self.radius = radius
@@ -19,6 +28,8 @@ class Peaks(object):
             # if have 'table' dataframe attributes
             self.dist_to_center = self.target.table.index.to_series().map(self._edit_dist_to_seq)
             self.rel_abun_table = self.target.table.divide(self.target.table.sum(axis=0), axis=1)
+        else:
+            raise TypeError('Unknown data type for target table')
 
     def _edit_dist_to_seq(self, seq):
         from Levenshtein import distance
