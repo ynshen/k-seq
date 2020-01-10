@@ -1140,3 +1140,50 @@ def _work_fn(worker):
     return worker
 
 
+def load_estimation_results(point_est_csv, seqtable_path=None, bootstrap_csv=None, **kwargs):
+    """Load estimation results and compose a table
+
+    Args:
+        point_est_csv (str): path to reported csv file from point estimation
+        seqtable_path (str): optional. path to original seqTable object for count info
+        bootstrap_csv (str): optional. path to csv file from bootstrap
+        kwargs: optional keyword arguments of callables to calculate extra columns, apply on results dataframe
+
+    Returns:
+        a pd.DataFrame contains composed results from provided information
+
+    """
+
+    point_est_res = pd.read_csv(point_est_csv, index_col=0)
+    est_res = point_est_res[point_est_res.columns]
+    seq_list = est_res.index.values
+    bootstrap_res = pd.read_csv(bootstrap_csv, index_col=0)
+
+    if seqtable_path:
+        # add counts in input pool
+        from ..utility import file_tools
+        seq_table = file_tools.read_pickle(seqtable_path)
+        if not seq_table.grouper and hasattr(seq_table.grouper, 'input'):
+            est_res['input_counts'] = seq_table.table[seq_table.grouper.input.group][seq_list].mean(axis=1)
+        est_res['mean_counts'] = seq_table.table.loc[seq_list].mean(axis=1)
+
+        if hasattr(seq_table, 'pool_peaks'):
+            # has doped pool, add dist to center
+            from ..data import landscape
+            mega_peak = landscape.Peak.from_peak_list(seq_table.pool_peaks)
+            est_res['dist_to_center'] = mega_peak.dist_to_center
+
+    if bootstrap_csv:
+        # add bootstrap results
+        est_res[['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']] = bootstrap_res[
+            ['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']]
+        est_res['A_range'] = bootstrap_res['A_97.5%'] - bootstrap_res['A_2.5%']
+
+    if kwargs:
+        for key, func in kwargs.items():
+            if callable(func):
+                est_res[key] = est_res.apply(func, axis=1)
+            else:
+                logging.error(f'Keyword argument {key} is not a function')
+                raise TypeError(f'Keyword argument {key} is not a function')
+    return est_res
