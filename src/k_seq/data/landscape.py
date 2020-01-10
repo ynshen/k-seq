@@ -8,25 +8,28 @@ class Peak(object):
      Peak is defined by Edit (Levenshtein) distance, including insertions and deletions
     """
 
-    def __init__(self, target, center_seq, name=None, radius=None):
+    def __init__(self, target, center_seq, name=None, radius=None, use_hamming_dist=False):
         """Initialize a Peak object
         Args:
             target (pd.DataFrame or SeqTable): target table of sequences to compute peak
             center_seq (str): center sequence for the peak
             name (str): name of the peak, optional
             radius (int): the radius of the peak, optional
+            use_hamming_dist (bool): use hamming distance instead of edit distance
         """
         self.target = target
         self.center_seq = center_seq
         self.radius = radius
         self.name = name
+        self.use_hamming_dist = use_hamming_dist
+        dist_measure = self._hamming_dist_to_seq if use_hamming_dist else self._edit_dist_to_seq
         if isinstance(self.target, pd.DataFrame):
             # index contains sequence
-            self.dist_to_center = self.target.index.to_series().map(self._edit_dist_to_seq)
+            self.dist_to_center = self.target.index.to_series().map(dist_measure)
             self.rel_abun_table = self.target.divide(self.target.sum(axis=0), axis=1)
         elif hasattr(self.target, 'table'):
             # if have 'table' dataframe attributes
-            self.dist_to_center = self.target.table.index.to_series().map(self._edit_dist_to_seq)
+            self.dist_to_center = self.target.table.index.to_series().map(dist_measure)
             self.rel_abun_table = self.target.table.divide(self.target.table.sum(axis=0), axis=1)
         else:
             raise TypeError('Unknown data type for target table')
@@ -36,6 +39,12 @@ class Peak(object):
         if isinstance(seq, pd.Series):
             seq = seq.name
         return distance(seq, self.center_seq)
+
+    def _hamming_dist_to_seq(self, seq):
+        from Levenshtein import hamming
+        if isinstance(seq, pd.Series):
+            seq = seq.name
+        return hamming(seq, self.center_seq)
 
     def peak_coverage(self, max_radius):
         """survey the coverage of peak: detected seqs vs all possible seqs

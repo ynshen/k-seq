@@ -682,7 +682,16 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
         byo_doped.table_filtered = seq_length_filter.get_filtered_table(
                 target=spike_in_filter.get_filtered_table()
         )
-
+        from . import landscape
+        pool_peaks = {
+            'pk2': 'ATTACCCTGGTCATCGAGTGA',
+            'pk1A': 'CTACTTCAAACAATCGGTCTG',
+            'pk1B': 'CCACACTTCAAGCAATCGGTC',
+            'pk3': 'AAGTTTGCTAATAGTCGCAAG'
+        }
+        byo_doped.pool_peaks = [landscape.Peak(target=byo_doped.table_filtered, center_seq=seq,
+                                               name=name, use_hamming_dist=True)
+                                for name, seq in pool_peaks.items()]
         # Add replicates grouper
         byo_doped.grouper.add({'byo': {
             1250: ['A1', 'A2', 'A3'],
