@@ -18,7 +18,7 @@ doc_helper = DocHelper(
 
 
 def check_scaler(value):
-    """Check if value is a scaler or is the single value in a vector/matrix/tensor"""
+    """Check if value is a scalar or is the single value in a vector/matrix/tensor"""
     return len(np.reshape(value, newshape=(-1))) == 1
 
 
@@ -32,31 +32,43 @@ def to_scaler(value):
 
 def first_order(c, k, A, alpha, t):
     """Base first-order kinetic model, returns reacted fraction of input seqs given parameters
-    for c_i < 0, returns all ones as it is input pool
-    
+    broadcast are available on A, k, c and a full return tensor will have shape (A, k, c)
+    if any of these 3 parameters is scalar, the dimension is automatically squeezed while maintaining the order
+    Note: for c_i < 0, returns ones as it is input pool
+     
     Args:
     {}
     """.format(doc_helper.get(first_order), indent=4)
 
-    c = np.array(c)
+    # dim  param
+    #  0     A
+    #  1     k
+    #  2     c
+
     if check_scaler(c):
-        if to_scaler(c) < 0:
-            return np.ones_like(k)
-        else:
-            return to_scaler(A) * (1 - np.exp(- alpha * t * to_scaler(k) * c))
-    elif check_scaler(k) or check_scaler(c):
-        # Two 1-D array, compute outer product
-        y = np.zeros_like(to_scaler(c))
-        y[c >= 0] = to_scaler(A) * (1 - np.exp(- alpha * t * to_scaler(k) * c[c >= 0]))
-        y[c < 0] = 1
-        return y
+        c = np.array([to_scaler(c)])
     else:
-        y = np.zeros((len(k), len(c)))
-        if len(np.shape(A)) == 1:
-            A = np.expand_dims(A, axis=-1)
-        y[:, c >= 0] = np.multiply(A, (1 - np.exp(- alpha * t * np.outer(k, c[c >= 0]))))
-        y[:, c < 0] = 1
-        return y
+        c = np.array(c)
+    if check_scaler(k):
+        k = np.array([to_scaler(k)])
+    else:
+        k = np.array(k)
+    if check_scaler(A):
+        A = np.array([to_scaler(A)])
+    else:
+        A = np.array(A)
+
+    y = np.outer(A, (1 - np.exp(- alpha * t * np.outer(k, c))))
+    y = y.reshape((len(A), len(k), len(c)))
+    y[:, :, c < 0] = 1
+
+    dim_to_squeeze = []
+    for dim in (0, 1, 2):
+        if y.shape[dim] == 1:
+            dim_to_squeeze.append(dim)
+
+    y = np.squeeze(y, axis=tuple(dim_to_squeeze))
+    return y
 
 
 def first_order_w_bias(c, k, A, alpha, t, b):
