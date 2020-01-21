@@ -3,20 +3,65 @@ This module contains project level utility functions
 """
 
 
-class PlotPreset:
-
-    def __init__(self):
-        pass
+class Presets:
+    """Collection of preset colors/markers"""
 
     @staticmethod
-    def colors(num=5):
-        from math import ceil
+    def _cycle_list(num, prop_list):
+        """Generate a list of properties, cycle if num > len(prop_list)"""
+        return [prop_list[i % len(prop_list)] for i in range(num)]
 
-        full_color_list = ['#FC820D', '#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080', '#AEAEAE']
-        color_list = []
-        for i in range(ceil(num/7)):
-            color_list += full_color_list
-        return color_list[:num]
+    @staticmethod
+    def from_list(prop_list):
+        from functools import partial
+        return partial(Presets._cycle_list, prop_list=prop_list)
+
+    @staticmethod
+    def color_cat10(num=5):
+        colors = [
+            '#1F77B4',
+            '#FF7F0E',
+            '#2CA02C',
+            '#D62728',
+            '#9467BD',
+            '#8C564B',
+            '#E377C2',
+            '#7F7F7F',
+            '#BCBD22',
+            '#17BECF'
+        ]
+        return Presets._cycle_list(num, colors)
+
+    @staticmethod
+    def color_tab10(num=5):
+        colors = [
+            '#4C78A8',
+            '#F58518',
+            '#E45756',
+            '#72B7B2',
+            '#54A24B',
+            '#EECA3B',
+            '#B279A2',
+            '#FF9DA6',
+            '#9D755D',
+            '#BAB0AC'
+        ]
+        return Presets._cycle_list(num, colors)
+
+    @staticmethod
+    def color_pastel1(num=5):
+        colors = [
+            "#FBB5AE",
+            "#B3CDE3",
+            "#CCEBC5",
+            "#DECBE4",
+            "#FED9A6",
+            "#FFFFCC",
+            "#E5D8BD",
+            "#FDDAEC",
+            "#F2F2F2"
+        ]
+        return Presets._cycle_list(num, colors)
 
     @staticmethod
     def markers(num=5, with_line=False):
