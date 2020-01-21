@@ -1163,9 +1163,10 @@ def load_estimation_results(point_est_csv, seqtable_path=None, bootstrap_csv=Non
         # add counts in input pool
         from ..utility import file_tools
         seq_table = file_tools.read_pickle(seqtable_path)
-        if not seq_table.grouper and hasattr(seq_table.grouper, 'input'):
-            est_res['input_counts'] = seq_table.table[seq_table.grouper.input.group][seq_list].mean(axis=1)
+        if seq_table.grouper and hasattr(seq_table.grouper, 'input'):
+            est_res['input_counts'] = seq_table.table[seq_table.grouper.input.group].loc[seq_list].mean(axis=1)
         est_res['mean_counts'] = seq_table.table.loc[seq_list].mean(axis=1)
+        est_res['min_counts'] = seq_table.table.loc[seq_list].min(axis=1)
 
         if hasattr(seq_table, 'pool_peaks'):
             # has doped pool, add dist to center
