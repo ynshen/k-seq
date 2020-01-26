@@ -1,4 +1,5 @@
 """This module contains methods for data preprocessing from count files to ``CountFile`` for estimator
+For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
   - write output function for each class as JSON file
   - Formalized filter and normalizer
@@ -20,9 +21,9 @@ class Metadata(AttrScope):
 
 def slice_table(table, axis, remove_zero, keys=None, mask=None):
     if axis == 0:
-        if keys is not None:
+        if keys:
             sub_table = table.loc[keys]
-        if mask is not None:
+        if mask:
             sub_table = table.loc[mask]
         if remove_zero:
             return sub_table.loc[:, (sub_table != 0).any(axis=0)]

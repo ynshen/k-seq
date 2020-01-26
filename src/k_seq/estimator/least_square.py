@@ -1,6 +1,6 @@
 """
-This sub-module contains the classic least-squares fitting for each sequence individually to the kinetic model,
-  using absolute amount or reacted fraction
+This sub-module contains the classic least-squares fitting for each sequence individually to given kinetic model,
+
 
 Several functions are included:
   - point estimation using `scipy.optimize.curve_fit`
@@ -15,6 +15,7 @@ from ..utility.func_tools import DocHelper
 from ..utility.file_tools import read_json, to_json, check_dir
 import logging
 import pandas as pd
+import numpy as np
 
 doc_helper = DocHelper(
     x_data=('list', 'list of x values in fitting'),
@@ -43,7 +44,7 @@ doc_helper = DocHelper(
 
 
 class SingleFitter(EstimatorType):
-    __doc__ = """A wrapper over `scipy.optimize.curve_fit` to fit a model for a single dataset
+    __doc__ = """scipy.optimize.curve_fit` to fit a model for a single dataset
     Can do point estimation or bootstrap for empirical CI estimation
 
     Attributes:
@@ -68,9 +69,6 @@ class SingleFitter(EstimatorType):
     def __repr__(self):
         return f"Single fitter for {self.name}"\
                f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
-
-    def __str__(self):
-        return f"Single fitter for {self.name}"
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, grouper=None,
@@ -377,8 +375,6 @@ class FitResults:
              params (pd.Series): stores the parameter estimation, with extra metrics calculation
              pcov (pd.DataFrame): covariance matrix for estimated parameter
 
-         TODO: add storage for convergence
-
          uncertainty (AttrScope): a scope stores uncertainty estimation results, includes
              summary (pd.DataFrame): description from record
              record (pd.DataFrame): records for stored bootstrapping results
@@ -475,6 +471,60 @@ class FitResults:
             if json_data['uncertainty']['record'] is not None:
                 results.uncertainty.record = pd.read_json(json_data['uncertainty']['record'])
         return results
+
+
+class ConvergenceTester:
+    """Apply repeated fitting with perturbed initial value for empirical convergence test"""
+
+    def __init__(self, fitter, reps=10, init_range=None):
+        """Apply convergence test to given fitter
+
+        Args:
+            fitter (SingleFitter): the target single fitter
+            reps (int): number of repeated fitting, default 10
+            init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters.
+              All parameters are initialized from (0, 1) with random uniform draw
+        """
+        self.reps = reps
+        self.fitter = fitter
+        if not init_range:
+            init_range = [(0, 1) for _ in fitter.parameters]
+        conv_test_res = [
+            fitter._fit(init_guess=[np.random.uniform(low, high) for (low, high) in init_range]) for _ in range(reps)
+        ]
+
+        def results_to_series(result):
+            if result['metrics']:
+                return result['params'].append(pd.Series(result['metrics']))
+            else:
+                return result['params']
+
+        self.results = pd.DataFrame([results_to_series(result) for result in conv_test_res])
+
+    def summary(self, param=None, show_sd=True, show_range=True):
+        """Summarize convergence test results as a pd.Series
+
+        Args:
+            param (list): list of parameter/metric estimated to report. e.g. ['A', 'kA'].
+              All values are reported if None
+            show_sd (bool): if report the standard deviation for reported params
+            show_range (bool): if report the range (max - min) for reported params
+
+        Returns:
+
+        """
+        from ..utility.func_tools import dict_flatten
+        report_data = self.results
+        if param:
+            report_data = report_data[param]
+        report_data = report_data.describe()
+        stats = ['count', 'mean']
+        if show_sd:
+            stats.append('std')
+        if show_range:
+            report_data.loc['range'] = report_data.loc['max'] - report_data.loc['min']
+            stats.append('range')
+        return pd.Series(dict_flatten(report_data.loc[stats].to_dict()), name=self.fitter.name)
 
 
 class Bootstrap:
