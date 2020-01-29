@@ -37,33 +37,30 @@ doc_helper = DocHelper(
                                                 "will be use if None"),
     metrics=('`dict` of `callable`', "Optional. Extra metric/parameters to calculate for each estimation"),
     rnd_seed=('`int`', "random seed used in fitting for reproducibility"),
-    curve_fit_params=('dict', 'other keyword parameters to pass to `scipy.optimze.curve_fit`'),
+    curve_fit_kwargs=('dict', 'other keyword parameters to pass to `scipy.optimize.curve_fit`'),
     grouper=('dict or Grouper', 'Indicate the grouping of samples'),
     seq_to_fit=('list of str', 'Optional. List of sequences used in batch fitting')
 )
 
 
 class SingleFitter(EstimatorType):
-    __doc__ = """scipy.optimize.curve_fit` to fit a model for a single dataset
+    """`scipy.optimize.curve_fit` to fit a model for a single dataset
     Can do point estimation or bootstrap for empirical CI estimation
 
     Attributes:
         {attr}
         bootstrap (Bootstrap): proxy to the bootstrap object
-        
-        results (FitResult): proxy to the FirResult object
-        
+        results (FitResult): proxy to the FitResult object
         config (AttrScope): name space for fitting, contains
         {config}
-        
         bootstrap_config (AttrScope): name space for bootstrap, contains
         {bs_config}
             
     """.format(
         attr=doc_helper.get(['x_data', 'y_data', 'model', 'parameter', 'silent', 'name']),
         config=doc_helper.get(['opt_method', 'exclude_zero', 'init_guess', 'rnd_seed', 'sigma',
-                               'bounds', 'metric', 'curve_fit_params'], indent=8),
-        bs_config=doc_helper.get(['bootstrap_num', 'bs_record_num', 'bs_method'])
+                               'bounds', 'metric', 'curve_fit_kwargs'], indent=8),
+        bs_config=doc_helper.get(['bootstrap_num', 'bs_record_num', 'bs_method'], indent=8)
     )
 
     def __repr__(self):
@@ -72,16 +69,18 @@ class SingleFitter(EstimatorType):
 
     def __init__(self, x_data, y_data, model, name=None, parameters=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, grouper=None,
-                 bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_params=None,
+                 bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_kwargs=None,
                  save_to=None, overwrite=False, silent=False):
         """Initialize a `SingleFitter` instance
         
         Args:
             {}
             save_to (str): save results to the given path when fitting finishes, if not None
+            overwrite (bool): if overwrite the results directory if already exists. Estimation will be skipped if False,
+              default False
+            silent (bool):
         """.format(doc_helper.get(self.__init__))
 
-        import numpy as np
         from ..utility.func_tools import AttrScope, get_func_params
 
         super().__init__()
@@ -97,7 +96,7 @@ class SingleFitter(EstimatorType):
             exclude_zero=exclude_zero,
             init_guess=init_guess,
             rnd_seed=rnd_seed,
-            curve_fit_params={} if curve_fit_params is None else curve_fit_params
+            curve_fit_kwargs={} if curve_fit_kwargs is None else curve_fit_kwargs
         )
 
         if isinstance(x_data, list):
@@ -146,47 +145,46 @@ class SingleFitter(EstimatorType):
         if not silent:
             logging.info(f"{self.__repr__()} initiated")
 
-    def _fit(self, model=None, x_data=None, y_data=None, sigma=None, parameters=None, bounds=None,
-             metrics=None, init_guess=None, opt_method=None, curve_fit_params=None):
-        """Core function perform fitting"""
-        from scipy.optimize import curve_fit
-        import numpy as np
+    def _fit(self, model=None, x_data=None, y_data=None, sigma=None, bounds="unspecified",
+             metrics=None, init_guess=None, curve_fit_kwargs=None, **kwargs):
+        """Core function performing fitting using `scipy.optimize.curve_fit`,
+        Arguments will be inferred from instance's attributes if not provided
 
-        if model is None:
-            model = self.model
-            parameters = self.parameters
-        if parameters is None:
-            from ..utility.func_tools import get_func_params
-            parameters = get_func_params(model, exclude_x=True)
-        if x_data is None:
-            x_data = self.x_data
-        if y_data is None:
-            y_data = self.y_data
-        if sigma is None:
-            sigma = self.config.sigma
-        if bounds is None:
+        Args:
+        {fit_param}
+
+        Returns: A dictionary contains least-squares fitting results
+          - params: pd.Series of estimated parameter
+          - pcov: pd.Dataframe of covariance matrix
+          - metrics: None or pd.Series of calculated metrics
+        """.format(fit_param=doc_helper.get(self._fit))
+
+        from scipy.optimize import curve_fit
+        from ..utility.func_tools import update_none
+        model = update_none(model, self.model)
+        from ..utility.func_tools import get_func_params
+        parameters = get_func_params(model, exclude_x=True)
+        x_data = update_none(x_data, self.x_data)
+        y_data = update_none(y_data, self.y_data)
+        sigma = update_none(sigma, self.config.sigma)
+        if bounds == "unspecified":
             bounds = self.config.bounds
-        if metrics is None:
-            metrics = self.config.metrics
-        if init_guess is None:
-            init_guess = self.config.init_guess
-        if opt_method is None:
-            opt_method = self.config.opt_method
-        if curve_fit_params is None:
-            curve_fit_params = self.config.curve_fit_params
+        if bounds is None:
+            bounds = (-np.inf, np.inf)
+        metrics = update_none(metrics, self.config.metrics)
+        init_guess = update_none(init_guess, self.config.init_guess)
+        curve_fit_kwargs = update_none(curve_fit_kwargs, self.config.curve_fit_kwargs)
 
         try:
-            if init_guess is None:
-                # use a random guess form (0, 1)
+            if not init_guess:
+                # by default, use a random guess form (0, 1)
                 init_guess = [np.random.random() for _ in parameters]
-            if curve_fit_params is None:
-                curve_fit_params = {}
-            params, pcov = curve_fit(f=model,
-                                     xdata=x_data, ydata=y_data,
-                                     sigma=sigma, method=opt_method,
-                                     bounds=bounds, p0=init_guess, **curve_fit_params)
-            if metrics is not None:
-                metrics_res = {name: fn(params) for name, fn in metrics.items()}
+            if curve_fit_kwargs is None:
+                curve_fit_kwargs = {}
+            params, pcov = curve_fit(f=model, xdata=x_data, ydata=y_data,
+                                     sigma=sigma, bounds=bounds, p0=init_guess, **curve_fit_kwargs)
+            if metrics:
+                metrics_res = pd.Series({name: fn(params) for name, fn in metrics.items()})
             else:
                 metrics_res = None
         except RuntimeError:
@@ -199,7 +197,7 @@ class SingleFitter(EstimatorType):
             params = np.full(fill_value=np.nan, shape=len(parameters))
             pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
             if metrics is not None:
-                metrics_res = {name: np.nan for name, fn in metrics.items()}
+                metrics_res = pd.Series({name: np.nan for name, fn in metrics.items()})
             else:
                 metrics_res = None
         except ValueError:
@@ -212,7 +210,7 @@ class SingleFitter(EstimatorType):
             params = np.full(fill_value=np.nan, shape=len(parameters))
             pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
             if metrics is not None:
-                metrics_res = {name: np.nan for name, fn in metrics.items()}
+                metrics_res = pd.Series({name: np.nan for name, fn in metrics.items()})
             else:
                 metrics_res = None
         except:
@@ -225,19 +223,43 @@ class SingleFitter(EstimatorType):
             params = np.full(fill_value=np.nan, shape=len(parameters))
             pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
             if metrics is not None:
-                metrics_res = {name: np.nan for name, fn in metrics.items()}
+                metrics_res = pd.Series({name: np.nan for name, fn in metrics.items()})
             else:
                 metrics_res = None
+
         return {
-            'params': params,
-            'pcov': pcov,
+            'params': pd.Series(data=params, index=parameters),
+            'pcov': pd.DataFrame(data=pcov, index=parameters, columns=parameters),
             'metrics': metrics_res
         }
 
-    def fit(self):
+    def point_estimate(self, **kwargs):
+        """Single point estimation on the given data
+        Keyword Args accepted for fitting:
+        {fit_param}
+        
+        Fitting results will be saved to `self.results.point_estimation`
+        """.format(fit_param=doc_helper.get(self._fit))
+
+        results = self._fit(**kwargs)
+        self.results.point_estimation.params = results['params']
+        if results['metrics']:
+            self.results.point_estimation.params.append(results['metrics'])
+        self.results.point_estimation.pcov = results['pcov']
+        if not self.silent:
+            logging.info(f'Point estimation for {self.__repr__()} finished')
+
+    def convergence_test(self):
+        """Empirically estimate convergence by repeated fittings"""
+        pass
+
+    def bootstrap(self):
+        """Use bootstrap for estimation uncertainty"""
+        pass
+
+    def fit(self, point_estimate=True, convergence_test=False, bootstrap=True):
         """Run fitting, configuration are from the object"""
 
-        import numpy as np
         from pathlib import Path
         if self.save_to is not None and self.overwrite is False:
             if Path(self.save_to).exists():
@@ -248,17 +270,7 @@ class SingleFitter(EstimatorType):
         if self.config.rnd_seed is not None:
             np.random.seed(self.config.rnd_seed)
 
-        # Point estimation
-        point_est = self._fit()
-        params = {key: value for key, value in zip(self.parameters, point_est['params'])}
-        if point_est['metrics'] is not None:
-            params.update(point_est['metrics'])
-        self.results.point_estimation.params = pd.Series(params)
-        self.results.point_estimation.pcov = pd.DataFrame(data=point_est['pcov'],
-                                                          index=self.parameters,
-                                                          columns=self.parameters)
-        if not self.silent:
-            logging.info(f'Point estimation for {self.__repr__()} finished')
+        self.point_estimate()
 
         # Bootstrap
         if self.bootstrap is None:
@@ -882,7 +894,7 @@ class BatchFitter(EstimatorType):
     """.format(attr=doc_helper.get(['model', 'x_data', 'parameters'], indent=4),
                fit_params=doc_helper.get(['x_data', 'model', 'parameters', 'bounds', 'init_guess', 'opt_method',
                                           'exclude_zero', 'metrics', 'rnd_seed', 'bootstrap_num', 'bs_record_num',
-                                          'bs_method', 'curve_fit_params', 'silent']))
+                                          'bs_method', 'curve_fit_kwargs', 'silent']))
 
     def __repr__(self):
         return 'Least-squared BatchFitter at'\
@@ -894,7 +906,7 @@ class BatchFitter(EstimatorType):
     def __init__(self, y_data_batch, x_data, model, sigma=None, bounds=None, seq_to_fit=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', grouper=None,
                  opt_method='trf', exclude_zero=False, init_guess=None, metrics=None, rnd_seed=None,
-                 curve_fit_params=None, note=None, result_path=None):
+                 curve_fit_kwargs=None, note=None, result_path=None):
         """
         Args:
             y_data_batch (pd.DataFrame or str): a set of y_data to fit form rows of y_data_batch, can be a string
@@ -905,7 +917,7 @@ class BatchFitter(EstimatorType):
             results: a proxy to BatchFitResults
         """.format(args=doc_helper.get(['x_data', 'model', 'bounds', 'sigma', 'bootstrap_num', 'bs_record_num',
                                         'bs_method', 'grouper', 'opt_method', 'exclude_zero', 'init_guess',
-                                        'metrics', 'rnd_seed', 'curve_fit_params', 'seq_to_fit'], indent=4))
+                                        'metrics', 'rnd_seed', 'curve_fit_kwargs', 'seq_to_fit'], indent=4))
 
         from ..utility.func_tools import get_func_params, AttrScope
         import pandas as pd
@@ -979,7 +991,7 @@ class BatchFitter(EstimatorType):
             metrics=metrics,
             rnd_seed=rnd_seed,
             grouper=grouper if bs_method == 'stratified' else None,
-            curve_fit_params=curve_fit_params,
+            curve_fit_kwargs=curve_fit_kwargs,
             silent=True
         )
 

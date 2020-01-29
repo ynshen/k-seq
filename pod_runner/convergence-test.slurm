@@ -17,7 +17,7 @@ cd $SLURM_SUBMIT_DIR
 # --reps
 # --cores
 ###############################################################################################################
-python /home/yshen/k-seq/clt/estimate-least-squares-convergence-test.py \
+python /home/yshen/k-seq/tools/estimate-least-squares-convergence-test.py \
     --pkg_path /home/yshen/k-seq/src/ \
     --output_dir /home/yshen/k-seq/results/convergence_test/no_1250 \
     --seq_num 10000 \
