@@ -70,6 +70,7 @@ class SingleFitter(EstimatorType):
     def __init__(self, x_data, y_data, model, name=None, parameters=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, grouper=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', curve_fit_kwargs=None,
+                 conv_reps=0, init_range=None,
                  save_to=None, overwrite=False, silent=False):
         """Initialize a `SingleFitter` instance
         
@@ -122,12 +123,6 @@ class SingleFitter(EstimatorType):
         else:
             self.config.bounds = bounds
 
-        self.bootstrap_config = AttrScope(
-            bootstrap_num=bootstrap_num,
-            bs_record_num=bs_record_num,
-            bs_method=bs_method
-        )
-
         if bootstrap_num > 0 and len(self.x_data) > 1:
             if bs_record_num is None:
                 bs_record_num = 0
@@ -136,11 +131,21 @@ class SingleFitter(EstimatorType):
         else:
             self.bootstrap = None
 
+        self.config.add(
+            bootstrap_num=bootstrap_num,
+            bs_record_num=bs_record_num,
+            bs_method=bs_method
+        )
+
+        if conv_reps > 0:
+            self.converge_tester = ConvergenceTester(reps=conv_reps, fitter=self, init_range=init_range)
+        else:
+            self.converge_tester = None
+
         self.config.metrics = metrics
         self.results = FitResults(fitter=self)
         self.save_to = save_to
         self.overwrite = overwrite
-
         self.silent = silent
         if not silent:
             logging.info(f"{self.__repr__()} initiated")
@@ -155,7 +160,7 @@ class SingleFitter(EstimatorType):
 
         Returns: A dictionary contains least-squares fitting results
           - params: pd.Series of estimated parameter
-          - pcov: pd.Dataframe of covariance matrix
+          - pcov: `pd.Dataframe` of covariance matrix
           - metrics: None or pd.Series of calculated metrics
         """.format(fit_param=doc_helper.get(self._fit))
 
@@ -242,47 +247,96 @@ class SingleFitter(EstimatorType):
         """.format(fit_param=doc_helper.get(self._fit))
 
         results = self._fit(**kwargs)
-        self.results.point_estimation.params = results['params']
-        if results['metrics']:
-            self.results.point_estimation.params.append(results['metrics'])
-        self.results.point_estimation.pcov = results['pcov']
         if not self.silent:
             logging.info(f'Point estimation for {self.__repr__()} finished')
+        return results
 
-    def convergence_test(self):
-        """Empirically estimate convergence by repeated fittings"""
-        pass
+    def run_bootstrap(self, bs_record_num=-1, **kwargs):
+        """Use bootstrap to estimation uncertainty
+        Args:
+            {bootstrap_args}
+            
+        Returns:
+            summary
+            results: subsample if 0 <= bs_record_num <= bootstrap_num 
+        """.format(bootstrap_args=doc_helper.get(['bs_method', 'bootstrap_num', 'grouper', 'bs_record_num'], indent=4))
 
-    def bootstrap(self):
-        """Use bootstrap for estimation uncertainty"""
-        pass
+        if 'bs_method' in kwargs.keys():
+            self.bootstrap.bs_method = kwargs['bs_method']
+        if 'bootstrap_num' in kwargs.keys():
+            self.bootstrap.bootstrap_num = kwargs['bootstrap_num']
+        if 'grouper' in kwargs.keys():
+            self.bootstrap.grouper = kwargs['grouper']
 
-    def fit(self, point_estimate=True, convergence_test=False, bootstrap=True):
-        """Run fitting, configuration are from the object"""
+        summary, results = self.bootstrap.run()
+        if 0 <= bs_record_num <= results.shape[0]:
+            results = results.sample(n=bs_record_num, replace=False, axis=0)
 
-        from pathlib import Path
-        if self.save_to is not None and self.overwrite is False:
-            if Path(self.save_to).exists():
-                # don't do fitting if not overwriting results
-                self.results = FitResults.from_json(self.save_to, fitter=self)
-                return None
-
-        if self.config.rnd_seed is not None:
-            np.random.seed(self.config.rnd_seed)
-
-        self.point_estimate()
-
-        # Bootstrap
         if self.bootstrap is None:
             if not self.silent:
                 logging.info('Bootstrap not conducted')
-            pass
         else:
             if not self.silent:
-                logging.info(f"Bootstrap using {self.bootstrap_config.bs_method} for "
-                             f"{self.bootstrap_config.bootstrap_num} and "
-                             f"save {self.bootstrap_config.bs_record_num} records")
-            self.bootstrap.run()
+                logging.info(f"Bootstrap using {self.bootstrap.bs_method} for "
+                             f"{self.bootstrap.bootstrap_num} and "
+                             f"save {self.bootstrap.bs_record_num} records")
+        return summary, results
+
+    def convergence_test(self, **kwargs):
+        """Empirically estimate convergence by repeated fittings,
+        Wrapper over `ConvergenceTester`
+        Keyword Args:
+            reps (int): number of repeated fitting to conduct, default 10
+            init_range (list of 2-tuples): range of parameters to initialize fitting, default (0, 1)
+            param (list of string): list of parameter to report. Report all parameter if None
+            show_sd (bool): if report standard deviation for parameters in summary
+            show_range (bool): if report range for parameters in summary
+
+        Returns:
+              summary, results
+        """
+        self.converge_tester = ConvergenceTester(**kwargs)
+        self.converge_tester.run()
+        return self.converge_tester.summary(**kwargs), self.converge_tester.results
+
+    def fit(self, point_estimate=True, bootstrap=False, convergence_test=False, **kwargs):
+        """Run fitting, configuration are from the object
+        Args:
+            point_estimate (bool): if do point estimation, default True
+            bootstrap (bool): if do bootstrap, default False
+            convergence_test (bool): if do convergence test, default False
+        """
+
+        save_to = kwargs.pop('save_to', self.save_to)
+        overwrite = kwargs.pop('overwrite', self.overwrite)
+        from pathlib import Path
+        if save_to and (overwrite is False) and Path(save_to).exists():
+            # result stream to hard drive, check if the result exists
+            from json import JSONDecodeError
+            try:
+                # don't do fitting if can saved result is readable
+                self.results = FitResults.from_json(save_to, fitter=self)
+                return None
+            except JSONDecodeError:
+                # still do the fitting
+                pass
+        rnd_seed = kwargs.pop('rnd_seed', self.config.rnd_seed)
+        if rnd_seed:
+            np.random.seed(rnd_seed)
+
+        if point_estimate:
+            results = self.point_estimate(**kwargs)
+            self.results.point_estimation.params = results['params']
+            if results['metrics']:
+                self.results.point_estimation.params.append(results['metrics'])
+            self.results.point_estimation.pcov = results['pcov']
+
+        if bootstrap and len(self.x_data) >= 2:
+            self.results.uncertainty.summary, self.results.uncertainty.records = self.run_bootstrap(**kwargs)
+
+        if convergence_test:
+            self.results.convergence.summary = self.convergence_test(**kwargs)
+             =
 
         if self.save_to is not None:
             # stream to disk as JSON file
@@ -390,6 +444,8 @@ class FitResults:
          uncertainty (AttrScope): a scope stores uncertainty estimation results, includes
              summary (pd.DataFrame): description from record
              record (pd.DataFrame): records for stored bootstrapping results
+
+         convergence (AttrScope):
     """
 
     def __repr__(self):
@@ -406,6 +462,7 @@ class FitResults:
         self.fitter = fitter
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'record'])
+        self.convergence = AttrScope(keys=['summary', 'record'])
 
         # TODO: update to make visualizer work
         from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
@@ -486,7 +543,18 @@ class FitResults:
 
 
 class ConvergenceTester:
-    """Apply repeated fitting with perturbed initial value for empirical convergence test"""
+    """Apply repeated fitting on `SingleFitter` with perturbed initial value for empirical convergence test
+    Store the convergence test results as these are separate tests from estimation
+
+    Attributes:
+        reps (int): number of repeated fittings conducted
+        fitter (SingleFitter): proxy to the associated Fitter
+        init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters.
+              All parameters are initialized from (0, 1) with random uniform draw
+
+    Methods:
+        run: run converge test and return a summary and full record
+    """
 
     def __init__(self, fitter, reps=10, init_range=None):
         """Apply convergence test to given fitter
@@ -499,10 +567,44 @@ class ConvergenceTester:
         """
         self.reps = reps
         self.fitter = fitter
-        if not init_range:
-            init_range = [(0, 1) for _ in fitter.parameters]
+        self.init_range = init_range
+
+    def _get_summary(self, records, param=None, show_sd=True, show_range=True, **kwargs):
+        """Utility to summarize multiple fitting result"""
+
+        from ..utility.func_tools import dict_flatten
+        report_data = records
+        if param:
+            report_data = report_data[param]
+        report_data = report_data.describe()
+        stats = ['mean']
+        if show_sd:
+            stats.append('std')
+        if show_range:
+            report_data.loc['range'] = report_data.loc['max'] - report_data.loc['min']
+            stats.append('range')
+
+        return pd.Series(dict_flatten(report_data.loc[stats].to_dict()), name=self.fitter.name)
+
+    def run(self, **kwargs):
+        """Run convergence test, report a summary and full record
+
+        Keyword Args:
+            param (list): list of parameter/metric estimated to report. e.g. ['A', 'kA'].
+              All values are reported if None
+            show_sd (bool): if report the standard deviation for reported params
+            show_range (bool): if report the range (max - min) for reported params
+
+        Returns:
+            summary: A pd.Series contains the `mean`, `sd`, `range` for each reported parameter
+            records: A pd.Dataframe contains the all records
+        """
+
+        if not self.init_range:
+            init_range = [(0, 1) for _ in self.fitter.parameters]
         conv_test_res = [
-            fitter._fit(init_guess=[np.random.uniform(low, high) for (low, high) in init_range]) for _ in range(reps)
+            self.fitter.point_estimate(init_guess=[np.random.uniform(low, high) for (low, high) in init_range])
+            for _ in range(self.reps)
         ]
 
         def results_to_series(result):
@@ -511,47 +613,21 @@ class ConvergenceTester:
             else:
                 return result['params']
 
-        self.results = pd.DataFrame([results_to_series(result) for result in conv_test_res])
+        records = pd.DataFrame([results_to_series(result) for result in conv_test_res])
 
-    def summary(self, param=None, show_sd=True, show_range=True):
-        """Summarize convergence test results as a pd.Series
-
-        Args:
-            param (list): list of parameter/metric estimated to report. e.g. ['A', 'kA'].
-              All values are reported if None
-            show_sd (bool): if report the standard deviation for reported params
-            show_range (bool): if report the range (max - min) for reported params
-
-        Returns:
-
-        """
-        from ..utility.func_tools import dict_flatten
-        report_data = self.results
-        if param:
-            report_data = report_data[param]
-        report_data = report_data.describe()
-        stats = ['count', 'mean']
-        if show_sd:
-            stats.append('std')
-        if show_range:
-            report_data.loc['range'] = report_data.loc['max'] - report_data.loc['min']
-            stats.append('range')
-        return pd.Series(dict_flatten(report_data.loc[stats].to_dict()), name=self.fitter.name)
+        return self._get_summary(records, **kwargs), records
 
 
 class Bootstrap:
-    """Class to perform bootstrap during fitting and store results to `FitResult`
+    """Class to perform bootstrap for fitting uncertainty estimation
     Three types of bootstrap supported:
-
-      - `pct_res`: resample the percent residue (from data property)
-
-      - `data`: resample data points
-
-      - `stratified`: resample within group, `grouper` is needed
+      - `pct_res`: resample the percent residue, based on the assumption that variance are proportional to the mean
+         (from data property)
+      - `data`: directly resample data points
+      - `stratified`: resample within groups, `grouper` is needed
 
     Attributes:
-    
-        fitter (`EstimatorBase` type): fitter used for estimation
+        fitter (`EstimatorBase` type): proxy to the associated fitter
         
     {}
     """.format(doc_helper.get(['bs_method', 'bootstrap_num', 'bs_record_num', 'grouper']))
@@ -566,6 +642,30 @@ class Bootstrap:
         {}
         """.format(doc_helper.get(['bootstrap_num', 'bs_record_num', 'bs_method', 'grouper']))
 
+        self.bs_method = bs_method
+        if bs_method == 'stratified':
+            try:
+                from ..data.grouper import Group
+                if isinstance(grouper, Group):
+                    grouper = grouper.group
+                if isinstance(grouper, dict):
+                    self.grouper = grouper
+                else:
+                    raise TypeError('Unsupported grouper type for stratified bootstrap')
+            except KeyError:
+                raise Exception('Please indicate grouper when using stratified bootstrapping')
+        else:
+            raise NotImplementedError(f'Bootstrap method {bs_method} is not implemented')
+        self.fitter = fitter
+        self.bootstrap_num = bootstrap_num
+        self.bs_record_num = bs_record_num
+    
+    @property
+    def bs_method(self):
+        return self._bs_method
+    
+    @bs_method.setter
+    def bs_method(self, bs_method):
         implemented_methods = {
             'pct_res': 'pct_res',
             'resample percent residues': 'pct_res',
@@ -573,27 +673,9 @@ class Bootstrap:
             'data': 'data',
             'stratified': 'stratified',
         }
-
         if bs_method in implemented_methods.keys():
-            self.bs_method = bs_method
-            if bs_method == 'stratified':
-                try:
-                    from ..data.grouper import Group
-                    if isinstance(grouper, Group):
-                        grouper = grouper.group
-                    if isinstance(grouper, dict):
-                        self.grouper = grouper
-                    else:
-                        raise TypeError('Unsupported grouper type for stratified bootstrap')
-                except KeyError:
-                    raise Exception('Please indicate grouper when using stratified bootstrapping')
-        else:
-            raise NotImplementedError(f'Bootstrap method {bs_method} is not implemented')
-
-        self.fitter = fitter
-        self.bootstrap_num = bootstrap_num
-        self.bs_record_num = bs_record_num
-
+            self._bs_method = bs_method
+    
     def _percent_residue(self):
         """Bootstrap percent residue"""
         import numpy as np
@@ -642,16 +724,17 @@ class Bootstrap:
             return None
 
     def run(self):
-        """Perform bootstrap"""
-        import numpy as np
-        import pandas as pd
+        """Perform bootstrap with arguments indicated in instance attributes
+        Returns
+           summary, results
+        """
 
         bs_sample_gen = self._bs_sample_generator()
         ix_list = pd.Series(np.arange(self.bootstrap_num))
 
         def fitting_runner(_):
             x_data, y_data = next(bs_sample_gen)
-            result = self.fitter._fit(x_data=x_data, y_data=y_data)
+            result = self.fitter.point_estimate(x_data=x_data, y_data=y_data)
             res_series = pd.Series(data=result['params'], index=self.fitter.parameters)
             if result['metrics'] is not None:
                 for key, value in result['metrics'].items():
@@ -661,11 +744,8 @@ class Bootstrap:
             return res_series
 
         results = ix_list.apply(fitting_runner)
-        self.fitter.results.uncertainty.summary = results.describe(percentiles=[0.025, 0.5, 0.975], include=np.number)
-        if (self.bs_record_num < 0) or (self.bs_record_num >= self.bootstrap_num):
-            self.fitter.results.uncertainty.record = results
-        else:
-            self.fitter.results.uncertainty.record = results.sample(n=self.bs_record_num, replace=False, axis=0)
+        summary = results.describe(percentiles=[0.025, 0.5, 0.975], include=np.number)
+        return summary, results
 
 
 class BatchFitResults:
