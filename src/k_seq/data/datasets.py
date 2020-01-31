@@ -1,4 +1,11 @@
-"""Default datasets used in k-seq project for chen labs"""
+"""Default datasets used in k-seq project for chen labs
+Currently have:
+  - BYO Doped pool: byo-doped
+  - BYO selected pool: byo-selected
+"""
+
+import logging
+from .seq_table import SeqTable
 
 _byo_doped_description = """
         contains k-seq results for seqs from BYO doped-pool, this dataset contains following pre-computed tables to use
@@ -11,13 +18,14 @@ _byo_doped_description = """
             - table_filtered_reacted_frac_total_dna: reacted fraction for valid seqs quantified by total DNA amount
             - table_filtered_seq_in_all_smpl_reacted_frac_spike_in: only contains seqs with counts >= 1 in all samples
             - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples
+            
         Note:
            By default, sequences within 2 edit distance (including insertion and deletion) of spike-in sequences were
              considered as spike-in seq
     """
 
 
-def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
+def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
                     pandaseq_joined=True, radius=2):
     """BYO doped pool k-seq datatable
     {} 
@@ -81,7 +89,7 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
         # Add standard filters
         from . import filters
         spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
-        seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21) # remove non-21 nt seq
+        seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21)  # remove non-21 nt seq
 
         # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
         byo_doped.table_filtered = seq_length_filter.get_filtered_table(
@@ -138,7 +146,6 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
         logging.info('Finished!')
     else:
         logging.info(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
-        import pickle
         from ..utility.file_tools import read_pickle
         byo_doped = read_pickle(BYO_DOPED_PKL)
         logging.info('Imported!')
@@ -147,7 +154,8 @@ def _load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path
 
 
 _byo_selected_description = """
-        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed tables to use
+        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed tables to 
+          use
 
             - table: original count table contains all sequences detected in any samples and all the samples
             - table_no_failed: count table with sample `2C`, `3D`, `3E`, `3F`, `4D`, `4F` removed (failed in sequencing)
@@ -167,7 +175,7 @@ _byo_selected_description = """
     """
 
 
-def _load_byo_selected(from_count_file=False, count_file_path=None, norm_path=None, pickled_path=None):
+def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=None, pickled_path=None):
     """Load k-seq results for BYO selected pool
     {description}
     """.format(description=_byo_selected_description)
@@ -262,7 +270,6 @@ def _load_byo_selected(from_count_file=False, count_file_path=None, norm_path=No
         logging.info('Finished!')
     else:
         logging.info(f'Load BYO-selected pool data from pickled record from {PKL_FILE}')
-        import pickle
         from ..utility.file_tools import read_pickle
         byo_selected = read_pickle(PKL_FILE)
         logging.info('Imported!')

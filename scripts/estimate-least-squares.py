@@ -4,6 +4,7 @@ import logging
 
 
 def kA(params):
+    """Calculate kA metric"""
     return params[0] * params[1]
 
 

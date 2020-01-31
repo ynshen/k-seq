@@ -239,7 +239,7 @@ cd "${outdir}/joined.reads" || exit 1
 # loop through directories and generate count files
 # temporaraly modify PATH to
 
-export PATH=/home/yuning/tools/bbmap:$PATH
+export PATH=/home/yuning/scripts/bbmap:$PATH
 
 ls -1 | while read d
 do

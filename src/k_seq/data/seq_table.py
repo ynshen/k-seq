@@ -1,4 +1,4 @@
-"""This module contains methods for data preprocessing from count files to ``CountFile`` for estimator
+"""This module contains methods for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
   - add directly from count file
@@ -29,16 +29,24 @@ class Metadata(AttrScope):
         super().__init__(attr_dict)
 
 
-def slice_table(table, axis, remove_zero, keys=None, mask=None):
-    """Utility function to slice a sequence table given a list of key value along given axis
+def slice_table(table, axis, keys=None, filter_fn=None, remove_zero=False):
+    """Utility function to slice pd.DataFrame table with a list of key values or filter functions along given axis
     Optional to remove all zero entries
+    Args:
+        table (pd.DataFrame): target table to slice
+        keys (list-like): list of keys to preserve
+        axis (0 or 1)
+        remove_zero (bool): if remove all zero items in the other axis
+    TODO: refactor slice function, collect other similar functions and move here
     """
 
+    if keys is None:
+        logging.error('`keys` or `mask` must be provided')
+        raise ValueError('`keys` or `mask` must be provided')
+
     if axis == 0:
-        if keys:
+        if keys is not None:
             sub_table = table.loc[keys]
-        if mask:
-            sub_table = table.loc[mask]
         if remove_zero:
             return sub_table.loc[:, (sub_table != 0).any(axis=0)]
         else:
@@ -46,8 +54,6 @@ def slice_table(table, axis, remove_zero, keys=None, mask=None):
     else:
         if keys is not None:
             sub_table = table[keys]
-        if mask is not None:
-            sub_table = table[mask]
         if remove_zero:
             return sub_table.loc[(sub_table != 0).any(axis=1)]
         else:
@@ -65,9 +71,9 @@ class SeqTable(object):
     Plugins:
     """
 
-    def __repr__(self):
-        # todo: update to include key information for the seq table
-        pass
+    # def __repr__(self):
+    #     # todo: update to include key information for the seq table
+    #     pass
 
     def __init__(self, data_mtx, data_unit='count',
                  seq_list=None, sample_list=None, grouper=None,
@@ -382,13 +388,13 @@ class SeqTable(object):
           - BYO-selected: 'byo-selected'
           - BFO: not implemented
         """
+        from .datasets import load_byo_doped, load_byo_selected
         if dataset.lower() in ['byo_doped', 'byo-doped', 'doped']:
-            return _load_byo_doped(from_count_file=from_count_file, **kwargs)
+            return load_byo_doped(from_count_file=from_count_file, **kwargs)
         elif dataset.lower() in ['byo_selected', 'byo-selected']:
-            return _load_byo_selected(from_count_file=from_count_file, **kwargs)
+            return load_byo_selected(from_count_file=from_count_file, **kwargs)
         else:
             raise NotImplementedError(f'Dataset {dataset} is not implemented')
-
 
 
     #     def add_norm_table(self, norm_fn, table_name, axis=0):

@@ -115,6 +115,11 @@ def update_none(arg, update_by):
     else:
         return arg
 
+
+def get_object_hex(obj):
+    return f"<{obj.__class__.__module__}{obj.__class__.__name__} at {hex(id(obj))}>"
+
+
 def param_to_dict(key_list, **kwargs):
     """Assign kwargs to the dictionary with key from key_list
     - if the arg is a single value, it will be assigned to all keys

@@ -2,9 +2,12 @@ import sys
 from time import time
 import logging
 
+# TODO: update logging system
+
 
 class Logger:
-    """A simple logger to log data"""
+    """A simple logger wrapper over `logging` (optional `print`)
+    """
 
     def __init__(self, log=None, silent=False):
         import pandas as pd
