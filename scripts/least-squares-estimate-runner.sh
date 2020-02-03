@@ -19,22 +19,22 @@
 ###############################################################################################################
 
 DATA_DIR='/mnt/storage/projects/k-seq/datasets/'
-SAMPLE_NAME='byo-doped.pkl'
+SAMPLE_NAME='byo-doped-pandaSeq.pkl'
 SAMPLE_DIR=$DATA_DIR/$SAMPLE_NAME
-TABLE='table_filtered_reacted_frac_spike_in'
-TABLE_TAG='spike-in'
+TABLE='table_filtered_seq_in_all_smpl_reacted_frac_total_dna'
+TABLE_TAG='total-dna'
 
 PREFIX=''
-FIT_NUM=100
-BS_NUM=30
+FIT_NUM=10
+BS_NUM=1000
 BS_SAVE_NUM=20
 BS_MTD="data"
 NO_ZERO=''
 INV_WEIGHT=''
 POSTFIX=''
-CORE=6
+CORE=40
 
-OUTPUT_BASE='/mnt/storage/projects/k-seq/working/byo_doped/least_square/pandaSeq/point-est_2019-12/'
+OUTPUT_BASE='/mnt/storage/projects/k-seq/working/byo_doped/least_square/pandaSeq/bootstrap_201912-202002/'
 
 ####################################### CREATE OUTPUT DIR AND RUN ESTIMATION ##################################
 
@@ -58,7 +58,7 @@ mkdir -p $OUTPUT_DIR
 # --stream-results
 # --overwrite
 
-python /home/yuning/research/k-seq/scripts/estimate-least-squares.py \
+python /home/yuning/research/k-seq/scripts/least-squares-estimate.py \
     --pkg_path /home/yuning/research/k-seq/src/ \
     --seq_table $SAMPLE_DIR \
     --table_name $TABLE \

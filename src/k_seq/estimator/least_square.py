@@ -319,12 +319,14 @@ class SingleFitter(EstimatorType):
             from json import JSONDecodeError
             try:
                 # don't do fitting if can saved result is readable
+                logging.info(f'Try to recover info from {save_to}...')
                 self.results = FitResults.from_json(save_to, fitter=self)
-                logging.info(f'Fitting result record found for {self.name}, abort fitting...')
+                logging.info('Found, skip fitting...')
                 return None
             except JSONDecodeError:
                 # still do the fitting
-                pass
+                logging.info('Can not parse JSON file, continue fitting...')
+        logging.info('Perform fitting...')
         rnd_seed = kwargs.pop('rnd_seed', self.config.rnd_seed)
         if rnd_seed:
             np.random.seed(rnd_seed)
@@ -516,8 +518,12 @@ class FitResults:
         if 'uncertainty' in json_data.keys():
             if json_data['uncertainty']['summary'] is not None:
                 results.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'])
-            if json_data['uncertainty']['records'] is not None:
-                results.uncertainty.records = pd.read_json(json_data['uncertainty']['records'])
+            if 'record' in json_data['uncertainty'].keys():
+                label = 'record'
+            else:
+                label = 'records'
+            if json_data['uncertainty'][label] is not None:
+                results.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
         return results
 
 
@@ -995,21 +1001,8 @@ class BatchFitter(EstimatorType):
         self.note = note
 
         # parse y_data_batch
-        if isinstance(y_data_batch, str):
-            from pathlib import Path
-            table_path = Path(y_data_batch)
-            if table_path.is_file():
-                try:
-                    y_data_batch = pd.read_pickle(table_path)
-                except:
-                    raise TypeError(f'{table_path} is not pickled `pd.DataFrame` object')
-            else:
-                raise FileNotFoundError(f'{table_path} is not a valid file')
-        elif not isinstance(y_data_batch, pd.DataFrame):
-            raise TypeError('Table should be a `pd.DataFrame`')
-        else:
-            pass
-        self.y_data_batch = y_data_batch
+        from ..utility.file_tools import table_object_to_dataframe
+        self.y_data_batch = table_object_to_dataframe(y_data_batch)
 
         # process seq_to_fit
         if seq_to_fit is not None:
@@ -1036,7 +1029,7 @@ class BatchFitter(EstimatorType):
             bounds = (-np.inf, np.inf)
 
         if len(x_data) <= 1:
-            logging.warning("Number of data points less than 2, no bootstrap will be performed")
+            logging.warning("Number of data points less than 2, bootstrap will not be performed")
             bootstrap_num = 0
         self.bootstrap = bootstrap_num > 0
 
@@ -1075,6 +1068,8 @@ class BatchFitter(EstimatorType):
         logging.info('BatchFitter created')
 
     def worker_generator(self, stream_to_disk=None, overwrite=False):
+        """Return a generator of worker for each sequence"""
+
         if self.seq_to_fit is None:
             seq_list = self.y_data_batch.index.values
         else:

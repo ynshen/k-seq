@@ -201,6 +201,7 @@ def read_pickle(path):
 
 
 def dump_pickle(obj, path):
+    """Save object as picked file"""
     import pickle
 
     with open(path, 'wb') as handle:
@@ -208,6 +209,7 @@ def dump_pickle(obj, path):
 
 
 def read_json(path):
+    """Read json file"""
     import json
 
     with open(path, 'r') as handle:
@@ -233,3 +235,35 @@ def check_dir(path):
     else:
         Path(path).mkdir(parents=True)
         return False
+
+
+def table_object_to_dataframe(obj, table_name=None):
+    """Convert object (`file path`, `SeqTable`) to `pd.DataFrame`
+    """
+    from pathlib import Path, PosixPath
+    import pandas as pd
+    from ..data.seq_table import SeqTable
+
+    if isinstance(obj, (str, Path, PosixPath)):
+        if Path(obj).is_file():
+            try:
+                obj = read_pickle(obj)
+            except:
+                raise TypeError(f'{obj} is not pickled object')
+        else:
+            raise FileNotFoundError(f'{obj} is not a valid file')
+    if isinstance(obj, pd.DataFrame):
+        return obj
+    elif isinstance(obj, SeqTable):
+        if table_name is None:
+            try:
+                return obj.table
+            except AttributeError:
+                raise AttributeError('Please indicate the table name')
+        else:
+            try:
+                return getattr(obj, table_name)
+            except AttributeError:
+                raise AttributeError(f'{table_name} is not found in the SeqTable object')
+    else:
+        raise TypeError('Table should be a `pd.DataFrame` or `SeqTable`')

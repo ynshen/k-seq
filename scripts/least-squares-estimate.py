@@ -13,7 +13,7 @@ def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=F
 
     Args:
         seq_table (str): path to a SeqTable instance with x_value
-        table_name (str): the table to use in SeqTable
+        table_name (str): the table to use in SeqTable, default 'table'
         fit_partial (int): if fit the first k sequences in the table. Fit all sequences if negative
         inverse_weight (bool): if weight the data by the inverse of their counts (sigma = counts + 0.5)
 
@@ -45,7 +45,9 @@ def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=F
 
 def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None,
-         stream=False, overwrite=False, **kwargs):
+         stream=False, overwrite=False):
+    """Main function
+    """
 
     from k_seq.estimator.least_square import BatchFitter
     from k_seq.model.kinetic import BYOModel
@@ -81,6 +83,7 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
 
 
 def parse_args():
+    """Parse arguments"""
     import argparse
 
     parser = argparse.ArgumentParser(description='Least-squares kinetic model fitting')
@@ -117,8 +120,9 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    if args['pkg_path'] not in sys.path:
-        sys.path.insert(0, args['pkg_path'])
+    pkg_path = args.pop('pkg_path', '')
+    if pkg_path not in sys.path:
+        sys.path.insert(0, pkg_path)
     from k_seq.utility.file_tools import to_json, check_dir
     check_dir(args['output_dir'])
     to_json(obj=args, path=f"{args['output_dir']}/config.json")
@@ -128,6 +132,7 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         filemode='w')
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    logging.info('Standard IO added')
     from k_seq.utility.log import Timer
     with Timer():
         sys.exit(main(**args))
