@@ -70,7 +70,8 @@ class DocHelper(object):
 
 
 def var_to_doc(doc_var):
-    """Convert a variable (dictionary or list/tuple)of args/attrs/methods documents to a string of documentation
+    """Deprecated.
+    Convert a variable (dictionary or list/tuple)of args/attrs/methods documents to a string of documentation
 
     Args:
         doc_var ('dict` or list-like): variable contains document info
@@ -101,6 +102,22 @@ def var_to_doc(doc_var):
         raise TypeError('Unknown docstring type doc_dict')
 
     return doc_string
+
+
+def update_none(arg, update_by):
+    """Update arguments with some default value
+    Args:
+        arg: variable object
+        update_by: variable object
+    """
+    if arg is None:
+        return update_by
+    else:
+        return arg
+
+
+def get_object_hex(obj):
+    return f"<{obj.__class__.__module__}{obj.__class__.__name__} at {hex(id(obj))}>"
 
 
 def param_to_dict(key_list, **kwargs):

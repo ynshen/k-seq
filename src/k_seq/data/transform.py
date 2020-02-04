@@ -162,7 +162,7 @@ class SpikeInNormalizer(Transformer):
 
 
 def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
-                       marker_list=None, color_list=None, err_guild_lines=None,
+                       marker_list=None, color_list=None, err_guild_lines=None, label_map=None,
                        legend_off=False, legend_col=2, ax=None, figsize=None, save_fig_to=None):
     """Plot the distribution of spike_in peak
     Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
@@ -175,6 +175,7 @@ def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, 
         log_y (`bool`): if set the y scale as log
         marker_list (list of `str`): overwrite default marker scheme if not `None`, same length and order as valid samples
         color_list (list of `str`): overwrite default color scheme if not `None`, same length and order as valid samples
+        label_map (dict or callable): alternative label for samples
         err_guild_lines (list of `float`): add a series of guild lines indicate the distribution only from given error rate,
           if not `None`
         legend_off (`bool`): do not show the legend if True
@@ -215,8 +216,13 @@ def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, 
     if norm_on_center:
         peak_counts = peak_counts / peak_counts.loc[0]
 
+    if label_map:
+        if callable(label_map):
+            label_map = {sample: label_map(sample) for sample in sample_list}
+    else:
+        label_map = {sample: sample for sample in sample_list}
     for sample, color, marker in zip(sample_list, color_list, marker_list):
-        ax.plot(dist_series, peak_counts[sample], marker, color=color, label=sample,
+        ax.plot(dist_series, peak_counts[sample], marker, color=color, label=label_map[sample],
                 ls='-', alpha=0.5, markeredgewidth=2)
     if log_y:
         ax.set_yscale('log')
