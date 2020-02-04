@@ -29,14 +29,10 @@ def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full
     if black_list is None:
         black_list = []
 
-    if isinstance(file_root, str):
-        if full_path is None:
-            full_path = False
+    if isinstance(file_root, (str, Path)):
         files = [file for file in Path(file_root).glob(pattern) if file.name not in black_list]
 
     elif isinstance(file_root, list):
-        if full_path is None:
-            full_path = True
         files = []
         for root_path in file_root:
             files += [file for file in Path(root_path).glob(pattern) if file.name not in black_list]

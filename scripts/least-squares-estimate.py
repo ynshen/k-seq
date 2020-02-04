@@ -75,6 +75,8 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
     batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num,
                      stream_to_disk=stream_to_disk, overwrite=overwrite)
 
+    return batch_fitter
+
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
     if stream:
         batch_fitter.save_model(output_dir=output_dir, results=True, bs_results=False, sep_files=True, tables=True)

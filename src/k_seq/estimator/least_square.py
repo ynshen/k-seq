@@ -421,11 +421,11 @@ class FitResults:
              pcov (pd.DataFrame): covariance matrix for estimated parameter
 
          uncertainty (AttrScope): a scope stores uncertainty estimation results, includes
-             summary (pd.Series): summary for record
+             summary (pd.DataFrame): summary of each parameter or metric from records
              records (pd.DataFrame): records for stored bootstrapping results
 
          convergence (AttrScope): a scope stores convergence test results, includes
-             summary (pd.Series): summary for records
+             summary (pd.DataFrame): summary for each parameter or metric from records
              records (pd.DataFrame): records for repeated fitting results
     """
 
@@ -456,17 +456,18 @@ class FitResults:
         flattened info:
         e.g. columns will include [param1, param2, param1_mean, param1_std, param1_2.5%, ..., param1_range]
         """
+        from ..utility.func_tools import dict_flatten
 
         res = self.point_estimation.params
         if self.uncertainty.summary is not None:
             # uncertainty estimation results exists
-            res = res.append(self.uncertainty.summary)
+            res = res.append(pd.Series(dict_flatten(self.uncertainty.summary.to_dict())))
 
         if self.convergence.summary is not None:
             # uncertainty estimation results exists
-            res = res.append(self.convergence.summary)
+            res = res.append(pd.Series(dict_flatten(self.convergence.summary.to_dict())))
 
-        if self.fitter.name is not None:
+        if self.fitter is not None:
             res.name = self.fitter.name
         return res
 
@@ -736,6 +737,20 @@ class Bootstrap:
         return summary, results
 
 
+def _read_seq_json(json_path):
+    """Read single fitting results from json file and return a summarized pd.Series"""
+    fit_res = FitResults.from_json(json_path)
+    return fit_res.to_series()
+
+
+def _read_work_fn(seq):
+    """Work function to read JSON results for each sequence"""
+
+    res = _read_seq_json(seq[1])
+    res.name = seq[0]
+    return res
+
+
 class BatchFitResults:
     """Parse, store, and visualize BatchFitter results
     Only save results (detached from each fitter), corresponding fitter should be found by sequence
@@ -771,6 +786,51 @@ class BatchFitResults:
             self.parse_saved_results()
 
         # TODO: add visualization here
+
+    @staticmethod
+    def generate_summary(result_folder_path, n_core=1, save_to=None):
+        """Generate a summary csv file from given result folder. This could be used if summary was not successfully
+        generated during fitting
+
+        Result folder should have a structure of:
+          - seqs
+            - [seq name or hash].json
+            - [if hash] seq_to_hash.json
+
+        Args:
+            result_folder_path (str): path to the root of `results` folder
+            n_core (int): number of threads to process in parallel. Default 1
+            save_to (str): save CSV file to local path
+
+        Returns:
+            pd.DataFrame of summary
+        """
+        from pathlib import Path
+        from ..utility.file_tools import get_file_list
+
+        if Path(result_folder_path).joinpath('seqs').exists():
+            seq_root = Path(result_folder_path).joinpath('seqs')
+        else:
+            seq_root = Path(result_folder_path)
+
+        file_list = get_file_list(str(seq_root), full_path=False)
+        if 'seq_to_hash.json' in file_list:
+            from k_seq.utility.file_tools import read_json
+            file_list = read_json(seq_root.joinpath('seq_to_hash.json'))
+            file_list = ((key, seq_root.joinpath(f'{hash_}.json')) for key, hash_ in file_list.items())
+        else:
+            file_list = ((seq, seq_root.joinpath(f'{seq}.json')) for seq in file_list)
+
+        if n_core > 1:
+            import multiprocessing as mp
+            pool = mp.Pool(n_core)
+            result = pool.map(_read_work_fn, file_list)
+        else:
+            result = [_read_work_fn(seq) for seq in file_list]
+        result = pd.DataFrame(result)
+        if save_to is not None:
+            result.to_csv(save_to)
+        return result
 
     def parse_saved_results(self):
         """Load/link data from `self.result_path`
@@ -1067,6 +1127,28 @@ class BatchFitter(EstimatorType):
         #                                   ])
         logging.info('BatchFitter created')
 
+    # def generate_summary(self, result_folder_path):
+    #     """Generate a summary csv file from given result folder. This could be used if summary was not successfully
+    #     generated during fitting
+
+        # Result folder should have a structure of:
+        #   - seqs
+        #     - [seq name or hash].json
+        #     - [if hash] seq_to_hash.json
+
+        # Args:
+        #     result_folder_path (str): path to the root of `results` folder
+
+        # Returns:
+        #     pd.DataFrame of summary
+        # """
+        # from pathlib import Path
+        # from ..utility.file_tools import get_file_list
+        # if Path(result_folder_path).append('seqs').exists():
+
+
+
+
     def worker_generator(self, stream_to_disk=None, overwrite=False):
         """Return a generator of worker for each sequence"""
 
@@ -1268,9 +1350,6 @@ class BatchFitter(EstimatorType):
             if isinstance(sigma, str):
                 sigma = read_pickle(sigma)
         return cls(y_data_batch=y_data_batch, sigma=sigma, result_path=result_path, **model_config)
-
-
-
 
 
 def load_estimation_results(count_table=None, table_name=None, input_samples=None,

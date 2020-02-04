@@ -65,7 +65,7 @@ mkdir -p $OUTPUT_DIR
 # --stream-results
 # --overwrite
 
-python /home/yshen/k-seq/scripts/estimate-least-squares.py \
+python /home/yshen/k-seq/scripts/least-squares-estimate.py \
     --pkg_path /home/yshen/k-seq/src/ \
     --seq_table $SAMPLE_DIR \
     --table_name $TABLE \
