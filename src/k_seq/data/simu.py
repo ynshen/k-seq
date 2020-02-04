@@ -356,6 +356,10 @@ def dna_amount_error(amount):
 def get_sample_table(seq_table, estimation):
     """Compose table for simulation by sampling from seq_table (for p0) and estimated results (for k, A)
     """
+    from ..estimator.least_square import load_estimation_results
+
+
+
 
     from .seq_table import SeqTable
     import pandas as pd
