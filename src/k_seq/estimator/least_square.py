@@ -478,6 +478,8 @@ class FitResults:
                                   pcov: jsonfy(pd.DataFrame) }
               uncertainty: { summary: jsonfy(pd.DataFrame)
                              records: jsonfy(pd.DataFrame) }
+              convergence: { summary: jsonfy(pd.DataFrame)
+                             records: jsonfy(pd.DataFrame) }
             }
         """
 
@@ -495,6 +497,10 @@ class FitResults:
             'uncertainty': {
                 'summary': jsonfy(self.uncertainty.summary),
                 'records': jsonfy(self.uncertainty.records)
+            },
+            'convergence': {
+                'summary': jsonfy(self.convergence.summary),
+                'records': jsonfy(self.convergence.records)
             }
         }
         if path is None:
@@ -525,6 +531,15 @@ class FitResults:
                 label = 'records'
             if json_data['uncertainty'][label] is not None:
                 results.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
+        if 'convergence' in json_data.keys():
+            if json_data['convergence']['summary'] is not None:
+                results.uncertainty.summary = pd.read_json(json_data['convergence']['summary'])
+            if 'record' in json_data['convergence'].keys():
+                label = 'record'
+            else:
+                label = 'records'
+            if json_data['convergence'][label] is not None:
+                results.uncertainty.records = pd.read_json(json_data['convergence'][label])
         return results
 
 
@@ -571,6 +586,7 @@ class ConvergenceTester:
             stats.append('range')
 
         def add_prefix(name):
+            """Prefix 'conv_' is added to convergence test results"""
             return 'conv_' + name
 
         return pd.Series(dict_flatten(report_data.loc[stats].to_dict()), name=self.fitter.name).rename(add_prefix)
@@ -1353,13 +1369,19 @@ class BatchFitter(EstimatorType):
 
 
 def load_estimation_results(count_table=None, table_name=None, input_samples=None,
-                            point_est_csv=None, seqtable_path=None, bootstrap_csv=None, convergence_csv=None,
+                            point_est_csv=None, seqtable=None, bootstrap_csv=None, convergence_csv=None,
                             **kwargs):
-    """Collect estimation results (summary.csv files)and compose a table
-    As
+    """Collect estimation results from multiple resources (e.g. summary.csv files) and compose a summary table
+    Sequences will be the union of indices in point estimate, bootstrap, and convergence test if avaiable
+
+    Resources:
+      - count_table/seq_table: input counts, mean counts
+      - point estimates: point estimation for parameters and metrics
+      - bootstrap: uncertainty estimation from bootstrap
+      - convergence test: convergence tests results
 
     Args:
-        seq_table (str): path to pickled `SeqTable` or `pd.DataFrame` object,
+        count_table (str): path to pickled `SeqTable` or `pd.DataFrame` object,
             will import 'input_counts'/, 'mean_counts'
         point_est_csv (str): optional, path to reported csv file from point estimation
         seqtable_path (str): optional. path to original seqTable object for count info
@@ -1396,6 +1418,9 @@ def load_estimation_results(count_table=None, table_name=None, input_samples=Non
         est_res[['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']] = bootstrap_res[
             ['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']]
         est_res['A_range'] = bootstrap_res['A_97.5%'] - bootstrap_res['A_2.5%']
+
+    if convergence_csv:
+        pass
 
     if kwargs:
         for key, func in kwargs.items():
