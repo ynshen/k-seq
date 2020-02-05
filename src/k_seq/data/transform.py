@@ -13,37 +13,33 @@ todo: method signature overriding - not a problem here but any better way to cod
 import numpy as np
 import pandas as pd
 from .seq_table import SeqTable
+from abc import ABC, abstractmethod
 
 
-class Transformer(object):
-    """Base class type for transformer
+class Transformer(ABC):
+    """Class type for transformer
 
     Necessary components for a Transformer
         - Attributes to store parameters
-        - A target table to apply transformation
         - A static `func` function to calculate transformation
-        - A `apply` function to wrap func
+        - A `apply` wrapper function
     """
 
-    def __init__(self, target=None, *args, **kwargs):
-        self.target = target
+    def __init__(self, *args, **kwargs):
         pass
 
     @staticmethod
-    def _func(target, *args, **kwargs):
-        """core function, input an `pd.Dataframe`, output an transformed `pd.Dataframe`. Should NOT be used alone"""
+    @abstractmethod
+    def func():
+        """core function, input `pd.Dataframe`, output an transformed `pd.Dataframe`"""
         raise NotImplementedError()
-
-    def apply(self, target=None, *args, **kwargs):
+    
+    @abstractmethod
+    def apply(self):
         """Run the transformation, with class attributes or arguments
         Logic and preprocessing of data and arguments should be done here
         """
-        if target is None:
-            target = self.target
-        if target is None:
-            raise ValueError('No valid target found')
-
-        return self._func(target=target)
+        raise NotImplementedError()
 
 
 class SpikeInNormalizer(Transformer):
@@ -126,7 +122,7 @@ class SpikeInNormalizer(Transformer):
             self.norm_factor = None
 
     @staticmethod
-    def _func(target, norm_factor, *args, **kwargs):
+    def func(target, norm_factor, *args, **kwargs):
 
         def sample_normalizer(sample):
             return sample * norm_factor[sample.name]
@@ -260,7 +256,7 @@ def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, 
 
 
 class DnaAmountNormalizer(Transformer):
-    """Normalize the DNA amount by total DNA amount in each sample
+    """Quantify the DNA amount by total DNA amount measured in each sample
     """
 
     def __init__(self, dna_amount, target=None, unit=None):
@@ -400,7 +396,7 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
         #             0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596]
 
     @staticmethod
-    def _func(target, q_factor):
+    def func(target, q_factor):
         total_counts = target.sum(axis=0)
         if isinstance(q_factor, pd.DataFrame):
             q_factor = q_factor.iloc[:, 0]

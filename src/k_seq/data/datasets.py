@@ -91,7 +91,7 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
         seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21)  # remove non-21 nt seq
 
-        # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
+        # filtered table by removing spike-in within 2 edit distance and seqs not with 21 nt
         byo_doped.table_filtered = seq_length_filter.get_filtered_table(
                 target=spike_in_filter.get_filtered_table()
         )
