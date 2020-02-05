@@ -1,10 +1,10 @@
-"""Default datasets used in k-seq project for chen labs
-Currently have:
+"""Pipeline for generating datasets for k-seq project
+Available datasets:
   - BYO Doped pool: byo-doped
   - BYO selected pool: byo-selected
 """
 
-import logging
+from ..utility.log import logging
 from .seq_table import SeqTable
 
 _byo_doped_description = """
