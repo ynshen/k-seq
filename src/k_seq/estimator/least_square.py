@@ -1146,9 +1146,6 @@ class BatchFitter(EstimatorType):
         # from ..utility.file_tools import get_file_list
         # if Path(result_folder_path).append('seqs').exists():
 
-
-
-
     def worker_generator(self, stream_to_disk=None, overwrite=False):
         """Return a generator of worker for each sequence"""
 

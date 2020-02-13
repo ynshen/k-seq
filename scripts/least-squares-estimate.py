@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import sys
-import logging
+from k_seq.utility.log import logging
 
 
 def kA(params):
@@ -44,7 +44,8 @@ def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=F
 
 
 def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, inverse_weight=False,
-         bootstrap_num=None, bs_record_num=None, bs_method='data', core_num=1, deduplicate=False, output_dir=None,
+         bootstrap_num=None, bs_record_num=None, bs_method='data', convergence_num=0,
+         core_num=1, deduplicate=False, output_dir=None,
          stream=False, overwrite=False):
     """Main function
     """
@@ -72,10 +73,10 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
     )
     stream_to_disk = f"{output_dir}/results" if stream else None
+    # TODO: add bootstrap, convergence_test control
     batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num,
-                     stream_to_disk=stream_to_disk, overwrite=overwrite)
-
-    return batch_fitter
+                     stream_to_disk=stream_to_disk, overwrite=overwrite,
+                     bootstrap=bootstrap_num > 0, convergence_test=convergence_num > 0)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
     if stream:
