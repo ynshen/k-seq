@@ -1,56 +1,88 @@
-import sys
+"""Utility function for control logging
+"""
+
 from time import time
-import logging
+import logging as lg
 
 
-class Logger:
-    """A simple logger to log data"""
+class UnknownError(Exception):
+    """Undefined error type
 
-    def __init__(self, log=None, silent=False):
-        import pandas as pd
-        if log is not None:
-            self.log = log
-        else:
-            self.log = pd.DataFrame(columns=['Timestamp', 'Message'])
-            self.log.set_index(['Timestamp'], inplace=True)
-        self._silent = silent
+    Attributes:
+        message -- explanation of the error
+    """
 
-    def __repr__(self):
-        return self.log
+    def __init__(self, message):
+        self.message = message
 
-    def add(self, message, show=False):
-        from datetime import datetime
-        self.log.loc[datetime.now()] = [message]
-        if (not self._silent) or show:
-            print(message)
 
-    def merge_from(self, logger_list):
-        if isinstance(logger_list, Logger):
-            logger_list = [logger_list]
-        for logger in logger_list:
-            self.log = self.log.append(logger.log)
-        self.log.sort_index(inplace=True)
+class logging:
+    """Collection of functions over `logging` module """
 
-    def to_json(self):
-        return self.log.to_json(orient='index')
+    default_formatter = lg.Formatter(fmt='%(asctime)s %(message)s',
+                                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    def to_tsv(self, file_path, sep='\t'):
-        self.log.to_csv(path_or_buf=file_path, sep=sep)
+    @staticmethod
+    def info(msg, silent=False):
+        """Wrapper over `logging.info`"""
+        if not silent:
+            lg.info(msg)
 
-    @classmethod
-    def from_json(cls, path_o_str, silent=False):
-        import pandas as pd
-        log = pd.read_json(path_o_str, orient='index')
-        cls(log=log, silent=silent)
+    @staticmethod
+    def warning(msg):
+        """Wrapper over `logging.warning`"""
+        lg.warning(msg)
+
+    @staticmethod
+    def error(msg, error_type=UnknownError, ignore_error=False):
+        """Wrapper over `logging.error` and raise an Error"""
+        lg.error(msg)
+        if not ignore_error:
+            raise error_type(msg)
+
+    @staticmethod
+    def debug(msg):
+        """Wrapper over `logging.debug`"""
+        lg.debug(msg)
+
+    @staticmethod
+    def check_handler_name(name, logger=None):
+        """Check if handler with name is attached to the logger (default root logger)"""
+        if logger is None:
+            logger = lg.getLogger()
+        return any([handler.get_name() == name for handler in logger.handlers])
+
+    @staticmethod
+    def add_console_handler(logger=None, name='console', formatter=default_formatter):
+        """Add console handler (write to stdout/stderr) to the logger (default root logger)"""
+        import sys
+
+        if logger is None:
+            logger = lg.getLogger()
+        if not logging.check_handler_name(name, logger=logger):
+            console_handler = lg.StreamHandler(sys.stdout)
+            console_handler.set_name(name)
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
+
+    @staticmethod
+    def add_file_handler(file_path, logger=None, name='logfile', formatter=default_formatter):
+        """Add file handler (write to log file) to the logger (default root logger)"""
+
+        if logger is None:
+            logger = lg.getLogger()
+        if not logging.check_handler_name(name, logger=logger):
+            file_handler = lg.FileHandler(file_path)
+            file_handler.set_name(name)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
 
 
 class Timer:
-    def __init__(self, message=None, save_to=None):
-        if message:
-            self.message = message
-        else:
-            self.message = 'It took {elapsed_time:.2f} {unit}.'
-        self.save_to = save_to
+    """Time the process within the scope"""
+
+    def __init__(self, message=None):
+        self.message = message if message else 'Time cost: {elapsed_time:.2f} {unit}.'
 
     def __enter__(self):
         self.start = time()
@@ -68,30 +100,4 @@ class Timer:
             elapsed_time /= 3600.0
         logging.info('-' * 50)
         logging.info(self.message.format(elapsed_time=elapsed_time, unit=unit))
-        if self.save_to is not None:
-            with open(self.save_to, 'w') as f:
-                f.write(self.message.format(elapsed_time=elapsed_time, unit=unit))
-
-
-class FileLogger(object):
-    """Log standard output to a file"""
-
-    def __init__(self, file_path):
-        if not '.log' in file_path:
-            self.stdout = file_path + '.log'
-        else:
-            self.stdout = file_path
-
-    def __enter__(self):
-        self.sys_stdout = sys.stdout
-        self.sys_stderr = sys.stderr
-
-        sys.stdout = open(self.stdout, 'w')
-        sys.stderr = sys.stdout
-
-    def __exit__(self, type, value, traceback):
-        sys.stdout.close()
-        sys.stdout = self.sys_stdout
-        sys.stderr = self.sys_stderr
-
 

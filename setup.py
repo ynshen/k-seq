@@ -19,7 +19,6 @@ setup(
         'scipy',
         'seaborn',
         'jupyter',
-	'jsonlib-python3',
     ],
     zip_safe=False
 )

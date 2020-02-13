@@ -29,14 +29,10 @@ def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full
     if black_list is None:
         black_list = []
 
-    if isinstance(file_root, str):
-        if full_path is None:
-            full_path = False
+    if isinstance(file_root, (str, Path)):
         files = [file for file in Path(file_root).glob(pattern) if file.name not in black_list]
 
     elif isinstance(file_root, list):
-        if full_path is None:
-            full_path = True
         files = []
         for root_path in file_root:
             files += [file for file in Path(root_path).glob(pattern) if file.name not in black_list]
@@ -201,6 +197,7 @@ def read_pickle(path):
 
 
 def dump_pickle(obj, path):
+    """Save object as picked file"""
     import pickle
 
     with open(path, 'wb') as handle:
@@ -208,13 +205,14 @@ def dump_pickle(obj, path):
 
 
 def read_json(path):
+    """Read json file"""
     import json
 
     with open(path, 'r') as handle:
         return json.load(handle)
 
 
-def to_json(obj, path=None, indent=4):
+def to_json(obj, path=None, indent=2):
     """Convert object to a JSON file or JSON string"""
     import json
 
@@ -233,3 +231,35 @@ def check_dir(path):
     else:
         Path(path).mkdir(parents=True)
         return False
+
+
+def table_object_to_dataframe(obj, table_name=None):
+    """Convert object (`file path`, `SeqTable`) to `pd.DataFrame`
+    """
+    from pathlib import Path, PosixPath
+    import pandas as pd
+    from ..data.seq_table import SeqTable
+
+    if isinstance(obj, (str, Path, PosixPath)):
+        if Path(obj).is_file():
+            try:
+                obj = read_pickle(obj)
+            except:
+                raise TypeError(f'{obj} is not pickled object')
+        else:
+            raise FileNotFoundError(f'{obj} is not a valid file')
+    if isinstance(obj, pd.DataFrame):
+        return obj
+    elif isinstance(obj, SeqTable):
+        if table_name is None:
+            try:
+                return obj.table
+            except AttributeError:
+                raise AttributeError('Please indicate the table name')
+        else:
+            try:
+                return getattr(obj, table_name)
+            except AttributeError:
+                raise AttributeError(f'{table_name} is not found in the SeqTable object')
+    else:
+        raise TypeError('Table should be a `pd.DataFrame` or `SeqTable`')
