@@ -1,11 +1,19 @@
-"""A simple landscape module to define sequence peaks on edit distance"""
+"""A simple landscape module related to sequence space"""
+
 import pandas as pd
 import numpy as np
 
 
 class Peak(object):
-    """Object to store a peak in a sequence space
-     Peak is defined by Edit (Levenshtein) distance, including insertions and deletions
+    """A sequence peak defined on sequence space with edit (Levenshtein) or hamming distance
+    - edit (Levenshtein) distance: including including insertions and deletions
+    - hamming distance: only consider mutations
+
+    Attributes:
+
+
+    Methods:
+
     """
 
     def __init__(self, target, center_seq, name=None, radius=None, use_hamming_dist=False):

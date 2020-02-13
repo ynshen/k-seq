@@ -23,9 +23,10 @@ class logging:
                                      datefmt='%m/%d/%Y %I:%M:%S %p')
 
     @staticmethod
-    def info(msg):
+    def info(msg, silent=False):
         """Wrapper over `logging.info`"""
-        lg.info(msg)
+        if not silent:
+            lg.info(msg)
 
     @staticmethod
     def warning(msg):

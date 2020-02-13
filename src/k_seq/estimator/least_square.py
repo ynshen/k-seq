@@ -11,7 +11,7 @@ Several functions are included:
 """
 
 from ..estimator import EstimatorType
-from ..utility.func_tools import DocHelper
+from ..utility.doc_helper import DocHelper
 from ..utility.file_tools import read_json, to_json, check_dir
 import logging
 import pandas as pd

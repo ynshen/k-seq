@@ -1,7 +1,7 @@
 """A collection of commonly used kinetic models used in the project
 """
 import numpy as np
-from ..utility.func_tools import DocHelper
+from ..utility.doc_helper import DocHelper
 
 doc_helper = DocHelper(
     c=('float or 1-D list-like', 'Concentration of substrates, return input pool if negative'),
