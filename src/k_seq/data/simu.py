@@ -3,11 +3,8 @@ import numpy as np
 
 
 class DistGenerators:
-    """A collection of random value generators from preset distributions
-
-    Behavior:
-        each distribution will return a generator if `return_gen` argument is True,
-            else return a function take size value and return a generator
+    """A collection of random value generators from commonly used distributions.
+    `size` number of independent draw of distribution are returned
 
     Available distributions:
         lognormal
@@ -359,6 +356,10 @@ def dna_amount_error(amount):
 def get_sample_table(seq_table, estimation):
     """Compose table for simulation by sampling from seq_table (for p0) and estimated results (for k, A)
     """
+    from ..estimator.least_square import load_estimation_results
+
+
+
 
     from .seq_table import SeqTable
     import pandas as pd
@@ -387,7 +388,7 @@ def get_sample_table(seq_table, estimation):
     return estimation[['k', 'A', 'p0', 'ka']]
 
 
-def simulate_from_sample(sample_table, seq_num, depth=40, dna_amount_error=None, save_to=None):
+def simulate_from_sample(sample_table, seq_num, depth=40, dna_amount_error=None, plot_dist=False, save_to=None):
 
     c_list = [-1] + list(np.repeat(
         np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
@@ -415,9 +416,11 @@ def simulate_from_sample(sample_table, seq_num, depth=40, dna_amount_error=None,
     init_pools = Y.loc[:, x.loc['c'] < 0]
     truth['p0_from_counts'] = (init_pools / init_pools.sum(axis=0)).sum(axis=1)
     truth['ka'] = truth.k * truth.A
-    from ..utility.plot_tools import pairplot
-    pairplot(data=truth, vars_name=['p0', 'A', 'k', 'ka'],
-             vars_log=[True, False, True, True], diag_kind='kde')
+
+    if plot_dist:
+        from ..utility.plot_tools import pairplot
+        pairplot(data=truth, vars_name=['p0', 'A', 'k', 'ka'],
+                 vars_log=[True, False, True, True], diag_kind='kde')
 
     return x, Y, dna_amount, truth, seq_table
 

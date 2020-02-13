@@ -18,7 +18,6 @@ setup(
         'python-levenshtein',
         'scipy',
         'seaborn',
-        'jupyter',
     ],
     zip_safe=False
 )
