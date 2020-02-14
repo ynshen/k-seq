@@ -137,7 +137,7 @@ class BYOModel:
         
         Return:
             Reacted fraction for each sequence in each sample
-            float, 1-D or 2-D np.ndarray with shape (seq_num, sample_num)
+            float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
         """.format(doc_helper.get(BYOModel.reacted_frac))
 
         return first_order(c=c, k=k, A=A, alpha=0.479, t=90)
@@ -151,7 +151,7 @@ class BYOModel:
         
         Return:
             Absolute abount of each sequence in each sample
-            float, 1-D or 2-D np.ndarray with shape (seq_num, sample_num)
+            float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
 
         """.format(doc_helper.get(BYOModel.amount_first_order))
         reacted_frac = BYOModel.reacted_frac(c=c, k=k, A=A)
@@ -171,7 +171,7 @@ class BYOModel:
 
         Return:
             Pool composition for sequences in each sample
-            float, 1-D or 2-D np.ndarray with shape (seq_num, sample_num)
+            float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
         """.format(BYOModel.composition_first_order)
 
         amounts = BYOModel.amount_first_order(c=c, p0=p0, k=k, A=A)

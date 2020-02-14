@@ -3,7 +3,7 @@
 
 
 class DocHelper(object):
-    """Control docstring for arguments/varaibles/methods/more with same names at one place
+    """Control docstring for arguments/variables/methods/more with same names at one place
 
     Attributes:
         var_lib (pd.DataFrame): contains all documented variables, include columns of name (index), dtype, doc
@@ -25,7 +25,7 @@ class DocHelper(object):
         import pandas as pd
         self.var_lib = pd.DataFrame(columns=('name', 'dtype', 'docstring')).set_index('name')
         if kwargs != {}:
-            self._add(self.var_lib, **kwargs)
+            self.add(**kwargs)
 
     def add(self, **kwargs):
         """Add kwarg arguments to the doc helper var_lib"""
@@ -60,6 +60,8 @@ class DocHelper(object):
         if callable(var_names):
             var_names = get_func_params(func=var_names, exclude_x=False)
             var_names = [name for name in var_names if name != 'self']
+        elif isinstance(var_names, str):
+            var_names = [var_names]
         else:
             var_names = list(var_names)
         indent = ' ' * indent

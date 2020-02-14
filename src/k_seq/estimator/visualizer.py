@@ -279,7 +279,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #
 #
 #
-# def fitting_check(k, A, xTrue, y, size=100, average=True):
+# def fitting_check(k, A, xTrue, y, uniq_seq_num=100, average=True):
 #     np.random.seed(23)
 #
 #     fittingRes = {
@@ -303,7 +303,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #         y_ = np.reshape(y, y.shape[0] * y.shape[1])
 #         x_ = np.reshape(xTrue, xTrue.shape[0] * xTrue.shape[1])
 #
-#     for epochs in range(size):
+#     for epochs in range(uniq_seq_num):
 #         # initGuess= (np.random.random(), np.random.random()*k*100)
 #         initGuess = (np.random.random(), np.random.random())
 #
