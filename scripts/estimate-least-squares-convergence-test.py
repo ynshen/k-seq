@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import sys
-import logging
+from k_seq.utility.log import logging
 import pandas as pd
 import numpy as np
 
@@ -21,7 +21,7 @@ def get_args():
     parser.add_argument('--include_1250', default=False, action='store_true', dest='include_1250',
                         help='If include 1250 nM concentration, maximal 250 uM BYO concentration is used without this'
                              'flag, and there are 4 replicates for each concentration to balance number of data points')
-    parser.add_argument('--seq_num', dest='seq_num', type=int, default=int(1e4),
+    parser.add_argument('--uniq_seq_num', dest='uniq_seq_num', type=int, default=int(1e4),
                         help='Number of random sequences ')
     parser.add_argument('--reps', dest='reps', type=int, default=20,
                         help='Number of repeated fitting performed for convergence test')

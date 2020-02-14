@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
-"""This script contains the code to generate the simulated count data from real data
+"""Pipeline to simulated count data for TODO: fill in paper
 """
 
-import logging
+from k_seq.utility.log import logging
 from k_seq.data import simu
 
 def parse_args():

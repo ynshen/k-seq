@@ -13,12 +13,12 @@ cd $SLURM_SUBMIT_DIR
 # --include_1250
 # --pkg_path
 # --output_dir
-# --seq_num
+# --uniq_seq_num
 # --reps
 # --cores
 ###############################################################################################################
 python /home/yshen/k-seq/scripts/estimate-least-squares-convergence-test.py \
     --pkg_path /home/yshen/k-seq/src/ \
     --output_dir /home/yshen/k-seq/results/convergence_test/no_1250 \
-    --seq_num 10000 \
+    --uniq_seq_num 10000 \
     --cores 20
