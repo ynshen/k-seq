@@ -15,7 +15,7 @@ def work_fn(seq):
 def main():
     timeInit = time.time()
     seqToFit = util.load_pickle('/mnt/storage/projects/ribozyme_predict/k_seq/seqToFit.pkl')
-    # seqToFit = np.random.choice(seqToFit, size=10, replace=False)
+    # seqToFit = np.random.choice(seqToFit, uniq_seq_num=10, replace=False)
     pool = mp.Pool(processes=6)
     seqToFit = pool.map(work_fn, seqToFit)
     util.dump_pickle(data=seqToFit,

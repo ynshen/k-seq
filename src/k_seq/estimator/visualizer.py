@@ -1,5 +1,5 @@
 def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-    from .least_square import SingleFitting, BatchFitting
+    from .least_square import BatchFitter, SingleFitter
     from ..data.seq_table import SeqTable
 
     def extract_info_from_SingleFitting(single_res):
@@ -22,7 +22,7 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
         num_bootstrap_records = None
     if isinstance(fitting_res, SeqTable):
         fitting_res = fitting_res.fitting
-    if isinstance(fitting_res, BatchFitting):
+    if isinstance(fitting_res, BatchFitter):
         if seq_ix is None:
             raise Exception('Please provide the names of sequences to plot')
         else:
@@ -36,7 +36,7 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
                 name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
                 for name, seq_ix in zip(seq_name, seq_ix)
             }
-    elif isinstance(fitting_res, SingleFitting):
+    elif isinstance(fitting_res, SingleFitter):
         if seq_name is None:
             seq_name = fitting_res.name
         if model is None:
@@ -279,7 +279,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #
 #
 #
-# def fitting_check(k, A, xTrue, y, size=100, average=True):
+# def fitting_check(k, A, xTrue, y, uniq_seq_num=100, average=True):
 #     np.random.seed(23)
 #
 #     fittingRes = {
@@ -303,7 +303,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #         y_ = np.reshape(y, y.shape[0] * y.shape[1])
 #         x_ = np.reshape(xTrue, xTrue.shape[0] * xTrue.shape[1])
 #
-#     for epochs in range(size):
+#     for epochs in range(uniq_seq_num):
 #         # initGuess= (np.random.random(), np.random.random()*k*100)
 #         initGuess = (np.random.random(), np.random.random())
 #

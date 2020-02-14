@@ -1,74 +1,3 @@
-
-class DocHelper(object):
-    """Helper for docstring controls in a module
-
-    Attributes:
-        var_lib (pd.DataFrame): contains all documented variables, include columns of name (index), dtype, doc
-
-    Methods:
-
-        add: add keyword arguments to the doc_helper
-
-        get: generate a formatted docstring
-
-    """
-
-    def __init__(self, **kwargs):
-        """Add arguments in initialization by keyword arguments
-        Accept two values for kwargs:
-            - str: the documentation string
-            - tuple of (str, str): (variable type, docstring)
-
-        Examples:
-            doc_strings = DocHelper(x='the first integer', y=('int', 'the second value'))
-        """
-        import pandas as pd
-        self.var_lib = pd.DataFrame(columns=('name', 'dtype', 'docstring')).set_index('name')
-        if kwargs != {}:
-            self._add(self.var_lib, **kwargs)
-
-    @staticmethod
-    def _add(lib, **kwargs):
-        for key, doc in kwargs.items():
-            if isinstance(doc, str):
-                lib.loc[key, 'docstring'] = doc
-            elif isinstance(doc, (list, tuple)):
-                lib.loc[key, 'dtype'] = doc[0]
-                lib.loc[key, 'docstring'] = doc[1]
-
-    def add(self, **kwargs):
-        """Add kwarg arguments to the doc helper var_lib"""
-        self._add(self.var_lib, **kwargs)
-
-    @staticmethod
-    def _record_to_string(variable):
-        if variable.isna()['dtype']:
-            return f"{variable.name}: {'' if variable.isna()['docstring'] else variable['docstring']}\n"
-        else:
-            return f"{variable.name} ({variable['dtype']}): {variable['docstring']}\n"
-
-    def get(self, var_names, indent=4, sep=''):
-        """Generate a formatted docstring
-
-        Args:
-
-            var_names (list, tuple, callable): a list or tuple of variable names to retrieve, if the variable name does
-                not exist in record, a line with null info will be created
-
-            indent (int): indent for the docstring lines. Default 4
-
-            sep (str): separation symbols between docstring lines (in addition of a natural line break). Default `\n`
-        """
-        if callable(var_names):
-            var_names = get_func_params(func=var_names, exclude_x=False)
-            var_names = [name for name in var_names if name != 'self']
-        else:
-            var_names = list(var_names)
-        indent = ' ' * indent
-        doc = list(self.var_lib.reindex(var_names).apply(self._record_to_string, axis=1))
-        return indent + (sep + indent).join(doc)
-
-
 def var_to_doc(doc_var):
     """Deprecated.
     Convert a variable (dictionary or list/tuple)of args/attrs/methods documents to a string of documentation
@@ -181,7 +110,7 @@ def get_func_params(func, exclude_x=True):
     Returns: a tuple of arguments name in order
 
     """
-    from inspect import signature, isfunction, isclass
+    from inspect import signature
 
     if callable(func):
         arg_tuple = tuple(signature(func).parameters.keys())
@@ -225,11 +154,8 @@ class AttrScope(object):
         """Create a name scope for a group of attributes
 
         Args:
-
             attr_dict (dict): a dictionary with values to pass
-
             keys (list of str): a list of attributes to initialize with None
-
             attr_kwargs: or directly pass some keyword arguments
         """
         if keys is not None:
@@ -242,7 +168,7 @@ class AttrScope(object):
         self.__dict__.update({**attr_dict, **attr_kwargs})
 
     def __getitem__(self, item):
-        return self.__getattribute__(item)
+        return getattr(self, item)
 
     def add(self, attr_dict=None, **kwargs):
         if attr_dict is None:

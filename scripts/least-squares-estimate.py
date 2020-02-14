@@ -22,6 +22,7 @@ def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=F
         x_data (list): list of x values (BYO concentration), same order as samples in work_table
         sigma (pd.DataFrame): sigma same as counts + 0.5 or None if not weighted
     """
+
     from k_seq.utility.file_tools import read_pickle
 
     # input is seq_table

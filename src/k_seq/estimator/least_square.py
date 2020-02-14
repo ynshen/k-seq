@@ -11,7 +11,7 @@ Several functions are included:
 """
 
 from ..estimator import EstimatorType
-from ..utility.func_tools import DocHelper
+from ..utility.doc_helper import DocHelper
 from ..utility.file_tools import read_json, to_json, check_dir
 import logging
 import pandas as pd
@@ -23,7 +23,7 @@ doc_helper = DocHelper(
     model=('callable', 'model to fit'),
     parameters=('list', 'Optional. List of parameter names, extracted from model if None'),
     name=('str', "Optional. Fitter's name"),
-    sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same size as y_data/y_data_batch.'
+    sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same uniq_seq_num as y_data/y_data_batch.'
                                                'Sigma (variance) for data points for weighted fitting'),
     bounds=('2 by m `list` ', 'Optional, [[lower bounds], [higher bounds]] for each parameter'),
     opt_method=('`str`', "Optimization methods in `scipy.optimize`. Default 'trf'"),

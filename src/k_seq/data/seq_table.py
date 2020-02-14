@@ -1,4 +1,4 @@
-"""This module contains methods for data pre-processing from count files to ``CountFile`` for estimator
+"""Submodule of `SeqTable`, a rich functions class of table for sequencing manipulation This module contains methods for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
   - add directly from count file
@@ -8,7 +8,7 @@ TODO:
 """
 
 from ..utility.func_tools import AttrScope
-import logging
+from ..utility.log import logging
 
 
 class Metadata(AttrScope):
@@ -22,42 +22,11 @@ class Metadata(AttrScope):
     """
 
     def __init__(self, attr_dict):
+
         self.dataset = None
-        self.logger = None
         self.samples = None
         self.sequences = None
         super().__init__(attr_dict)
-
-
-def slice_table(table, axis, keys=None, filter_fn=None, remove_zero=False):
-    """Utility function to slice pd.DataFrame table with a list of key values or filter functions along given axis
-    Optional to remove all zero entries
-    Args:
-        table (pd.DataFrame): target table to slice
-        keys (list-like): list of keys to preserve
-        axis (0 or 1)
-        remove_zero (bool): if remove all zero items in the other axis
-    TODO: refactor slice function, collect other similar functions and move here
-    """
-
-    if keys is None:
-        logging.error('`keys` or `mask` must be provided')
-        raise ValueError('`keys` or `mask` must be provided')
-
-    if axis == 0:
-        if keys is not None:
-            sub_table = table.loc[keys]
-        if remove_zero:
-            return sub_table.loc[:, (sub_table != 0).any(axis=0)]
-        else:
-            return sub_table
-    else:
-        if keys is not None:
-            sub_table = table[keys]
-        if remove_zero:
-            return sub_table.loc[(sub_table != 0).any(axis=1)]
-        else:
-            return sub_table
 
 
 class SeqTable(object):
@@ -66,6 +35,7 @@ class SeqTable(object):
     Methods:
 
     Attributes:
+        table_original (pd.DataFrame): default original table when initialize a `SeqTable` instance
 
 
     Plugins:
@@ -73,6 +43,7 @@ class SeqTable(object):
 
     # def __repr__(self):
     #     # todo: update to include key information for the seq table
+    #     #      include list of tables, number of samples, number of sequences
     #     pass
 
     def __init__(self, data_mtx, data_unit='count',
@@ -209,6 +180,8 @@ class SeqTable(object):
     #     """Deprecated due to poor slicing performance on larget table"""
     #     return self._raw_table.loc[self.seq_list][self.sample_list]
 
+
+
     @property
     def sample_list(self):
         return self._sample_list
@@ -235,65 +208,6 @@ class SeqTable(object):
         else:
             self._seq_list = seq_list
 
-    @classmethod
-    def from_count_files(cls,
-                         file_root, file_list=None, pattern_filter=None, black_list=None, name_pattern=None, sort_by=None,
-                         x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
-                         silent=True, dry_run=False, **kwargs):
-        """todo: implement the method to generate directly from count files"""
-        from ..utility.file_tools import get_file_list, extract_metadata
-        import numpy as np
-        import pandas as pd
-
-        # parse file metadata
-        file_list = get_file_list(file_root=file_root, file_list=file_list,
-                                  pattern=pattern_filter, black_list=black_list, full_path=True)
-        if name_pattern is None:
-            samples = {file.name: {'file_path': str(file), 'name':file.name} for file in file_list}
-        else:
-            samples = {}
-            for file in file_list:
-                f_meta = extract_metadata(target=file.name, pattern=name_pattern)
-                samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
-        if sample_metadata is not None:
-            for file_name, f_meta in sample_metadata.items():
-                samples[file_name].udpate(f_meta)
-
-        # sort file order if applicable
-        sample_names = list(samples.keys())
-        if sort_by is not None:
-            if isinstance(sort_by, str):
-                def sort_fn(sample_name):
-                    return samples[sample_name].get(sort_by, np.nan)
-            elif callable(sort_by):
-                sort_fn = sort_by
-            else:
-                raise TypeError('Unknown sort_by format')
-            sample_names = sorted(sample_names, key=sort_fn)
-
-        if dry_run:
-            return pd.DataFrame(samples)[sample_names].transpose()
-
-        from ..data.count_file import read_count_file
-        data_mtx = {sample: read_count_file(file_path=samples[sample]['file_path'], as_dict=True)[2]
-                    for sample in sample_names}
-        data_mtx = pd.DataFrame.from_dict(data_mtx).fillna(0, inplace=False).astype(pd.SparseDtype(dtype='int'))
-        if input_sample_name is not None:
-            grouper = {'input': [name for name in sample_names if name in input_sample_name],
-                       'reacted': [name for name in sample_names if name not in input_sample_name]}
-        else:
-            grouper = None
-
-        seq_table = cls(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
-                        x_values=x_values, x_unit=x_unit, note=note, silent=silent)
-
-        if 'spike_in_seq' in kwargs.keys():
-            seq_table.add_spike_in(**kwargs)
-
-        if 'dna_amount' in kwargs.keys():
-            seq_table.add_total_dna_amount(**kwargs)
-
-        return seq_table
 
     def add_spike_in(self, spike_in_seq, spike_in_amount, radius=2, dna_unit=None, black_list=None, **kwargs):
         """Add spike in """
@@ -379,22 +293,6 @@ class SeqTable(object):
         else:
             target = target
         pass
-
-    @classmethod
-    def load_dataset(cls, dataset, from_count_file=False, **kwargs):
-        """Load default dataset
-        Available dataset:
-          - BYO-doped: 'byo-doped'
-          - BYO-selected: 'byo-selected'
-          - BFO: not implemented
-        """
-        from .datasets import load_byo_doped, load_byo_selected
-        if dataset.lower() in ['byo_doped', 'byo-doped', 'doped']:
-            return load_byo_doped(from_count_file=from_count_file, **kwargs)
-        elif dataset.lower() in ['byo_selected', 'byo-selected']:
-            return load_byo_selected(from_count_file=from_count_file, **kwargs)
-        else:
-            raise NotImplementedError(f'Dataset {dataset} is not implemented')
 
 
     #     def add_norm_table(self, norm_fn, table_name, axis=0):
@@ -627,3 +525,94 @@ class SeqTable(object):
             return pickle.load(handle)
 
 
+
+@classmethod
+def from_count_files(cls,
+                     file_root, file_list=None, pattern_filter=None, black_list=None, name_pattern=None, sort_by=None,
+                     x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
+                     silent=True, dry_run=False, **kwargs):
+    """todo: implement the method to generate directly from count files"""
+    from ..utility.file_tools import get_file_list, extract_metadata
+    import numpy as np
+    import pandas as pd
+
+    # parse file metadata
+    file_list = get_file_list(file_root=file_root, file_list=file_list,
+                              pattern=pattern_filter, black_list=black_list, full_path=True)
+    if name_pattern is None:
+        samples = {file.name: {'file_path': str(file), 'name':file.name} for file in file_list}
+    else:
+        samples = {}
+        for file in file_list:
+            f_meta = extract_metadata(target=file.name, pattern=name_pattern)
+            samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
+    if sample_metadata is not None:
+        for file_name, f_meta in sample_metadata.items():
+            samples[file_name].udpate(f_meta)
+
+    # sort file order if applicable
+    sample_names = list(samples.keys())
+    if sort_by is not None:
+        if isinstance(sort_by, str):
+            def sort_fn(sample_name):
+                return samples[sample_name].get(sort_by, np.nan)
+        elif callable(sort_by):
+            sort_fn = sort_by
+        else:
+            raise TypeError('Unknown sort_by format')
+        sample_names = sorted(sample_names, key=sort_fn)
+
+    if dry_run:
+        return pd.DataFrame(samples)[sample_names].transpose()
+
+    from ..data.count_file import read_count_file
+    data_mtx = {sample: read_count_file(file_path=samples[sample]['file_path'], as_dict=True)[2]
+                for sample in sample_names}
+    data_mtx = pd.DataFrame.from_dict(data_mtx).fillna(0, inplace=False).astype(pd.SparseDtype(dtype='int'))
+    if input_sample_name is not None:
+        grouper = {'input': [name for name in sample_names if name in input_sample_name],
+                   'reacted': [name for name in sample_names if name not in input_sample_name]}
+    else:
+        grouper = None
+
+    seq_table = cls(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
+                    x_values=x_values, x_unit=x_unit, note=note, silent=silent)
+
+    if 'spike_in_seq' in kwargs.keys():
+        seq_table.add_spike_in(**kwargs)
+
+    if 'dna_amount' in kwargs.keys():
+        seq_table.add_total_dna_amount(**kwargs)
+
+    return seq_table
+
+
+def slice_table(table, axis, keys=None, filter_fn=None, remove_zero=False):
+    """Utility function to slice pd.DataFrame table with a list of key values or filter functions along given axis
+    Optional to remove all zero entries
+    Args:
+        table (pd.DataFrame): target table to slice
+        keys (list-like): list of keys to preserve
+        axis (0 or 1)
+        remove_zero (bool): if remove all zero items in the other axis
+    TODO: refactor slice function, collect other similar functions and move here
+    """
+
+    if keys is None:
+        logging.error('`keys` or `mask` must be provided')
+        raise ValueError('`keys` or `mask` must be provided')
+
+    if axis == 0:
+        if keys is not None:
+            sub_table = table.loc[keys]
+        if remove_zero:
+            return sub_table.loc[:, (sub_table != 0).any(axis=0)]
+        else:
+            return sub_table
+    else:
+        if keys is not None:
+            sub_table = table[keys]
+        if remove_zero:
+            return sub_table.loc[(sub_table != 0).any(axis=1)]
+        else:
+            return sub_table

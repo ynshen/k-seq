@@ -129,7 +129,7 @@ class PoolModel(ModelBase):
 #         """A pool model integrate kinetic model and count model
 #         if x, y are given, it is saved as data
 #           x: x values for each 1-dim of y value
-#           y: count value with shape (sample_num, seq_num)
+#           y: count value with shape (sample_num, uniq_seq_num)
 #         if p0, k_params, c_params are given, they are used for simulation
 #
 #         Args:
@@ -173,7 +173,7 @@ class PoolModel(ModelBase):
 #     def X(self, value):
 #         raise AttributeError('X is the number of trials, can be only inferred from y')
 #
-#     def predict(self, N=None, p=None, size=1, seed=None):
+#     def predict(self, N=None, p=None, uniq_seq_num=1, seed=None):
 #         """Method as prediction model, single observation"""
 #         import numpy as np
 #
@@ -182,10 +182,10 @@ class PoolModel(ModelBase):
 #
 #         N = N if N is not None else self.N
 #         p = p if p is not None else self.p
-#         if size == 1:
+#         if uniq_seq_num == 1:
 #             return self.func(p=p, N=N)
 #         else:
-#             return np.array([self.func(p=p, N=N) for _ in range(size)])
+#             return np.array([self.func(p=p, N=N) for _ in range(uniq_seq_num)])
 #
 #     @staticmethod
 #     def func(p, N):
