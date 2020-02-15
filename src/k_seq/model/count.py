@@ -1,4 +1,9 @@
-"""Module model the counts"""
+"""Module model the counts
+
+Notes:
+    kinetic models were currently implemented as callable function. It might migrate to `Model` subclass for
+      storing parameters, set required parameters, etc
+"""
 
 import numpy as np
 import pandas as pd

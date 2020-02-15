@@ -86,7 +86,6 @@ def test_sample_from_dataframe():
 
 
 
-
 # TODO: simulate_counts returns x, Y, parameters, and a SeqTable
 
 def test_simulate_counts_return_correct():
