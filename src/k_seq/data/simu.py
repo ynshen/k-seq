@@ -1,6 +1,6 @@
 """Module contains code to simulate data"""
-
 from ..utility.log import logging
+from ..utility.doc_helper import DocHelper
 import numpy as np
 import pandas as pd
 
@@ -95,7 +95,6 @@ class DistGenerators:
         return q / np.sum(q)
 
 
-from ..utility.doc_helper import DocHelper
 simu_args = DocHelper(
     uniq_seq_num=('int', 'Number of unqiue sequences from simulation'),
     p0=('list-like, generator, or callable', 'reserved argument for initial pool composition (fraction)'),
@@ -277,7 +276,7 @@ def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
                                                                     uniq_seq_num=uniq_seq_num)['p0']
     if param_generator != {}:
         temp_table = PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=uniq_seq_num,
-                                                            **param_generator)
+                                                             **param_generator)
         col_name = temp_table.index[~temp_table.index.isin(param_table.index)]
         param_table[col_name] = temp_table[col_name]
 
