@@ -65,10 +65,9 @@ def test_sample_from_iid_dist_takes_callable_for_generator():
 
     size = 3
     callable_gen = fake_callable_return_generator_no_size
-    with raises(TypeError):
-        case = simu.PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=size, p0=callable_gen, param1=callable_gen)
-        check_returns_correct_df(case, size=size)
-        assert case.shape[1] == 2
+    case = simu.PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=size, p0=callable_gen, param1=callable_gen)
+    check_returns_correct_df(case, size=size)
+    assert case.shape[1] == 2
 
 
 def test_sample_from_dataframe_returns_df():
@@ -84,6 +83,9 @@ def test_sample_from_dataframe():
     weights = [0.3, 0.1, 0.9, 0.1, 0.3]
     check_returns_correct_df(simu.PoolParamGenerator.sample_from_dataframe(df=df, uniq_seq_num=size, weights=weights),
                              size=size)
+
+
+
 
 # TODO: simulate_counts returns x, Y, parameters, and a SeqTable
 

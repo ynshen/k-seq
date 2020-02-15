@@ -183,7 +183,7 @@ class PoolParamGenerator:
                     # if can not pass uniq_seq_num, assume generate single samples
                     param_output = param_input()
                     if isinstance(param_output, GeneratorType):
-                        return [next(param_input) for _ in range(uniq_seq_num)]
+                        return [next(param_output) for _ in range(uniq_seq_num)]
                     elif isinstance(param_output, (float, int)):
                         return [param_input() for _ in range(uniq_seq_num)]
                     else:

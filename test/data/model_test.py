@@ -2,11 +2,9 @@ from yuning_util.dev_mode import DevMode
 dev_mode = DevMode('k-seq')
 dev_mode.on()
 
-from k_seq.model import kinetic
+from k_seq.model import kinetic, count
 
-from pytest import approx, raises
 import numpy as np
-import pandas as pd
 
 # TODO: PoolModel can combine kinetic model and count model
 
@@ -43,4 +41,10 @@ def test_byo_reacted_frac_can_disable_broadcast():
     results = kinetic.BYOModel.reacted_frac(c=c, k=k, A=A, broadcast=False)
     np.testing.assert_array_almost_equal(results, np.array([[1, 0.051085207],
                                                             [1, 0.096951017]]))
+
+
+def test_multinomial_correct_return():
+    N = 50
+    p = (0.1, 0.5, 0.3, 0.1)
+    assert count.multinomial(N=N, p=p).sum() == 50
 
