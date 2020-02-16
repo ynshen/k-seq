@@ -68,12 +68,12 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
 
         # parse dna amount file, original data is 1/total_dna
         dna_amount = pd.read_table(BYO_DOPED_NORM_FILE, header=None).rename(columns={0: 'dna_inv'})
-        dna_amount['dna_amount'] = 1 / dna_amount['dna_inv']
+        dna_amount['total_amounts'] = 1 / dna_amount['dna_inv']
         indices = ['R0']
         for sample in 'ABCDE':
             for rep in range(3):
                 indices.append(f'{sample}{rep + 1}')
-        dna_amount = {name: dna_amount['dna_amount'][ix] for ix, name in enumerate(indices)}
+        dna_amount = {name: dna_amount['total_amounts'][ix] for ix, name in enumerate(indices)}
 
         # TODO: move spike-in and total DNA out of from_count_file
         # temp note: spike-in norm factor were calculated on original table, notice the table normalized on were already

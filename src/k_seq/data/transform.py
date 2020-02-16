@@ -14,6 +14,8 @@ import pandas as pd
 from .seq_table import SeqTable
 from abc import ABC, abstractmethod
 from ..utility import DocHelper
+from ..utility.func_tools import update_none
+from ..utility.log import logging
 
 
 class Transformer(ABC):
@@ -38,7 +40,7 @@ class Transformer(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def apply(self):
+    def apply(self, target):
         """Run the transformation, with class attributes or arguments
         Logic and preprocessing of data and arguments should be done here
         """
@@ -47,7 +49,6 @@ class Transformer(ABC):
 
 _spike_in_doc = DocHelper(
     radius=('int', 'Radius of spike-in peak, seqs less or equal to radius away from center are spike-in seqs'),
-    spike_in_amount(),
 )
 
 
@@ -174,7 +175,7 @@ class SpikeInNormalizer(Transformer):
         if isinstance(target, SeqTable):
             target = target.table
 
-        return self._func(target=target, norm_factor=norm_factor)
+        return self.func(target=target, norm_factor=norm_factor)
 
     @staticmethod
     def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
@@ -275,63 +276,110 @@ class SpikeInNormalizer(Transformer):
         return ax
 
 
-class DnaAmountNormalizer(Transformer):
-    """Quantify the DNA amount by total DNA amount measured in each sample
+_total_dna_doc = DocHelper(
+    total_amounts=('dict or pd.Series', 'Total DNA amount for samples measured in experiment'),
+    target=('pd.DataFrame', 'Target table to convert, samples are columns'),
+    unit=('str', 'Unit of amount measured'),
+    norm_factor=('dict', 'Amount per sequence. Sequence amount = norm_factor * reads'),
+    full_table=('pd.DataFrame', 'table where the total amount were measured and normalize to'),
+
+)
+
+
+class TotalAmountNormalizer(Transformer):
+    f"""Quantify the DNA amount by total DNA amount measured in each sample
+
+    Amount for each sequence were normalized by direct fraction of the sequence
+        seq amount = (seq counts / total counts) * total amount
+    
+    Attributes:
+    {_total_dna_doc.get(['full_table', 'total_amounts', 'norm_factor', 'unit'])}
     """
 
-    def __init__(self, dna_amount, target=None, unit=None):
-        super().__init__(target)
-        self.target = target
-        self.dna_amount = dna_amount
+    def __init__(self, total_amounts, full_table, unit=None):
+        f"""Initialize a TotalAmountNormalizer
+        Args:
+        {_total_dna_doc.get(['total_amounts', 'full_table', 'target', 'unit'])}
+        """
+
+        super().__init__()
+        self._full_table = None
+        self._total_amounts = None
+        self.full_table = full_table
+        self.total_amounts = total_amounts
         self.unit = unit
-        self.norm_factor = None
+
+    @property
+    def total_amounts(self):
+        return self._total_amounts
+
+    @total_amounts.setter
+    def total_amounts(self, value):
+        if isinstance(value, pd.Series):
+            value = value.to_dict()
+        self._total_amounts = value
+        self._update_norm_factor()
+
+    @property
+    def full_table(self):
+        return self._full_table
+
+    @full_table.setter
+    def full_table(self, value):
+        if not isinstance(value, pd.DataFrame):
+            logging.error("full table needs to be a pd.DataFrame", error_type=TypeError)
+        self._full_table = value
+        self._update_norm_factor()
+
+    def _update_norm_factor(self):
+        """Update norm factor value based on current self.total_amounts and self.full_table"""
+        if (self.full_table is not None) and (self.total_amounts is not None):
+            for sample in self.full_table.columns:
+                if sample not in self.total_amounts.keys():
+                    logging.info(f'Notice: {sample} is not in total_amount, skip this sample')
+
+            self.norm_factor = {}
+            from ..utility.func_tools import is_sparse
+
+            for sample, amount in self.total_amounts.items():
+                if sample in self.full_table.columns:
+                    if is_sparse(self.full_table[sample]):
+                        self.norm_factor[sample] = amount / self.full_table[sample].sparse.to_dense().sum()
+                    else:
+                        self.norm_factor[sample] = amount / self.full_table[sample].sum()
+                else:
+                    logging.info(f"Notice: {sample} is not in full_table")
 
     @staticmethod
-    def _func(target, norm_factor):
-        """Norm factor here should be per seq amount calculated from total DNA amount"""
+    def func(target, norm_factor):
+        """Normalize target table w.r.t norm_factor
 
-        def sample_normalize(sample):
-            return sample * norm_factor[sample.name]
+        Returns:
+            pd.DataFrame of normalized target table with only samples provided in norm_factor
+        """
 
-        import warnings
+        def sample_normalize(col):
+            return col * norm_factor[col.name]
+
         sample_list = []
         for sample in target.columns:
             if sample in norm_factor.keys():
                 sample_list.append(sample)
             else:
-                warnings.warn(f'Sample {sample} is not found in the normalizer, normalization is not performed')
+                logging.warning(f'Sample {sample} is not in norm_factor, skip this sample')
 
         return target[sample_list].apply(sample_normalize, axis=0)
 
-    def apply(self, target=None, dna_amount=None):
-        """Transform counts to absolute amount based on given total DNA amount
+    def apply(self, target):
+        """Transform counts to absolute amount on columns in target that are in norm_factor 
+        
+        Args:
+        {args}
 
-            Args:
-                target (pd.DataFrame): contains counts of sequences in samples
-
-                dna_amount (dict): a dictionary {sample_name: total_dna_amount}
-
-                    exclude_spike_in (bool): if exclude spike-in sequences in total amount
-                    spike_in_members (list of str): list of spike_in sequences
-
-                Returns:
-                    a dict: {sample_name: norm_factor}
-                    where sequence amount = sequence counts * norm_factor
-        """
-
-        if target is None:
-            target = self.target
-        if target is None:
-            raise ValueError('No valid target found')
-        if dna_amount is None:
-            dna_amount = self.dna_amount
-        if dna_amount is None:
-            raise ValueError('No valid dna_amount found')
-        if not isinstance(target, pd.DataFrame):
-            target = target.table
-        self.norm_factor = {sample: dna_am / target[sample].sparse.to_dense().sum()
-                            for sample, dna_am in dna_amount.items()}
-        return self._func(target=target, norm_factor=self.norm_factor)
+        Returns:
+            pd.DataFrame of normalized target table with only samples in norm_factor
+        """.format(args=_total_dna_doc.get(['target']))
+        return self.func(target=target, norm_factor=self.norm_factor)
 
 
 class ReactedFractionNormalizer(Transformer):
@@ -345,7 +393,7 @@ class ReactedFractionNormalizer(Transformer):
         self.remove_zero = remove_zero
 
     @staticmethod
-    def _func(target, input_samples, reduce_method='median', remove_zero=True):
+    def func(target, input_samples, reduce_method='median', remove_zero=True):
 
         method_mapper = {
             'med': np.nanmedian,
@@ -394,7 +442,7 @@ class ReactedFractionNormalizer(Transformer):
         if remove_zero is None:
             remove_zero = self.remove_zero
 
-        return self._func(target=target, input_samples=input_samples,
+        return self.func(target=target, input_samples=input_samples,
                           reduce_method=reduce_method, remove_zero=remove_zero)
 
 
@@ -439,4 +487,4 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
             q_factor = self.q_factor
         q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
 
-        return self._func(target=target, q_factor=q_factor)
+        return self.func(target=target, q_factor=q_factor)

@@ -89,4 +89,10 @@ def test_sample_from_dataframe():
 # TODO: simulate_counts returns x, Y, parameters, and a SeqTable
 
 def test_simulate_counts_return_correct():
-    return True
+    simu.simulate_counts(uniq_seq_num=10,
+                         x_values=[-1, 2e-6, 50e-6],
+                         total_reads=1000,
+                         p0=[0.1, 0.5, 0.4, 0.6, 0.2],
+                         reps=3,
+                         k=[10, 5, 30],
+                         A=[0.8, 0.9])

@@ -51,7 +51,7 @@ class CountFile(object):
         self.unit = unit
         self.silent = silent
         self.sequences = None
-        self.dna_amount = None
+        self.total_amounts = None
         self.norm_factor = None
 
     TODO:
@@ -183,7 +183,7 @@ class CountFile(object):
             elif isinstance(dna_amount, float):
                 self.dna_amount = dna_amount
             else:
-                raise ValueError('dna_amount should be float or string')
+                raise ValueError('total_amounts should be float or string')
 
         if load_data:
             self.load_data()
@@ -376,7 +376,7 @@ class CountFile(object):
             - total_counts_no_spike_in (if remove_spike_in is True)
             - sample_type
             - x_value
-            - dna_amount
+            - total_amounts
             - dna_amount_no_spike_in (if remove_spike_in is True)
             - norm_factor
             - spike in (dict, if applicable, return members if verbose)
@@ -416,7 +416,7 @@ class SpikeIn(object):
 
         spike_in_amount (`float`): DNA amount of spike-in sequences added
 
-        dna_amount (`float`): Total DNA amount in the sample, based on current sequences
+        total_amounts (`float`): Total DNA amount in the sample, based on current sequences
 
         unit (`str`): unit of amount, e.g. ng
 
@@ -578,7 +578,7 @@ class SpikeIn(object):
         """Return necessary info of spike-in as a dictionary, including:
           - seq: spike-in seq
           - radius:
-          - dna_amount: DNA amount of sample pool calculated by spike-in
+          - total_amounts: DNA amount of sample pool calculated by spike-in
           - norm_factor
           - unit
           - members (verbose): list
@@ -589,7 +589,7 @@ class SpikeIn(object):
         info = {
             'seq': self.center,
             'radius': self.radius,
-            'dna_amount': self.dna_amount,
+            'total_amounts': self.dna_amount,
             'norm_factor': self.norm_factor,
             'unit': self.unit
         }
@@ -981,7 +981,7 @@ class CountFileSet(object):
                 'spike_in_dia': 2,
                 'x_unit': 'umol',
                 'dna_unit': 'ng',
-                'dna_amount':None,
+                'total_amounts':None,
                 'sort_by': 'name',
                 'load_data': False,
                 'silent': True,
@@ -1001,7 +1001,7 @@ class CountFileSet(object):
                 'spike_in_dia': 2,
                 'x_unit': 'umol',
                 'dna_unit': 'fmol',
-                'dna_amount': None,
+                'total_amounts': None,
                 'sort_by': 'id',
                 'load_data': False,
                 'silent': True,
@@ -1028,7 +1028,7 @@ class CountFileSet(object):
                 'spike_in_dia': 4,
                 'x_unit': 'mol',
                 'dna_unit': 'ng',
-                'dna_amount': None,
+                'total_amounts': None,
                 'sort_by': 'name',
                 'load_data': False,
                 'silent': True,

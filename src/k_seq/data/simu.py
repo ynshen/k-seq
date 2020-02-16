@@ -223,31 +223,31 @@ class PoolParamGenerator:
         return results
 
 
-def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
+def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                     kinetic_model=None, count_model=None, total_dna_error=None,
                     param_sample_from_df=None, weights=None, replace=True,
                     reps=1, seed=None, note=None,
                     save_to=None, **param_generator):
-    f"""Simulate count dataset given kinetic and count model
+    f"""Simulate sequencing count dataset given kinetic and count model
 
     Procedure:
       1. parameter for each unique sequences were sampled from param_sample_from_df and kwargs
         (param_generators). It is an even pool if p0 is not provided. No repeated parameters.
       2. simulate the reacted amount / fraction of sequences with each controlled variable in x_values
-      3. Simulated counts with given total sample_reads were simulated for input pool and reacted pools.
+      3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
 
     Args:
-    {simu_args.get(['uniq_seq_num', 'x_values', 'sample_reads', 'p0', 'kinetic_model',
+    {simu_args.get(['uniq_seq_num', 'x_values', 'total_reads', 'p0', 'kinetic_model',
                     'count_model'])}
         param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
         weights (list or str): weights/col of weight for sampling from table
     {simu_args.get(['total_dna_error', 'reps', 'seed', 'save_to', 'param_generator'])}
 
     Returns:
-        X (pd.DataFrame): c, n value for samples
-        y (pd.DataFrame): sequence counts for sequence samples
-        param_table (pd.DataFrame): table list the parameters of simulated pool
-        seq_table (data.SeqTable): a SeqTable object stores all the data
+        x (pd.DataFrame): c, n value for samples
+        Y (pd.DataFrame): simulated sequence counts for given samples
+        param_table (pd.DataFrame): table list the parameters for simulated sequences
+        seq_table (data.SeqTable): a SeqTable object to stores all the data
     """
 
     from ..model import pool
@@ -261,15 +261,16 @@ def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
         kinetic_model = kinetic.BYOModel.amount_first_order
         logging.info('No kinetic model provided, use BYOModel.amount_first_order')
     if count_model is None:
-        # default use MultiNomial
+        # default use multinomial
         from ..model import count
-        count_model = count.MultiNomial
-        logging.info('No count model provided, use MultiNomial')
+        count_model = count.multinomial
+        logging.info('No count model provided, use multinomial distribution')
 
     # compose sequence parameter from
     # 1. p0
     # 2. param_generator
     # 3. param_sample_from_df
+
     param_table = pd.DataFrame(index=np.arange(uniq_seq_num))
     if p0 is not None:
         param_table['p0'] = PoolParamGenerator.sample_from_iid_dist(p0=p0,
@@ -277,7 +278,7 @@ def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
     if param_generator != {}:
         temp_table = PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=uniq_seq_num,
                                                              **param_generator)
-        col_name = temp_table.index[~temp_table.index.isin(param_table.index)]
+        col_name = temp_table.columns[~temp_table.columns.isin(param_table.columns.values)]
         param_table[col_name] = temp_table[col_name]
 
     if param_sample_from_df is not None:
@@ -298,7 +299,10 @@ def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
     x = {}
     Y = {}
     dna_amount = {}
-    for sample_ix, (c, n) in enumerate(zip(x_values, sample_reads)):
+
+    if isinstance(total_reads, (float, int)):
+        total_reads = np.repeat(total_reads, len(x_values))
+    for sample_ix, (c, n) in enumerate(zip(x_values, total_reads)):
         if reps is None or reps == 1:
             dna_amount[f"s{sample_ix}"], Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
             x[f"s{sample_ix}"] = {'c': c, 'n': n}
@@ -306,14 +310,14 @@ def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
             for rep in range(reps):
                 dna_amount[f"s{sample_ix}-{rep}"], Y[f"s{sample_ix}-{rep}"] = pool_model.predict(c=c, N=n)
                 x[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
-    # return x, Y, dna_amount, param_table
+    # return x, Y, total_amounts, param_table
     x = pd.DataFrame.from_dict(x, orient='columns')
     Y = pd.DataFrame.from_dict(Y, orient='columns')
     dna_amount = pd.Series(dna_amount)
-    if isinstance(dna_amount_error, float):
-        dna_amount += np.random.normal(loc=0, scale=dna_amount_error, size=len(dna_amount))
-    elif callable(dna_amount_error):
-        dna_amount = dna_amount.apply(dna_amount_error)
+    if isinstance(total_dna_error, float):
+        dna_amount += np.random.normal(loc=0, scale=total_dna_error, size=len(dna_amount))
+    elif callable(total_dna_error):
+        dna_amount = dna_amount.apply(total_dna_error)
     x.index.name = 'param'
     Y.index.name = 'seq'
     dna_amount.index.name = 'amount'
@@ -348,13 +352,12 @@ def simulate_counts(uniq_seq_num, x_values, sample_reads, p0=None,
             param_table.to_csv(f'{save_path}/truth.csv')
             seq_table.to_pickle(f"{save_path}/seq_table.pkl")
         else:
-            logging.error('save_to should be a directory')
-            raise TypeError('save_to should be a directory')
+            logging.error('save_to should be a directory', error_type=TypeError)
 
     return x, Y, dna_amount, param_table, seq_table
 
 
-def simulate_from_distribution(seq_num, depth, p0_loc, p0_scale, k_95, dna_amount_error, save_to=None):
+def simulate_from_distribution(seq_num, depth, p0_loc, p0_scale, k_95, total_dna_error, save_to=None):
     """
     Preset simulation of pool dataset from random variables
     TODO: add description
@@ -369,11 +372,11 @@ def simulate_from_distribution(seq_num, depth, p0_loc, p0_scale, k_95, dna_amoun
     x, Y, dna_amount, truth, seq_table = simulate_counts(
         uniq_seq_num=seq_num,
         x_values=c_list,
-        sample_reads=N_list,
+        total_reads=N_list,
         p0=DistGenerators.compo_lognormal(loc=p0_loc, scale=p0_scale, size=seq_num),
         k=DistGenerators.lognormal(c95=k_95, size=seq_num),
         A=DistGenerators.uniform(low=0, high=1, size=seq_num),
-        dna_amount_error=dna_amount_error,
+        total_dna_error=total_dna_error,
         reps=1,
         save_to=save_to,
         seed=23
@@ -383,7 +386,7 @@ def simulate_from_distribution(seq_num, depth, p0_loc, p0_scale, k_95, dna_amoun
         with open(save_to + '/config.txt', 'w') as handle:
             handle.write(
                 f'uniq_seq_num: {seq_num}\ndepth: {depth}\np0: loc:{p0_loc} scale: {p0_scale}\n'
-                f'k_95: {k_95}\ndna_amount_error:{dna_amount_error}'
+                f'k_95: {k_95}\total_dna_error:{total_dna_error}'
             )
 
     import matplotlib.pyplot as plt
@@ -446,7 +449,7 @@ def get_sample_table(seq_table, estimation):
     return estimation[['k', 'A', 'p0', 'ka']]
 
 
-def simulate_from_sample(sample_table, seq_num, depth=40, dna_amount_error=None, plot_dist=False, save_to=None):
+def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, plot_dist=False, save_to=None):
     """Simulate k-seq count results from given """
 
     c_list = [-1] + list(np.repeat(
@@ -458,9 +461,9 @@ def simulate_from_sample(sample_table, seq_num, depth=40, dna_amount_error=None,
     x, Y, dna_amount, truth, seq_table = simulate_counts(
         uniq_seq_num=seq_num,
         x_values=c_list,
-        sample_reads=N_list,
+        total_reads=N_list,
         param_sample_from_df=sample_table,
-        dna_amount_error=dna_amount_error,
+        total_dna_error=total_dna_error,
         weights=None,
         replace=True,
         reps=1,

@@ -1,3 +1,22 @@
+import numpy as np
+import pandas as pd
+
+
+def is_int(x):
+    return isinstance(x, (int, np.int_, np.int0, np.int8, np.int16, np.int32, np.int64))
+
+
+def is_numeric(x):
+    return is_int(x) or isinstance(x, (float, np.float_, np.float16, np.float32, np.float64))
+
+
+def is_sparse(obj):
+    if isinstance(obj, pd.Series):
+        return pd.api.types.is_sparse(obj)
+    elif isinstance(obj, pd.DataFrame):
+        return obj.apply(pd.api.types.is_sparse).all()
+
+
 def var_to_doc(doc_var):
     """Deprecated.
     Convert a variable (dictionary or list/tuple)of args/attrs/methods documents to a string of documentation
@@ -55,7 +74,6 @@ def param_to_dict(key_list, **kwargs):
     - if the arg is a list, it will should have same length as key_list
     - if the arg is a dict, it should contain all members in the key
     """
-    import numpy as np
     import pandas as pd
 
     def parse_args(kwargs, key, ix):

@@ -4,11 +4,10 @@ TODO:
   - add directly from count file
   - write output function for each class as JSON file
   - Formalized filter and normalizer
-  - integrate logging to the Logger function
 """
 
 from ..utility.func_tools import AttrScope
-from ..utility.log import logging
+from ..utility.log import logging, Logger
 
 
 class Metadata(AttrScope):
@@ -17,8 +16,6 @@ class Metadata(AttrScope):
         dataset
         samples
         sequences
-        logger: record actions conducted on the seq table
-    todo: check logger functionality
     """
 
     def __init__(self, attr_dict):
@@ -26,6 +23,7 @@ class Metadata(AttrScope):
         self.dataset = None
         self.samples = None
         self.sequences = None
+        self.logger = Logger()
         super().__init__(attr_dict)
 
 
@@ -57,7 +55,6 @@ class SeqTable(object):
         Find all valid sequences that occur at least once in any 'input' sample and once in any 'reacted' sample
         """
 
-        from ..utility.log import Logger
         import numpy as np
         import pandas as pd
 
@@ -81,7 +78,6 @@ class SeqTable(object):
                 'note': note,
                 'x_unit': x_unit
             }),
-            'logger': Logger(silent=silent),
         })
         if dataset_metadata is not None:
             self.metadata.dataset.add(dataset_metadata)
@@ -89,7 +85,7 @@ class SeqTable(object):
             self.metadata.samples = AttrScope(sample_metadata)
         if seq_metadata is not None:
             self.metadata.sequences = AttrScope(seq_metadata)
-        self.metadata.logger.add('SeqTable created')
+        logging.info('SeqTable created')
 
         # import table
         self.table = None
@@ -101,10 +97,10 @@ class SeqTable(object):
                 else:
                     dtype = pd.SparseDtype('float', fill_value=0.0)
                 self._raw_table = data_mtx.astype(dtype)
-                self.metadata.logger.add('Import type pd.Dataframe, not sparse, convert to sparse table')
+                self.metadata.logger.info('Import type pd.Dataframe, not sparse, convert to sparse table')
             else:
                 self._raw_table = data_mtx
-                self.metadata.logger.add('Import type pd.Dataframe, sparse')
+                self.metadata.logger.info('Import type pd.Dataframe, sparse')
             self.seq_list = self._raw_table.index.to_series()
             self.sample_list = self._raw_table.columns.to_series()
 
@@ -120,7 +116,7 @@ class SeqTable(object):
                     raise ValueError('Some seq are not found in data_mtx')
                 else:
                     self.seq_list = seq_list
-            self.metadata.logger.add('Data value imported from Pandas DataFrame, dtype={}'.format(
+            self.metadata.logger.info('Data value imported from Pandas DataFrame, dtype={}'.format(
                 self.metadata.dataset['data_unit']
             ))
         elif isinstance(data_mtx, np.ndarray):
@@ -140,7 +136,7 @@ class SeqTable(object):
                 self._raw_table = pd.DataFrame(pd.SparseArray(data_mtx, fill_value=0),
                                                columns=sample_list,
                                                index=seq_list)
-                self.metadata.logger.add('Data value imported from Numpy array, dtype={}'.format(
+                self.metadata.logger.info('Data value imported from Numpy array, dtype={}'.format(
                     self.metadata.dataset['data_unit']
                 ))
         else:
@@ -218,8 +214,8 @@ class SeqTable(object):
 
     def add_total_dna_amount(self, dna_amount, dna_unit=None, **kwargs):
         """todo: add total DNA normalizer"""
-        from .transform import DnaAmountNormalizer
-        setattr(self, 'dna_amount', DnaAmountNormalizer(target=self, dna_amount=dna_amount, unit=dna_unit))
+        from .transform import TotalAmountNormalizer
+        setattr(self, 'total_amounts', TotalAmountNormalizer(target=self, total_amounts=dna_amount, unit=dna_unit))
 
     def sample_overview(self):
         import numpy as np
@@ -451,7 +447,7 @@ class SeqTable(object):
 #     #     reacted_frac_table = reacted_frac_table.divide(input_amount_avg, axis=0)
 #     #     if inplace:
 #     #         self.reacted_frac_table = reacted_frac_table
-#     #         self.logger.add('reacted_frac_tabled added using {} as input average'.format(input_average))
+#     #         self.logger.info('reacted_frac_tabled added using {} as input average'.format(input_average))
 #     #     else:
 #     #         return reacted_frac_table
 #     #
@@ -503,7 +499,7 @@ class SeqTable(object):
 #     #         random_init=random_init,
 #     #         metrics=metrics
 #     #     )
-#     #     self.logger.add('BatchFitting fitter added')
+#     #     self.logger.info('BatchFitting fitter added')
 #     #
 #     # @classmethod
 #     # def load_count_files(cls, folder_path, x_values, file_pattern=None, name_pattern=None, file_list=None, black_list=None,
@@ -581,7 +577,7 @@ def from_count_files(cls,
     if 'spike_in_seq' in kwargs.keys():
         seq_table.add_spike_in(**kwargs)
 
-    if 'dna_amount' in kwargs.keys():
+    if 'total_amounts' in kwargs.keys():
         seq_table.add_total_dna_amount(**kwargs)
 
     return seq_table
