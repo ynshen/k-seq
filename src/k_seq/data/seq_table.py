@@ -212,10 +212,24 @@ class SeqTable(object):
                 SpikeInNormalizer(base_table=self, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
                                   radius=radius, unit=dna_unit, blacklist=black_list))
 
-    def add_total_dna_amount(self, dna_amount, dna_unit=None, **kwargs):
-        """todo: add total DNA normalizer"""
+    def add_sample_total_amounts(self, total_amounts, full_table, unit=None):
+        """Add TotalAmountNormalizer to quantify sequences with their total amount in each sample
+          as `sample_total_amounts`
+
+        Args:
+            total_amounts (dict or pd.Series): total amount for each sample
+            full_table (str or pd.DataFrame): corresponding table total amount measured with.
+              Get attributes of the instance if it is str
+            unit (str): unit for the amount measured
+        """
         from .transform import TotalAmountNormalizer
-        setattr(self, 'total_amounts', TotalAmountNormalizer(target=self, total_amounts=dna_amount, unit=dna_unit))
+        if isinstance(full_table, str):
+            full_table = getattr(self, full_table)
+
+        setattr(self, 'sample_total_amounts',
+                TotalAmountNormalizer(full_table=full_table,
+                                      total_amounts=total_amounts,
+                                      unit=unit))
 
     def sample_overview(self):
         import numpy as np
@@ -578,7 +592,7 @@ def from_count_files(cls,
         seq_table.add_spike_in(**kwargs)
 
     if 'total_amounts' in kwargs.keys():
-        seq_table.add_total_dna_amount(**kwargs)
+        seq_table.add_sample_total_amounts(**kwargs)
 
     return seq_table
 

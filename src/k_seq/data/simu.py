@@ -329,8 +329,10 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     seq_table = SeqTable(data_mtx=Y, x_values=x.loc['c'].to_dict(), note=note,
                          grouper={'input': input_samples,
                                   'reacted': [sample for sample in x.columns if sample not in input_samples]})
-    seq_table.add_total_dna_amount(dna_amount=dna_amount.to_dict())
-    seq_table.table_abs_amnt = seq_table.dna_amount.apply(target=seq_table.table)
+    seq_table.add_sample_total_amounts(total_amounts=dna_amount.to_dict(),
+                                       full_table=seq_table.table)
+    seq_table.table_abs_amnt = seq_table.sample_total_amounts.apply(target=seq_table.table)
+
     from .transform import ReactedFractionNormalizer
     reacted_frac = ReactedFractionNormalizer(input_samples=input_samples,
                                              reduce_method='median',

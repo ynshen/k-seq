@@ -4,7 +4,8 @@ dev_mode = DevMode('k-seq')
 dev_mode.on()
 
 from k_seq.data import simu
-from pytest import approx, raises
+from k_seq.data.seq_table import SeqTable
+from pytest import approx
 import numpy as np
 import pandas as pd
 
@@ -85,14 +86,18 @@ def test_sample_from_dataframe():
                              size=size)
 
 
-
-# TODO: simulate_counts returns x, Y, parameters, and a SeqTable
-
 def test_simulate_counts_return_correct():
-    simu.simulate_counts(uniq_seq_num=10,
-                         x_values=[-1, 2e-6, 50e-6],
-                         total_reads=1000,
-                         p0=[0.1, 0.5, 0.4, 0.6, 0.2],
-                         reps=3,
-                         k=[10, 5, 30],
-                         A=[0.8, 0.9])
+    x, Y, dna_amount, param_table, seq_table = simu.simulate_counts(
+        uniq_seq_num=10,
+        x_values=[-1, 2e-6, 50e-6],
+        total_reads=1000,
+        p0=[0.1, 0.5, 0.4, 0.6, 0.2],
+        reps=3,
+        k=[10, 5, 30],
+        A=[0.8, 0.9]
+    )
+    assert x.shape == (2, 9)
+    assert Y.shape == (10, 9)
+    assert all([val == 1000 for val in Y.sum(axis=0)])
+    assert param_table.shape == (10, 3)
+    assert isinstance(seq_table, SeqTable)
