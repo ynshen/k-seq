@@ -401,6 +401,12 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
         an error function take true value. Default is 10 percent Gaussian error. Assign 0 for no error introduced.
         save_to (str): save simulated to a folder
         plot_dist (bool): if pairwise figures of distribution for simulated parameters (p0, A, k, kA)
+
+    Returns:
+        x (pd.DataFrame): c, n value for samples
+        Y (pd.DataFrame): simulated sequence counts for given samples
+        param_table (pd.DataFrame): table list the parameters for simulated sequences, including p0, k, A, kA
+        seq_table (data.SeqTable): a SeqTable object to stores all the data
     """
 
     c_list = [-1] + list(np.repeat(
@@ -448,51 +454,53 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
     return x, Y, dna_amount, truth, seq_table
 
 
-def get_sample_table(seq_table, estimation):
-    """Compose table for simulation by sampling from seq_table (for p0) and estimated results (for k, A)
+def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path, uniq_seq_num, depth=40,
+                                                    total_dna_error_rate=0.1, plot_dist=False, save_to=None):
+    """Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
+        t: reaction time (90 min)
+        alpha: degradation ratio of BYO (0.479)
+        x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
+          5 BYO concentration with triplicates:
+            [-1 (input pool),
+             2e-6, 2e-6, 2e-6,
+             10e-6, 10e-6, 10e-6,
+             50e-6, 50e-6, 50e-6,
+             250e-6, 250e-6, 250e-6,
+             1260e-6, 1260e-6, 1260e-6]
+
+    Parameter for each sequences were sampled from previous point estimate results:
+        - point_est_csv: load point estimates results to extract estimated k and A
+        - seqtable_path: path to load input sample SeqTable object to get p0 information
+
+    Returns:
+        x (pd.DataFrame): c, n value for samples
+        Y (pd.DataFrame): simulated sequence counts for given samples
+        param_table (pd.DataFrame): table list the parameters for simulated sequences, including p0, k, A, kA
+        seq_table (data.SeqTable): a SeqTable object to stores all the data
     """
+
     from ..estimator.least_square import load_estimation_results
-
-    from .seq_table import SeqTable
-
-    if isinstance(seq_table, str):
-        from pathlib import Path
-        if Path(seq_table).exists():
-            from ..utility.file_tools import read_pickle
-            seq_table = read_pickle(seq_table)
-        else:
-            seq_table = SeqTable.load_dataset(dataset=seq_table)
-    if isinstance(estimation, str):
-        estimation = pd.read_csv(estimation, index_col=0)
-
-    # survey initial pool composition from byo_doped and add to ls_point_est
-    if hasattr(seq_table.grouper, 'input'):
-        inputs = seq_table.grouper.input.group
-    else:
-        inputs = ['R0']  # default
-    counts = seq_table.table[inputs].loc[estimation.index]
-    counts = counts.sparse.to_dense().mean(axis=1)
-    estimation['mean_counts'] = counts
-    estimation['p0'] = counts / counts.sum()
-    estimation = estimation[~estimation.isna().any(axis=1)]
-    estimation['ka'] = estimation['k'] * estimation['A']
-    return estimation[['k', 'A', 'p0', 'ka']]
-
-
-def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, plot_dist=False, save_to=None):
-    """Simulate k-seq count results from given """
+    result_table = load_estimation_results(point_est_csv=point_est_csv, seqtable_path=seqtable_path)
+    if 'ka' in result_table.columns:
+        result_table = result_table.rename(columns={'ka': 'kA'})
+    result_table = result_table[['k', 'A', 'p0', 'kA']]
 
     c_list = [-1] + list(np.repeat(
         np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
     ))
 
-    N_list = [seq_num * depth if c >= 0 else seq_num * depth * 3 for c in c_list]
+    N_list = [uniq_seq_num * depth if c >= 0 else uniq_seq_num * depth * 3 for c in c_list]
+
+    if total_dna_error_rate is None:
+        total_dna_error = 0
+    else:
+        total_dna_error = get_pct_gaussian_error(total_dna_error_rate)
 
     x, Y, dna_amount, truth, seq_table = simulate_counts(
-        uniq_seq_num=seq_num,
+        uniq_seq_num=uniq_seq_num,
         x_values=c_list,
         total_reads=N_list,
-        param_sample_from_df=sample_table,
+        param_sample_from_df=result_table,
         total_amount_error=total_dna_error,
         weights=None,
         replace=True,
@@ -500,18 +508,22 @@ def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, 
         save_to=save_to,
         seed=23
     )
+    truth['kA'] = truth.k * truth.A
 
     if save_to is not None:
-        with open(save_to + '/config.txt', 'w') as handle:
-            handle.write(f'uniq_seq_num: {seq_num}\ndepth: {depth}\n')
-
-    init_pools = Y.loc[:, x.loc['c'] < 0]
-    truth['p0_from_counts'] = (init_pools / init_pools.sum(axis=0)).sum(axis=1)
-    truth['kA'] = truth.k * truth.A
+        config = {
+            'point_est_csv': point_est_csv,
+            'seqtable_path': seqtable_path,
+            'uniq_seq_num': uniq_seq_num,
+            'depth': depth,
+            'total_dna_error_rate': total_dna_error_rate
+        }
+        from ..utility.file_tools import dump_json
+        dump_json(config, save_to + '/config.txt')
 
     if plot_dist:
         from ..utility.plot_tools import pairplot
-        pairplot(data=truth, vars_name=['p0', 'A', 'k', 'ka'],
+        pairplot(data=truth, vars_name=['p0', 'A', 'k', 'kA'],
                  vars_log=[True, False, True, True], diag_kind='kde')
 
     return x, Y, dna_amount, truth, seq_table

@@ -13,7 +13,7 @@ Several functions are included:
 from ..estimator import EstimatorType
 from ..utility.doc_helper import DocHelper
 from ..utility.file_tools import read_json, dump_json, check_dir
-import logging
+from ..utility.log import logging
 import pandas as pd
 import numpy as np
 
@@ -1352,8 +1352,7 @@ class BatchFitter(EstimatorType):
         return cls(y_data_batch=y_data_batch, sigma=sigma, result_path=result_path, **model_config)
 
 
-def load_estimation_results(count_table=None, table_name=None, input_samples=None,
-                            point_est_csv=None, seqtable_path=None, bootstrap_csv=None, convergence_csv=None,
+def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_csv=None,
                             **kwargs):
     """Collect estimation results (summary.csv files)and compose a table
     As
@@ -1402,6 +1401,5 @@ def load_estimation_results(count_table=None, table_name=None, input_samples=Non
             if callable(func):
                 est_res[key] = est_res.apply(func, axis=1)
             else:
-                logging.error(f'Keyword argument {key} is not a function')
-                raise TypeError(f'Keyword argument {key} is not a function')
+                logging.error(f'Keyword argument {key} is not a function', error_type=TypeError)
     return est_res
