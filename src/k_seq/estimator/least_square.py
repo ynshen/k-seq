@@ -12,7 +12,7 @@ Several functions are included:
 
 from ..estimator import EstimatorType
 from ..utility.doc_helper import DocHelper
-from ..utility.file_tools import read_json, to_json, check_dir
+from ..utility.file_tools import read_json, dump_json, check_dir
 import logging
 import pandas as pd
 import numpy as np
@@ -387,15 +387,15 @@ class SingleFitter(EstimatorType):
             if path.suffix == '.json':
                 # its a named json file
                 check_dir(path.parent)
-                to_json(obj=config_dict, path=path, indent=2)
+                dump_json(obj=config_dict, path=path, indent=2)
             elif path.suffix == '':
                 # its a directory
                 check_dir(path)
-                to_json(obj=config_dict, path=str(path) + '/config.json', indent=2)
+                dump_json(obj=config_dict, path=str(path) + '/config.json', indent=2)
             else:
                 raise NameError('Unrecognized saving path')
         else:
-            return to_json(config_dict, indent=0)
+            return dump_json(config_dict, indent=0)
 
     @classmethod
     def from_json(cls, file_path, model):
@@ -483,7 +483,7 @@ class FitResults:
 
         def jsonfy(target):
             try:
-                return target.to_json()
+                return target.dump_json()
             except:
                 return None
 
@@ -498,9 +498,9 @@ class FitResults:
             }
         }
         if path is None:
-            return to_json(data_to_dump)
+            return dump_json(data_to_dump)
         else:
-            to_json(data_to_dump, path=path)
+            dump_json(data_to_dump, path=path)
 
     @classmethod
     def from_json(cls, json_path, fitter=None):
@@ -763,7 +763,7 @@ class BatchFitResults:
 
     Methods:
         summary_to_csv: export summary dataframe as csv file
-        to_json: preferred format to save results
+        dump_json: preferred format to save results
         to_pickle: save results as pickled dictionary
         from_pickle: load bootstrapping results from picked dictionary
         from_folder: link results to a saved folder
@@ -900,7 +900,7 @@ class BatchFitResults:
         self.summary.to_csv(path)
 
     def to_pickle(self, output_dir, bs_record=True, sep_files=True):
-        """Save fitting results as a pickled dict, notice: `to_json` is preferred
+        """Save fitting results as a pickled dict, notice: `dump_json` is preferred
         Args:
              output_dir (str): path to saved results, should be the parent of target location
              bs_record (bool): if output bs_record as well
@@ -973,16 +973,16 @@ class BatchFitResults:
         check_dir(output_dir)
         if sep_files:
             check_dir(f'{output_dir}/results/')
-            to_json(obj=self.summary.to_json(), path=f'{output_dir}/results/summary.json')
+            dump_json(obj=self.summary.dump_json(), path=f'{output_dir}/results/summary.json')
             if bs_record and self.bs_record is not None:
                 check_dir(f'{output_dir}/seqs')
                 for seq, record in self.bs_record.items():
-                    to_json(obj=record.to_json(), path=f"{output_dir}/results/seqs/{seq}.json")
+                    dump_json(obj=record.dump_json(), path=f"{output_dir}/results/seqs/{seq}.json")
         else:
-            data_to_json = {'summary': self.summary.to_json()}
+            data_to_json = {'summary': self.summary.dump_json()}
             if bs_record and self.bs_record is not None:
-                data_to_json['bs_record'] = {seq: record.to_json() for seq, record in self.bs_record}
-            to_json(obj=data_to_json, path=f"{output_dir}/results.json")
+                data_to_json['bs_record'] = {seq: record.dump_json() for seq, record in self.bs_record}
+            dump_json(obj=data_to_json, path=f"{output_dir}/results.json")
 
     @classmethod
     def from_json(cls, fitter, json_o_path):
@@ -1190,7 +1190,7 @@ class BatchFitter(EstimatorType):
             self._hash()
             if stream_to_disk:
                 check_dir(stream_to_disk + '/seqs/')
-                to_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
+                dump_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
 
         from functools import partial
         work_fn = partial(_work_fn, point_estimate=point_estimate,

@@ -212,7 +212,7 @@ def read_json(path):
         return json.load(handle)
 
 
-def to_json(obj, path=None, indent=2):
+def dump_json(obj, path=None, indent=2):
     """Convert object to a JSON file or JSON string"""
     import json
 

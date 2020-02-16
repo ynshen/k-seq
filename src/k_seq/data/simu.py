@@ -1,11 +1,11 @@
 """Module contains code to simulate data"""
 from ..utility.log import logging
 from ..utility.doc_helper import DocHelper
+from ..utility.func_tools import is_numeric
 import numpy as np
 import pandas as pd
 
 
-# TODO: consider if keep DistGenerators
 class DistGenerators:
     """A collection of random value generators from commonly used distributions.
     `uniq_seq_num` number of independent draw of distribution are returned
@@ -107,8 +107,8 @@ simu_args = DocHelper(
                                'Default `BYOModel.amount_first_order`'),
     count_model=('callable', 'model the sequencing counts w.r.t. total reads and pool composition.'
                              'Default MultiNomial model.'),
-    total_dna_error=('float or callable', 'float as the standard deviation for a fixed Gaussian error, '
-                                          'or any error function on the DNA amount'),
+    total_amount_error=('float or callable', 'float as the standard deviation for a fixed Gaussian error, '
+                                             'or any error function on the DNA amount'),
     replace=('bool', 'if sample with replacement when sampling from a dataframe'),
     reps=('int', 'number of replicates for each condition in x_values'),
     save_to=('str', 'optional, path to save the simulation results with x, Y, truth csv file '
@@ -224,7 +224,7 @@ class PoolParamGenerator:
 
 
 def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
-                    kinetic_model=None, count_model=None, total_dna_error=None,
+                    kinetic_model=None, count_model=None, total_amount_error=None,
                     param_sample_from_df=None, weights=None, replace=True,
                     reps=1, seed=None, note=None,
                     save_to=None, **param_generator):
@@ -241,7 +241,7 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                     'count_model'])}
         param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
         weights (list or str): weights/col of weight for sampling from table
-    {simu_args.get(['total_dna_error', 'reps', 'seed', 'save_to', 'param_generator'])}
+    {simu_args.get(['total_amount_error', 'reps', 'seed', 'save_to', 'param_generator'])}
 
     Returns:
         x (pd.DataFrame): c, n value for samples
@@ -300,7 +300,7 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     Y = {}
     dna_amount = {}
 
-    if isinstance(total_reads, (float, int)):
+    if is_numeric(total_reads):
         total_reads = np.repeat(total_reads, len(x_values))
     for sample_ix, (c, n) in enumerate(zip(x_values, total_reads)):
         if reps is None or reps == 1:
@@ -314,10 +314,15 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     x = pd.DataFrame.from_dict(x, orient='columns')
     Y = pd.DataFrame.from_dict(Y, orient='columns')
     dna_amount = pd.Series(dna_amount)
-    if isinstance(total_dna_error, float):
-        dna_amount += np.random.normal(loc=0, scale=total_dna_error, size=len(dna_amount))
-    elif callable(total_dna_error):
-        dna_amount = dna_amount.apply(total_dna_error)
+
+    if total_amount_error is not None:
+        if is_numeric(total_amount_error):
+            dna_amount += np.random.normal(loc=0, scale=total_amount_error, size=len(dna_amount))
+        elif callable(total_amount_error):
+            dna_amount = dna_amount.apply(total_amount_error)
+        else:
+            logging.error('Unknown total_amount_error type', error_type=TypeError)
+
     x.index.name = 'param'
     Y.index.name = 'seq'
     dna_amount.index.name = 'amount'
@@ -359,65 +364,88 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     return x, Y, dna_amount, param_table, seq_table
 
 
-def simulate_from_distribution(seq_num, depth, p0_loc, p0_scale, k_95, total_dna_error, save_to=None):
-    """
-    Preset simulation of pool dataset from random variables
-    TODO: add description
+def get_pct_gaussian_error(rate):
+    """Return a function to apply Gaussian error proportional to the value"""
+
+    def pct_gaussian_error(amount):
+        """For DNA amount, assign a given ratio Gaussian error"""
+        return np.random.normal(loc=amount, scale=amount * rate)
+
+    return pct_gaussian_error
+
+
+def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, p0_scale, k_95,
+                                                   total_dna_error_rate=0.1,
+                                                   save_to=None, plot_dist=True):
+    """Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
+        t: reaction time (90 min)
+        alpha: degradation ratio of BYO (0.479)
+        x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
+          5 BYO concentration with triplicates:
+            [-1 (input pool),
+             2e-6, 2e-6, 2e-6,
+             10e-6, 10e-6, 10e-6,
+             50e-6, 50e-6, 50e-6,
+             250e-6, 250e-6, 250e-6,
+             1260e-6, 1260e-6, 1260e-6]
+
+    Parameter for each sequences were sampled from given distribution defined from arguments
+        - p0: log normal from exp(N(p0_loc, p0_scale))
+        - k: log normal from k_95 95-percentile for k
+        - A: uniform from [0, 1]
+
+    Other args:
+        uniq_seq_num (int): number of unique sequences to simulate
+        depth (int or float): sequence depth defined on mean reads per sequence
+        total_amount_error (float or callable): fix Gaussian error standard deviation or
+        an error function take true value. Default is 10 percent Gaussian error. Assign 0 for no error introduced.
+        save_to (str): save simulated to a folder
+        plot_dist (bool): if pairwise figures of distribution for simulated parameters (p0, A, k, kA)
     """
 
     c_list = [-1] + list(np.repeat(
         np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
     ))
 
-    N_list = [seq_num * depth if c >= 0 else seq_num * depth * 3 for c in c_list]
+    N_list = [uniq_seq_num * depth if c >= 0 else uniq_seq_num * depth * 3 for c in c_list]
+
+    if total_dna_error_rate is None:
+        total_dna_error = 0
+    else:
+        total_dna_error = get_pct_gaussian_error(total_dna_error_rate)
 
     x, Y, dna_amount, truth, seq_table = simulate_counts(
-        uniq_seq_num=seq_num,
+        uniq_seq_num=uniq_seq_num,
         x_values=c_list,
         total_reads=N_list,
-        p0=DistGenerators.compo_lognormal(loc=p0_loc, scale=p0_scale, size=seq_num),
-        k=DistGenerators.lognormal(c95=k_95, size=seq_num),
-        A=DistGenerators.uniform(low=0, high=1, size=seq_num),
-        total_dna_error=total_dna_error,
+        p0=DistGenerators.compo_lognormal(loc=p0_loc, scale=p0_scale, size=uniq_seq_num),
+        k=DistGenerators.lognormal(c95=k_95, size=uniq_seq_num),
+        A=DistGenerators.uniform(low=0, high=1, size=uniq_seq_num),
+        total_amount_error=total_dna_error,
         reps=1,
         save_to=save_to,
         seed=23
     )
+    truth['kA'] = truth.k * truth.A
 
     if save_to:
-        with open(save_to + '/config.txt', 'w') as handle:
-            handle.write(
-                f'uniq_seq_num: {seq_num}\ndepth: {depth}\np0: loc:{p0_loc} scale: {p0_scale}\n'
-                f'k_95: {k_95}\total_dna_error:{total_dna_error}'
-            )
+        config = {
+            'uniq_seq_num': uniq_seq_num,
+            'depth': depth,
+            'p0_loc': p0_loc,
+            'p0_scale': p0_scale,
+            'k_95': k_95,
+            'total_dna_error_rate': total_dna_error_rate
+        }
+        from ..utility.file_tools import dump_json
+        dump_json(config, save_to + '/config.txt')
 
-    import matplotlib.pyplot as plt
-
-    fig, axes = plt.subplots(1, 4, figsize=(16, 3))
-    init_pools = Y.loc[:, x.loc['c'] < 0]
-    p0 = (init_pools / init_pools.sum(axis=0)).sum(axis=1)
-    axes[0].hist(p0, bins=20)
-    axes[0].set_xlabel('p0, init count avg', fontsize=14)
-    axes[1].hist(truth.A, bins=20)
-    axes[1].set_xlabel('a', fontsize=14)
-    bins = np.logspace(np.log10(truth.k.min()) - 0.5, np.log10(truth.k.max()) + 0.5, 20)
-    axes[2].hist(truth.k, bins=bins)
-    axes[2].set_xscale('log')
-    axes[2].set_xlabel('k', fontsize=14)
-    ka = truth.k * truth.A
-    bins = np.logspace(np.log10(ka.min()) - 0.5, np.log10(ka.max()) + 0.5, 20)
-    axes[3].hist(ka, bins=bins)
-    axes[3].set_xscale('log')
-    axes[3].set_xlabel('k * a', fontsize=14)
-    plt.show()
+    if plot_dist:
+        from ..utility.plot_tools import pairplot
+        pairplot(data=truth, vars_name=['p0', 'A', 'k', 'kA'],
+                 vars_log=[True, False, True, True], diag_kind='kde')
 
     return x, Y, dna_amount, truth, seq_table
-
-
-def dna_amount_error(amount):
-    """For DNA amount, assign a 10 % Gaussian error"""
-
-    return amount + np.random.normal(scale=amount * 0.1)
 
 
 def get_sample_table(seq_table, estimation):
@@ -465,7 +493,7 @@ def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, 
         x_values=c_list,
         total_reads=N_list,
         param_sample_from_df=sample_table,
-        total_dna_error=total_dna_error,
+        total_amount_error=total_dna_error,
         weights=None,
         replace=True,
         reps=1,
@@ -479,7 +507,7 @@ def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, 
 
     init_pools = Y.loc[:, x.loc['c'] < 0]
     truth['p0_from_counts'] = (init_pools / init_pools.sum(axis=0)).sum(axis=1)
-    truth['ka'] = truth.k * truth.A
+    truth['kA'] = truth.k * truth.A
 
     if plot_dist:
         from ..utility.plot_tools import pairplot
@@ -489,6 +517,7 @@ def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, 
     return x, Y, dna_amount, truth, seq_table
 
 
+# TODO: Move reacted fraction simulator here
 
 # def reacted_frac_simulator(x_values, kinetic_model=None, percent_noise=0.2, uniq_seq_num=None,
 #                            param_sample_from_df=None, weights=None, replace=True,
@@ -642,117 +671,3 @@ def simulate_from_sample(sample_table, seq_num, depth=40, total_dna_error=None, 
 #     #                      log='Simulated dataset for convergence map of k ({}), A ({}), with x:{} and percent_noise:{}'.format(k_range, A_range, x, percent_noise),
 #     #                      overwrite=True)
 #     return dataset_to_dum
-
-# def count_simulator(model, params, repeat=1, seed=None):
-#     """Function to simulate a pool count with different parameters
-#
-#     Args:
-#         model:
-#         params:
-#         repeat:
-#         seed:
-#
-#     Returns:
-#         pd.DataFrame contains counts table
-#
-#     """
-#     import numpy as np
-#     import pandas as pd
-#
-#     def run_model(param):
-#         if isinstance(param, dict):
-#             return model(**param)
-#         elif isinstance(param, (list, tuple)):
-#             return model(*param)
-#         else:
-#             return model(param)
-#
-#     # first parse params
-#     if isinstance(params, list):
-#         params = {f'sample_{int(idx)}': param for idx, param in enumerate(params)}
-#
-#     if seed is not None:
-#         np.random.seed(seed)
-#
-#     result = {}   # {sample_name: counts}
-#     for sample, param in params.items():
-#         if repeat is None or repeat == 1:
-#             result[sample] = run_model(param)
-#         else:
-#             for rep in range(repeat):
-#                 result[f"{sample}-{rep}"] = run_model(param)
-#     return pd.DataFrame.from_dict(result, orient='columns')
-#
-#
-# class CountSimulator(object):
-#     """Simulate pool counts given parameters (e.g. p0, k, A), and simulate counts for a given x values
-#     """
-#
-#     def __init__(self, count_model, kinetic_model, count_params=None, kinetic_params=None,
-#                  x_values=None, seed=None):
-#         """Initialize a simulator with parameter table, count model, and parameters
-#
-#         Args:
-#
-#
-#             kinetic_model (`Model` or callable): pool kinetic model, whose output is a list of abundance of pool members
-#
-#             kin_param (`dict`): contains parameter needed for
-#
-#             c_param:
-#
-#             c_model:
-#             seed:
-#         """
-#         import numpy as np
-#
-#         self.k_model = k_model
-#         self.k_param = k_param
-#         self.c_model = c_model
-#         self.c_param = c_param
-#         self.seed = seed
-#         if seed is not None:
-#             np.random.seed(seed)
-#
-#     def get_data(self, k_param=None, c_param=None, N=1, seed=None):
-#         """Return a uniq_seq_num N data for each param set in k_param
-#
-#         Return: a dict or list of dict of
-#             {'data': pd.DataFrame (sparse) of data,
-#              'config':
-#         """
-#
-#         def get_one_data(k_param, c_param):
-#             comp = self.k_model(**k_param)
-#             if np.sum(comp) != 1:
-#                 comp = comp / np.sum(comp)
-#             return self.c_model(comp, **c_param)
-#
-#         def get_one_config(k_param, c_param, N):
-#             k_p = self.k_param.copy()
-#             k_p.update(k_param)
-#             c_p = self.c_param.copy()
-#             c_p.update(c_param)
-#
-#             import pandas as pd
-#
-#             return {'data': pd.DataFrame(pd.SparseArray([get_one_data(k_p, c_p) for _ in range(N)]), dtype=int),
-#                     'config': {'k_param': k_p, 'c_param': c_p}}
-#
-#         import numpy as np
-#         if seed is not None:
-#             np.random.seed(seed)
-#
-#         results = []
-#
-#     def to_pickle(self):
-#         pass
-#
-#     def to_DataFrame(self):
-#         pass
-#
-#     def to_csv(self):
-#         pass
-
-
-

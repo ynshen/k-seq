@@ -101,3 +101,19 @@ def test_simulate_counts_return_correct():
     assert all([val == 1000 for val in Y.sum(axis=0)])
     assert param_table.shape == (10, 3)
     assert isinstance(seq_table, SeqTable)
+
+
+def test_simulate_w_byo_doped_condition_from_param_dist_can_return():
+    x, Y, dna_amount, truth, seq_table = simu.simulate_w_byo_doped_condition_from_param_dist(
+        uniq_seq_num=20, depth=40, p0_loc=1, p0_scale=0.1, k_95=(0.1, 100),
+        total_dna_error_rate=0.1, save_to=None, plot_dist=False
+    )
+    assert x.shape == (2, 16)
+    assert Y.shape == (20, 16)
+    assert Y.iloc[:, 0].sum() == 2400
+    assert all([val == 800 for val in Y.iloc[:, 1:].sum(axis=0)])
+    assert truth.shape == (20, 4)
+    assert isinstance(seq_table, SeqTable)
+
+
+# TODO: Test simulate_from_sample
