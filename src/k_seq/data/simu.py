@@ -1,9 +1,10 @@
 """Module contains code to simulate data"""
-from ..utility.log import logging
-from ..utility.doc_helper import DocHelper
-from ..utility.func_tools import is_numeric
 import numpy as np
 import pandas as pd
+
+from ..utility.doc_helper import DocHelper
+from ..utility.func_tools import is_numeric
+from ..utility.log import logging
 
 
 class DistGenerators:
@@ -227,8 +228,8 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                     kinetic_model=None, count_model=None, total_amount_error=None,
                     param_sample_from_df=None, weights=None, replace=True,
                     reps=1, seed=None, note=None,
-                    save_to=None, **param_generator):
-    f"""Simulate sequencing count dataset given kinetic and count model
+                    save_to=None, **param_generators):
+    simulate_counts.__doc__="""Simulate sequencing count dataset given kinetic and count model
 
     Procedure:
       1. parameter for each unique sequences were sampled from param_sample_from_df and kwargs
@@ -237,18 +238,18 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
       3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
 
     Args:
-    {simu_args.get(['uniq_seq_num', 'x_values', 'total_reads', 'p0', 'kinetic_model',
-                    'count_model'])}
+    {args_1}
         param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
         weights (list or str): weights/col of weight for sampling from table
-    {simu_args.get(['total_amount_error', 'reps', 'seed', 'save_to', 'param_generator'])}
+    {args_2}
 
     Returns:
         x (pd.DataFrame): c, n value for samples
         Y (pd.DataFrame): simulated sequence counts for given samples
         param_table (pd.DataFrame): table list the parameters for simulated sequences
         seq_table (data.SeqTable): a SeqTable object to stores all the data
-    """
+    """.format(args_1=simu_args.get(['uniq_seq_num', 'x_values', 'total_reads', 'p0', 'kinetic_model', 'count_model']),
+               args_2=simu_args.get(['total_amount_error', 'reps', 'seed', 'save_to', 'param_generator']))
 
     from ..model import pool
 
@@ -275,9 +276,9 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     if p0 is not None:
         param_table['p0'] = PoolParamGenerator.sample_from_iid_dist(p0=p0,
                                                                     uniq_seq_num=uniq_seq_num)['p0']
-    if param_generator != {}:
+    if param_generators != {}:
         temp_table = PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=uniq_seq_num,
-                                                             **param_generator)
+                                                             **param_generators)
         col_name = temp_table.columns[~temp_table.columns.isin(param_table.columns.values)]
         param_table[col_name] = temp_table[col_name]
 
@@ -363,6 +364,28 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
 
     return x, Y, dna_amount, param_table, seq_table
 
+simulate_counts.__doc__="""Simulate sequencing count dataset given kinetic and count model
+
+    Procedure:
+      1. parameter for each unique sequences were sampled from param_sample_from_df and kwargs
+        (param_generators). It is an even pool if p0 is not provided. No repeated parameters.
+      2. simulate the reacted amount / fraction of sequences with each controlled variable in x_values
+      3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
+
+    Args:
+    {args_1}
+        param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
+        weights (list or str): weights/col of weight for sampling from table
+    {args_2}
+
+    Returns:
+        x (pd.DataFrame): c, n value for samples
+        Y (pd.DataFrame): simulated sequence counts for given samples
+        param_table (pd.DataFrame): table list the parameters for simulated sequences
+        seq_table (data.SeqTable): a SeqTable object to stores all the data
+    """.format(args_1=simu_args.get(['uniq_seq_num', 'x_values', 'total_reads', 'p0', 'kinetic_model', 'count_model'], indent=4),
+               args_2=simu_args.get(['total_amount_error', 'reps', 'seed', 'save_to', 'param_generators'], indent=4))
+
 
 def get_pct_gaussian_error(rate):
     """Return a function to apply Gaussian error proportional to the value"""
@@ -375,7 +398,7 @@ def get_pct_gaussian_error(rate):
 
 
 def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, p0_scale, k_95,
-                                                   total_dna_error_rate=0.1,
+                                                   total_dna_error_rate=0.1, seed=23,
                                                    save_to=None, plot_dist=True):
     """Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
         t: reaction time (90 min)
@@ -430,7 +453,7 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
         total_amount_error=total_dna_error,
         reps=1,
         save_to=save_to,
-        seed=23
+        seed=seed
     )
     truth['kA'] = truth.k * truth.A
 
@@ -455,7 +478,8 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
 
 
 def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path, uniq_seq_num, depth=40,
-                                                    total_dna_error_rate=0.1, plot_dist=False, save_to=None):
+                                                    total_dna_error_rate=0.1, seed=23,
+                                                    plot_dist=False, save_to=None):
     """Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
         t: reaction time (90 min)
         alpha: degradation ratio of BYO (0.479)
@@ -506,7 +530,7 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
         replace=True,
         reps=1,
         save_to=save_to,
-        seed=23
+        seed=seed
     )
     truth['kA'] = truth.k * truth.A
 
