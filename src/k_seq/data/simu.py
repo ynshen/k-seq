@@ -96,9 +96,10 @@ class DistGenerators:
         return q / np.sum(q)
 
 
-simu_args = DocHelper(
-    uniq_seq_num=('int', 'Number of unqiue sequences from simulation'),
+simu_doc = DocHelper(
+    uniq_seq_num=('int', 'Number of unique sequences from simulation'),
     p0=('list-like, generator, or callable', 'reserved argument for initial pool composition (fraction)'),
+    depth=('int or float', 'sequence depth defined on mean reads per sequence'),
     seed=('int', 'random seed for repeatability'),
     param_generators=('kwargs of list-like, generator, or callable', 'parameter generator depending on the model'),
     x_values=('list-like', 'list of controlled variables in each experiment setup,'
@@ -109,12 +110,16 @@ simu_args = DocHelper(
     count_model=('callable', 'model the sequencing counts w.r.t. total reads and pool composition.'
                              'Default MultiNomial model.'),
     total_amount_error=('float or callable', 'float as the standard deviation for a fixed Gaussian error, '
-                                             'or any error function on the DNA amount'),
+                                             'or any error function on the DNA amount. Use 0 for no introduced error.'),
     replace=('bool', 'if sample with replacement when sampling from a dataframe'),
     reps=('int', 'number of replicates for each condition in x_values'),
     save_to=('str', 'optional, path to save the simulation results with x, Y, truth csv file '
-                    'and a pickled SeqTable object')
-
+                    'and a pickled SeqTable object'),
+    x=('pd.DataFrame', 'controlled variable (c, n) for samples'),
+    Y=('pd.DataFrame', 'simulated sequence counts for given samples'),
+    param_table=('pd.DataFrame', 'table list the parameters for simulated sequences, including p0, k, A, kA'),
+    seq_table=('data.SeqTable', 'a SeqTable object to stores all the data'),
+    truth=('pd.DataFrame', 'true values of parameters (e.g. p0, k, A) for simulated sequences')
 )
 
 accepted_gen_type = """
@@ -138,21 +143,20 @@ class PoolParamGenerator:
     """
 
     @staticmethod
+    @simu_doc.compose(f"""Simulate the seq parameters from individual draws of distributions
+Parameter:
+    p0: initial fraction for each sequence for uneven pool
+    depending on the model. e.g. first-order model needs to include k and A
+
+    {accepted_gen_type}
+    
+Args:
+<< p0, uniq_seq_num, seed, param_generators>>
+    
+Returns:
+    a n_row = uniq_seq_num pd.DataFrame contains generated parameters
+""")
     def sample_from_iid_dist(uniq_seq_num, seed=None, **param_generators):
-        f"""Simulate the seq parameters from individual draws of distributions
-
-        Parameter:
-          p0: initial fraction for each sequence for uneven pool
-          depending on the model. e.g. first-order model needs to include k and A
-
-        {accepted_gen_type}
-
-        Args:
-        {simu_args.get(['p0', 'uniq_seq_num', 'seed', 'param_generators'], indent=4)}
-
-        Returns:
-            a n_row = uniq_seq_num pd.DataFrame contains generated parameters
-        """
 
         def generate_params(param_input):
             """Parse single distribution input and reformat as generated results
@@ -206,14 +210,13 @@ class PoolParamGenerator:
         return results
 
     @classmethod
+    @simu_doc.compose("""Simulate parameter by resampling rows of a given dataframe
+Args:
+    df (pd.DataFrame): dataframe contains parameters as columns to sample from,
+      needs to have `p0` as one column for heterogenous pool
+<<uniq_seq_num>>
+""")
     def sample_from_dataframe(cls, df, uniq_seq_num, replace=True, weights=None, seed=None):
-        f"""Simulate parameter by resampling rows of a given dataframe
-
-        Args:
-            df (pd.DataFrame): dataframe contains parameters as columns to sample from,
-              needs to have `p0` as one column for heterogenous pool
-            {simu_args.get(['uniq_seq_num'], indent=4)}
-        """
 
         results = df.sample(n=int(uniq_seq_num), replace=replace, weights=weights, random_state=seed)
         if 'p0' in results.columns:
@@ -224,33 +227,31 @@ class PoolParamGenerator:
         return results
 
 
+@simu_doc.compose("""Simulate sequencing count dataset given kinetic and count model
+
+Procedure:
+  1. parameter for each unique sequences were sampled from param_sample_from_df and kwargs
+    (param_generators). It is an even pool if p0 is not provided. No repeated parameters.
+  2. simulate the reacted amount / fraction of sequences with each controlled variable in x_values
+  3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
+
+Args:
+<<uniq_seq_num, x_values, total_reads, p0, kinetic_model, count_model>>
+    param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
+    weights (list or str): weights/col of weight for sampling from table
+<<total_amount_error, reps, seed, save_to, param_generator>>
+
+Returns:
+    x (pd.DataFrame): c, n value for samples
+    Y (pd.DataFrame): simulated sequence counts for given samples
+    param_table (pd.DataFrame): table list the parameters for simulated sequences
+    seq_table (data.SeqTable): a SeqTable object to stores all the data
+""")
 def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                     kinetic_model=None, count_model=None, total_amount_error=None,
                     param_sample_from_df=None, weights=None, replace=True,
                     reps=1, seed=None, note=None,
                     save_to=None, **param_generators):
-    simulate_counts.__doc__="""Simulate sequencing count dataset given kinetic and count model
-
-    Procedure:
-      1. parameter for each unique sequences were sampled from param_sample_from_df and kwargs
-        (param_generators). It is an even pool if p0 is not provided. No repeated parameters.
-      2. simulate the reacted amount / fraction of sequences with each controlled variable in x_values
-      3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
-
-    Args:
-    {args_1}
-        param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
-        weights (list or str): weights/col of weight for sampling from table
-    {args_2}
-
-    Returns:
-        x (pd.DataFrame): c, n value for samples
-        Y (pd.DataFrame): simulated sequence counts for given samples
-        param_table (pd.DataFrame): table list the parameters for simulated sequences
-        seq_table (data.SeqTable): a SeqTable object to stores all the data
-    """.format(args_1=simu_args.get(['uniq_seq_num', 'x_values', 'total_reads', 'p0', 'kinetic_model', 'count_model']),
-               args_2=simu_args.get(['total_amount_error', 'reps', 'seed', 'save_to', 'param_generator']))
-
     from ..model import pool
 
     if seed is not None:
@@ -310,7 +311,7 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
         else:
             for rep in range(reps):
                 dna_amount[f"s{sample_ix}-{rep}"], Y[f"s{sample_ix}-{rep}"] = pool_model.predict(c=c, N=n)
-                x[f"s{sample_ix}-{rep}"] = {'c': c, 'n': n}
+                x[f"s{sample_ix}-{rep}"] = {'c': c, 'N': n}
     # return x, Y, total_amounts, param_table
     x = pd.DataFrame.from_dict(x, orient='columns')
     Y = pd.DataFrame.from_dict(Y, orient='columns')
@@ -361,30 +362,7 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
             seq_table.to_pickle(f"{save_path}/seq_table.pkl")
         else:
             logging.error('save_to should be a directory', error_type=TypeError)
-
     return x, Y, dna_amount, param_table, seq_table
-
-simulate_counts.__doc__="""Simulate sequencing count dataset given kinetic and count model
-
-    Procedure:
-      1. parameter for each unique sequences were sampled from param_sample_from_df and kwargs
-        (param_generators). It is an even pool if p0 is not provided. No repeated parameters.
-      2. simulate the reacted amount / fraction of sequences with each controlled variable in x_values
-      3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
-
-    Args:
-    {args_1}
-        param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
-        weights (list or str): weights/col of weight for sampling from table
-    {args_2}
-
-    Returns:
-        x (pd.DataFrame): c, n value for samples
-        Y (pd.DataFrame): simulated sequence counts for given samples
-        param_table (pd.DataFrame): table list the parameters for simulated sequences
-        seq_table (data.SeqTable): a SeqTable object to stores all the data
-    """.format(args_1=simu_args.get(['uniq_seq_num', 'x_values', 'total_reads', 'p0', 'kinetic_model', 'count_model'], indent=4),
-               args_2=simu_args.get(['total_amount_error', 'reps', 'seed', 'save_to', 'param_generators'], indent=4))
 
 
 def get_pct_gaussian_error(rate):
@@ -397,40 +375,33 @@ def get_pct_gaussian_error(rate):
     return pct_gaussian_error
 
 
+@simu_doc.compose("""Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
+    t: reaction time (90 min)
+    alpha: degradation ratio of BYO (0.479)
+    x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
+      5 BYO concentration with triplicates:
+        [-1 (input pool),
+         2e-6, 2e-6, 2e-6,
+         10e-6, 10e-6, 10e-6,
+         50e-6, 50e-6, 50e-6,
+         250e-6, 250e-6, 250e-6,
+         1260e-6, 1260e-6, 1260e-6]
+
+Parameter for each sequences were sampled from given distribution defined from arguments
+    - p0: log normal from exp(N(p0_loc, p0_scale))
+    - k: log normal from k_95 95-percentile for k
+    - A: uniform from [0, 1]
+
+Other args:
+<<uniq_seq_num, depth, total_amount_error, save_to>>
+    plot_dist (bool): if pairwise figures of distribution for simulated parameters (p0, A, k, kA)
+
+Returns:
+<<x, Y, param_table, truth, seq_table>>
+""")
 def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, p0_scale, k_95,
                                                    total_dna_error_rate=0.1, seed=23,
                                                    save_to=None, plot_dist=True):
-    """Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
-        t: reaction time (90 min)
-        alpha: degradation ratio of BYO (0.479)
-        x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
-          5 BYO concentration with triplicates:
-            [-1 (input pool),
-             2e-6, 2e-6, 2e-6,
-             10e-6, 10e-6, 10e-6,
-             50e-6, 50e-6, 50e-6,
-             250e-6, 250e-6, 250e-6,
-             1260e-6, 1260e-6, 1260e-6]
-
-    Parameter for each sequences were sampled from given distribution defined from arguments
-        - p0: log normal from exp(N(p0_loc, p0_scale))
-        - k: log normal from k_95 95-percentile for k
-        - A: uniform from [0, 1]
-
-    Other args:
-        uniq_seq_num (int): number of unique sequences to simulate
-        depth (int or float): sequence depth defined on mean reads per sequence
-        total_amount_error (float or callable): fix Gaussian error standard deviation or
-        an error function take true value. Default is 10 percent Gaussian error. Assign 0 for no error introduced.
-        save_to (str): save simulated to a folder
-        plot_dist (bool): if pairwise figures of distribution for simulated parameters (p0, A, k, kA)
-
-    Returns:
-        x (pd.DataFrame): c, n value for samples
-        Y (pd.DataFrame): simulated sequence counts for given samples
-        param_table (pd.DataFrame): table list the parameters for simulated sequences, including p0, k, A, kA
-        seq_table (data.SeqTable): a SeqTable object to stores all the data
-    """
 
     c_list = [-1] + list(np.repeat(
         np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
@@ -477,31 +448,28 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
     return x, Y, dna_amount, truth, seq_table
 
 
+@simu_doc.compose("""Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
+    t: reaction time (90 min)
+    alpha: degradation ratio of BYO (0.479)
+    x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
+      5 BYO concentration with triplicates:
+        [-1 (input pool),
+         2e-6, 2e-6, 2e-6,
+         10e-6, 10e-6, 10e-6,
+         50e-6, 50e-6, 50e-6,
+         250e-6, 250e-6, 250e-6,
+         1260e-6, 1260e-6, 1260e-6]
+
+Parameter for each sequences were sampled from previous point estimate results:
+    - point_est_csv: load point estimates results to extract estimated k and A
+    - seqtable_path: path to load input sample SeqTable object to get p0 information
+
+Returns:
+<<x, Y, param_table, truth, seq_table>>
+""")
 def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path, uniq_seq_num, depth=40,
                                                     total_dna_error_rate=0.1, seed=23,
                                                     plot_dist=False, save_to=None):
-    """Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
-        t: reaction time (90 min)
-        alpha: degradation ratio of BYO (0.479)
-        x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
-          5 BYO concentration with triplicates:
-            [-1 (input pool),
-             2e-6, 2e-6, 2e-6,
-             10e-6, 10e-6, 10e-6,
-             50e-6, 50e-6, 50e-6,
-             250e-6, 250e-6, 250e-6,
-             1260e-6, 1260e-6, 1260e-6]
-
-    Parameter for each sequences were sampled from previous point estimate results:
-        - point_est_csv: load point estimates results to extract estimated k and A
-        - seqtable_path: path to load input sample SeqTable object to get p0 information
-
-    Returns:
-        x (pd.DataFrame): c, n value for samples
-        Y (pd.DataFrame): simulated sequence counts for given samples
-        param_table (pd.DataFrame): table list the parameters for simulated sequences, including p0, k, A, kA
-        seq_table (data.SeqTable): a SeqTable object to stores all the data
-    """
 
     from ..estimator.least_square import load_estimation_results
     result_table = load_estimation_results(point_est_csv=point_est_csv, seqtable_path=seqtable_path)

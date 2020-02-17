@@ -21,9 +21,8 @@ def multinomial(p, N, seed=None):
 
     from scipy.stats import multinomial
     if isinstance(N, (list, np.ndarray, pd.Series)):
-        return np.array([multinomial.rvs(n=n, p=p) for n in N])
+        return np.array([multinomial.rvs(n=int(n), p=p) for n in N])
     elif is_numeric(N):
         return multinomial.rvs(n=int(N), p=p)
     else:
-        print(N, f"dtype:{type(N)}")
         logging.error("Unknown N type", error_type=TypeError)

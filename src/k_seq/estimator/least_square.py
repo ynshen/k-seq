@@ -1373,7 +1373,6 @@ def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_cs
     point_est_res = pd.read_csv(point_est_csv, index_col=0)
     est_res = point_est_res[point_est_res.columns]
     seq_list = est_res.index.values
-    bootstrap_res = pd.read_csv(bootstrap_csv, index_col=0)
 
     if seqtable_path:
         # add counts in input pool
@@ -1391,6 +1390,7 @@ def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_cs
             est_res['dist_to_center'] = mega_peak.dist_to_center
 
     if bootstrap_csv:
+        bootstrap_res = pd.read_csv(bootstrap_csv, index_col=0)
         # add bootstrap results
         est_res[['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']] = bootstrap_res[
             ['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']]

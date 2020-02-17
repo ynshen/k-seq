@@ -125,7 +125,7 @@ class BYOModel:
         return first_order(c=c, k=k, A=A, broadcast=broadcast, alpha=0.479, t=90)
 
     @staticmethod
-    def amount_first_order(c, p0, k, A, broadcast=True):
+    def amount_first_order(c, p0, k, A, broadcast=False):
         f"""Absolute amount of reacted pool, if c is negative, return 0
         Notice: broadcast should be False if multiple p0 is used.
 

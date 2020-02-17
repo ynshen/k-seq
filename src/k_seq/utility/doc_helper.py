@@ -104,7 +104,7 @@ class DocHelper(object):
     def compose(self, docstring, indent=4, sep='\n'):
         docstring = ''.join(
             [s if isinstance(s, str) else self.get(s, indent=indent, sep=sep)
-             for s in DocHelper.split_string(docstring)]
+             for s in self.split_string(docstring)]
         )
 
         def decorator(func):

@@ -62,7 +62,12 @@ Args:
     def target_func(arg1):
         pass
 
-    assert target_func.__doc__ == "Here is an example\n    arg1: Docstring for arg1\n    arg2: Docstring for arg2\nArgs:\n        arg2: Docstring for arg2\n        arg3 (type for arg3): Docstring for arg3\n"
+    assert target_func.__doc__ == "Here is an example\n" \
+                                  "    arg1: Docstring for arg1\n" \
+                                  "    arg2: Docstring for arg2\n" \
+                                  "Args:\n" \
+                                  "        arg2: Docstring for arg2\n" \
+                                  "        arg3 (type for arg3): Docstring for arg3\n"
 
 
 def test_DocHelper_compose_doc_decorator_no_effect_works():
@@ -79,4 +84,6 @@ Args:
     def target_func(arg1):
         pass
 
-    assert target_func.__doc__ == "Here is an example of simple docstring with no argument substitution\nArgs:\n  args1\n"
+    assert target_func.__doc__ == "Here is an example of simple docstring with no argument substitution\n" \
+                                  "Args:\n" \
+                                  "  args1\n"
