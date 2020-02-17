@@ -65,3 +65,46 @@ def load_Seqtable_from_count_files(cls,
         seq_table.add_sample_total_amounts(**kwargs)
 
     return seq_table
+
+
+def read_count_file(file_path, as_dict=False, number_only=False):
+    """Read a single count file generated from Chen lab's customized scripts
+
+    Count file format:
+    ::
+        number of unique sequences = 2825
+        total number of molecules = 29348173
+
+        AAAAAAAACACCACACA               2636463
+        AATATTACATCATCTATC              86763
+        ...
+
+    Args:
+        file_path (str): full directory to the count file
+        as_dict (bool): return a dictionary instead of a `pd.DataFrame`
+        number_only (bool): only return number of unique seqs and total counts if True
+
+    Returns:
+        unique_seqs (`int`): number of unique sequences in the count file
+        total_counts (`int`): number of total reads in the count file
+        sequence_counts (`pd.DataFrame`): with `sequence` as index and `counts` as the first column
+    """
+    import pandas as pd
+
+    with open(file_path, 'r') as file:
+        unique_seqs = int([elem for elem in next(file).strip().split()][-1])
+        total_counts = int([elem for elem in next(file).strip().split()][-1])
+        if number_only:
+            sequence_counts = None
+            as_dict = True
+        else:
+            next(file)
+            sequence_counts = {}
+            for line in file:
+                seq = line.strip().split()
+                sequence_counts[seq[0]] = int(seq[1])
+
+    if as_dict:
+        return unique_seqs, total_counts, sequence_counts
+    else:
+        return unique_seqs, total_counts, pd.DataFrame.from_dict(sequence_counts, orient='index', columns=['counts'])
