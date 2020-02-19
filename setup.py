@@ -18,6 +18,7 @@ setup(
         'python-levenshtein',
         'scipy',
         'seaborn',
+        'doc-helper'
     ],
     zip_safe=False
 )

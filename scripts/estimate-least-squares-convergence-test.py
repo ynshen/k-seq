@@ -46,7 +46,7 @@ def simu_seq_reacted_frac(param, c, kinetic_model, percent_error=0):
 
 
 def simulate_reacted_frac(df_seq_param=None, c=None, kinetic_model=None, percent_error=0):
-    """Simulate reacted franctions for a list of sequences"""
+    """Simulate reacted fractions for a list of sequences"""
 
     from functools import partial
     partial_func = partial(simu_seq_reacted_frac, c=c, kinetic_model=kinetic_model, percent_error=percent_error)
@@ -131,6 +131,6 @@ if __name__ == '__main__':
     logging.info(f'Results will be saved to {args.output_dir}')
     from k_seq.utility.log import Timer
     with Timer():
-        main(n_seq=args.seq_num, include_1250=args.include_1250,
+        main(n_seq=args.uniq_seq_num, include_1250=args.include_1250,
              reps=args.reps, core=args.core, output_dir=args.output_dir)
 

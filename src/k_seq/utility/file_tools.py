@@ -1,21 +1,18 @@
+from .log import logging
+
 
 def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full_path=True):
     """list all files under the given file root(s) follows the pattern if given, folders are not included
 
     Args:
         file_root (`str` of list of `str`): root directory or a list of root directory
-
         pattern (`str`): optional, include all the files under directories if None
-
         file_list (list of `str`): optional, only includes the files with names in the file_list
-
         black_list (list of `str`): optional, file name include substring in black list will be excluded
-
         full_path (`bool`): if return the full path or only name of the file, by default, if file_root is one string,
           only file name will be returned; if file_root contains multiple strings, full path will be returned
 
     Returns:
-
         list of `str` or `path.Path`: list of file names/full directory
     """
 
@@ -221,6 +218,28 @@ def dump_json(obj, path=None, indent=2):
             json.dump(obj, handle, indent=indent)
     else:
         return json.dumps(obj)
+
+
+def read_table_files(file_path, col_name=None, header=1):
+    """Read common table files
+    - .xls or .xlsx: first sheet will be read with first row as header
+    - .csv: read the csv files with first row as header, separator is ','
+    - .tsv: read the tsv files with first row as header, separator is '/t'
+    """
+    from pathlib import Path
+    import pandas as pd
+
+    file_path = Path(file_path)
+    if file_path.suffix in ['xls', 'xlsx']:
+        df = pd.read_excel(io=file_path, sheet_name=0, header=header)
+    elif file_path.suffix in ['csv']:
+        df = pd.read_csv(file_path, header=header)
+    elif file_path.suffix in ['tsv']:
+        df = pd.read_csv(file_path, header=header, sep='/t')
+    else:
+        logging.error('File type not identified', error_type=TypeError)
+
+    return df[col_name]
 
 
 def check_dir(path):
