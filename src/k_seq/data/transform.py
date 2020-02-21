@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from .seq_table import SeqTable
 from abc import ABC, abstractmethod
-from ..utility import DocHelper
+from doc_helper import DocHelper
 from ..utility.func_tools import update_none
 from ..utility.log import logging
 
@@ -62,36 +62,38 @@ class SpikeInNormalizer(Transformer):
     """
 
     def __repr__(self):
-        return f"SpikeIn Normalizer (center seq: {self.spike_in_seq}, radius= {self.radius}, dist measure={self.dist_measure})"
+        return f"SpikeIn Normalizer (center seq: {self.peak.center_seq}," \
+               f"radius: {self.radius}, dist type: {self.dist_type})"
 
-    def __init__(self, spike_in_seq, spike_in_amount, base_table, radius=None, unit='ng', dist_measure='hamming',
-                 blacklist=None):
+    def __init__(self, spike_in_seq, spike_in_amount, base_table, radius, unit, dist_type='edit'):
         """Initialize a SpikeInNormalizer
 
         Args:
 
 
         """
-        super().__init__()
-        self.spike_in_seq = spike_in_seq
-        self.unit = unit
-        self.target = base_table
-        self.blacklist = blacklist
-        self.spike_in_amount = spike_in_amount
-        if isinstance(self.target, pd.DataFrame):
-            self.dist_to_center = pd.Series(self.target.index.map(self._get_edit_dist), index=self.target.index)
-        else:
-            try:
-                self.dist_to_center = pd.Series(self.target.table.index.map(self._get_edit_dist),
-                                                index=self.target.table.index)
-            except AttributeError:
-                raise AttributeError('target for SpikeInNormalizer needs to be either `SeqTable` or `pd.Dataframe`')
+        from landscape import Peak
 
-        self.spike_in_members = None
-        self.norm_factor = None
-        self.radius = None
+        super().__init__()
+
+        self.peak = Peak(center_seq=spike_in_seq, radius=radius,
+                         seqs=base_table,
+                         dist_type=dist_type, name='spike-in')
+        self.base_table = self.peak.seqs
+        self.spike_in_amount = spike_in_amount
+        self.unit = unit
         self.radius = radius
-        self.dist_measure = dist_measure
+        self.dist_type = dist_type
+        self.plot_spike_in_peak = self.peak.vis.peak_plot
+
+    def _update_spike_in_members(self):
+        """Update spike-in members based on current distance and radius"""
+        self.spike_in_members = self.peak.dist_to_center[self.peak.dist_to_center <= self.radius]
+
+    def _update_norm_factors(self):
+        """Update normalization factor for each sample"""
+        spike_in_counts = self.base_table.loc[self.spike_in_members, self.spike_in_amount.index].sum(axis=0)
+        self.norm_factor = self.spike_in_amount / spike_in_counts
 
     @property
     def spike_in_amount(self):
@@ -99,26 +101,19 @@ class SpikeInNormalizer(Transformer):
 
     @spike_in_amount.setter
     def spike_in_amount(self, spike_in_amount):
+        """Check and reformat spike_in_amount type, and update norm_factors"""
+
         if isinstance(spike_in_amount, (list, np.ndarray)):
-            if isinstance(self.target, pd.DataFrame):
-                sample_list = self.target.columns
+            # if unkey array, must be same length as base_table's columns
+            if len(self.base_table.columns) != len(spike_in_amount):
+                logging.error('Length of spike_in_amount does not match sample number')
+                ValueError('Length of spike_in_amount does not match sample number')
             else:
-                sample_list = self.target.sample_list
-            if self.blacklist is not None:
-                sample_list = [sample for sample in sample_list if sample not in self.blacklist]
-            self._spike_in_amount = {key: value for key, value in zip(sample_list, spike_in_amount)}
+                self._spike_in_amount = pd.Series(data=spike_in_amount, index=self.base_table.columns)
         elif isinstance(spike_in_amount, dict):
-            self._spike_in_amount = spike_in_amount
-        else:
-            raise TypeError('spike_in_amount needs to be list or dict')
+            self._spike_in_amount = pd.Series(spike_in_amount)
 
-    def _get_edit_dist(self, seq):
-        from Levenshtein import distance
-        return distance(self.spike_in_seq, seq)
-
-    def _get_norm_factor(self, sample):
-        """Calculate norm factor from a sample column"""
-        return self.spike_in_amount[sample.name] / sample[self.spike_in_members].sparse.to_dense().sum()
+        self._update_norm_factors()
 
     @property
     def radius(self):
@@ -126,154 +121,35 @@ class SpikeInNormalizer(Transformer):
 
     @radius.setter
     def radius(self, value):
-        if value is not None:
+        """Update spike_in_members and norm_factors when radius change"""
+        if value is None:
+            self._radius = None
+            self.norm_factor = None
+            self.spike_in_amount = None
+        else:
             if value != self.radius:
                 self._radius = value
-                self.spike_in_members = self.dist_to_center[self.dist_to_center <= value].index.values
-                if isinstance(self.target, pd.DataFrame):
-                    self.norm_factor = self.target[list(self.spike_in_amount.keys())].apply(self._get_norm_factor,
-                                                                                            axis=0)
-                else:
-                    self.norm_factor = self.target.table[list(self.spike_in_amount.keys())].apply(
-                        self._get_norm_factor, axis=0
-                    )
-        else:
-            self._radius = None
-            self.spike_in_members = None
-            self.norm_factor = None
+                self._update_spike_in_members()
+                self._update_norm_factors()
 
     @staticmethod
-    def func(target, norm_factor, *args, **kwargs):
+    def func(target, norm_factor):
+        """Normalize counts in target by norm_factor"""
 
-        def sample_normalizer(sample):
-            return sample * norm_factor[sample.name]
-
-        import pandas as pd
         if not isinstance(target, pd.DataFrame):
+            logging.error('target needs to be pd.DataFrame')
             raise TypeError('target needs to be pd.DataFrame')
 
-        import warnings
-        sample_list = []
-        for sample in target.columns:
-            if sample in norm_factor.keys():
-                sample_list.append(sample)
-            else:
-                warnings.warn(f'Sample {sample} is not found in the normalizer, normalization is not performed')
+        sample_list = norm_factor.index
+        sample_not_in = list(target.columns[~target.columns.isin(sample_list)])
 
-        return target[sample_list].apply(sample_normalizer, axis=0)
+        for sample in sample_not_in:
+            logging.warning(f'Sample {sample} is not found in the normalizer, normalization is not performed')
 
-    def apply(self, target=None, norm_factor=None):
-        if target is None:
-            target = self.target
-        if target is None:
-            raise ValueError('No valid target found')
-        if norm_factor is None:
-            norm_factor = self.norm_factor
-        if norm_factor is None:
-            raise ValueError('No valid norm_factor found')
+        return target.loc[:, sample_list] * norm_factor
 
-        if isinstance(target, SeqTable):
-            target = target.table
-
-        return self.func(target=target, norm_factor=norm_factor)
-
-    @staticmethod
-    def spike_in_peak_plot(spike_in, seq_table=None, sample_list=None, max_dist=15, norm_on_center=True, log_y=True,
-                           marker_list=None, color_list=None, err_guild_lines=None, label_map=None,
-                           legend_off=False, legend_col=2, ax=None, figsize=None, save_fig_to=None):
-        """Plot the distribution of spike_in peak
-        Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)
-
-        Args:
-            target (`SeqTable` or `pd.DataFrame`): dataset to plot
-            sample_list (list of `str`): samples to show. All samples will show if None
-            max_dist (`int`): maximal edit distance to survey. Default 15
-            norm_on_center (`bool`): if the counts/abundance are normalized to then center (exact spike in)
-            log_y (`bool`): if set the y scale as log
-            marker_list (list of `str`): overwrite default marker scheme if not `None`, same length and order as valid samples
-            color_list (list of `str`): overwrite default color scheme if not `None`, same length and order as valid samples
-            label_map (dict or callable): alternative label for samples
-            err_guild_lines (list of `float`): add a series of guild lines indicate the distribution only from given error rate,
-              if not `None`
-            legend_off (`bool`): do not show the legend if True
-            ax (`matplotlib.Axis`): if use external ax object to plot. Create a new figure if `None`
-            save_fig_to (`str`): save the figure to file if not None
-
-        """
-
-        from ..utility.plot_tools import PlotPreset
-        import matplotlib.pyplot as plt
-        import numpy as np
-
-        if seq_table is None:
-            seq_table = spike_in.target.table
-        if sample_list is None:
-            sample_list = seq_table.columns.values
-        if marker_list is None:
-            marker_list = PlotPreset.markers(num=len(sample_list), with_line=True)
-        elif len(marker_list) != len(sample_list):
-            raise Exception('Error: length of marker_list does not align with the number of valid samples to plot')
-        if color_list is None:
-            color_list = PlotPreset.colors(num=len(sample_list))
-        elif len(color_list) != len(sample_list):
-            raise Exception('Error: length of color_list does not align with the number of valid samples to plot')
-
-        if ax is None:
-            if figsize is None:
-                figsize = (max_dist / 2, 6) if legend_off else (max_dist / 2 + 5, 6)
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
-
-        dist_series = pd.Series(data=np.arange(max_dist + 1), index=np.arange(max_dist + 1))
-
-        def get_sample_counts(dist):
-            seqs = spike_in.dist_to_center[spike_in.dist_to_center == dist].index
-            return seq_table.loc[seqs].sum(axis=0)
-
-        peak_counts = dist_series.apply(get_sample_counts)
-        if norm_on_center:
-            peak_counts = peak_counts / peak_counts.loc[0]
-
-        if label_map:
-            if callable(label_map):
-                label_map = {sample: label_map(sample) for sample in sample_list}
-        else:
-            label_map = {sample: sample for sample in sample_list}
-        for sample, color, marker in zip(sample_list, color_list, marker_list):
-            ax.plot(dist_series, peak_counts[sample], marker, color=color, label=label_map[sample],
-                    ls='-', alpha=0.5, markeredgewidth=2)
-        if log_y:
-            ax.set_yscale('log')
-        ylim = ax.get_ylim()
-        if err_guild_lines is not None:
-            if not norm_on_center:
-                raise ValueError('Can only add guidelines if peaks are normed on center')
-            # assuming a fix error rate per nt, iid on binom
-            from scipy.stats import binom
-            if isinstance(err_guild_lines, (float, int)):
-                err_guild_lines = [err_guild_lines]
-            colors = PlotPreset.colors(num=len(err_guild_lines))
-            for ix, (p, color) in enumerate(zip(err_guild_lines, colors)):
-                rv = binom(len(spike_in.spike_in_seq), p)
-                pmfs = np.array([rv.pmf(x) for x in dist_series])
-                pmfs_normed = pmfs / pmfs[0]
-                ax.plot(dist_series, pmfs_normed,
-                        color=color, ls='--', alpha=(ix + 1) / len(err_guild_lines), label=f'p = {p}')
-        ax.set_ylim(ylim)
-        y_label = ''
-        if norm_on_center:
-            y_label += ' normed'
-        y_label += ' counts'
-        ax.set_ylabel(y_label.title(), fontsize=14)
-        ax.set_xlabel('Edit Distance to Spike-in Center', fontsize=14)
-        if not legend_off:
-            ax.legend(loc=[1.02, 0], fontsize=9, frameon=False, ncol=legend_col)
-        plt.tight_layout()
-
-        if save_fig_to:
-            fig.patch.set_facecolor('none')
-            fig.patch.set_alpha(0)
-            plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-        return ax
+    def apply(self, target):
+        return self.func(target=target, norm_factor=self.norm_factor)
 
 
 _total_dna_doc = DocHelper(

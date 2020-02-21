@@ -8,7 +8,7 @@
 """
 
 
-from . import visualizer, simu
+from . import visualization, simu
 
 
 # Dev ENV: directly import landscape from its report
