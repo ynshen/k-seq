@@ -6,7 +6,7 @@ Notes:
 """
 
 import numpy as np
-from ..utility.doc_helper import DocHelper
+from ..utility import DocHelper
 from ..utility.log import logging
 
 doc_helper = DocHelper(
@@ -108,7 +108,7 @@ class BYOModel:
     {params}
 
     return:
-        concentration/composition at the target (time, concentration) point
+        concentration/composition at the name (time, concentration) point
     """.format(params=doc_helper.get(['p0', 'c', 'k', 'A']))
 
     @staticmethod

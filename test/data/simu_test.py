@@ -1,7 +1,4 @@
 """Test code for simulation"""
-from yuning_util.dev_mode import DevMode
-dev_mode = DevMode('k-seq')
-dev_mode.on()
 
 from k_seq.data import simu
 from k_seq.data.seq_table import SeqTable

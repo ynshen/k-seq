@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-from ..utility.doc_helper import DocHelper
+from ..utility import DocHelper
 from ..utility.func_tools import is_numeric
 from ..utility.log import logging
 

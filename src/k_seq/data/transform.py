@@ -49,29 +49,40 @@ class Transformer(ABC):
 
 _spike_in_doc = DocHelper(
     radius=('int', 'Radius of spike-in peak, seqs less or equal to radius away from center are spike-in seqs'),
+    base_table=('pd.DataFrame', 'base_table includes spike-in sequences to calculate normalization factor'),
+    unit=('str', 'unit of spike-in amount'),
+    dist_type=('str', "'edit' or 'hamming' as distance measure. Default 'edit' to include insertion / deletion")
 )
 
 
+@_spike_in_doc.compose("""Normalized counts to absolute amount using spike-in information
+
+Attributes:
+    peak (landscape.Peak): a Peak instance in `seq-landscape` package to calculate sequence distances
+    spike_in_amount (pd.Series): measured spike-in amount in samples
+<<base_table, radius, unit, dist_type>>
+
+Methods:
+    plot_spike_in_peak: plot the shape of spike-in sequences for each sample
+    apply: apply the normalization to a `name` table
+    func: static method to calculate normalization
+""")
 class SpikeInNormalizer(Transformer):
-    """Normalized counts to absolute amount using spike-in information
-    todo: add attributes of spike-in
-
-
-    Attributes:
-
-    """
 
     def __repr__(self):
         return f"SpikeIn Normalizer (center seq: {self.peak.center_seq}," \
                f"radius: {self.radius}, dist type: {self.dist_type})"
 
+    @_spike_in_doc.compose("""Initialize a SpikeInNormalizer
+    
+    Args:
+        spike_in_seq (str): center sequence for spike-in
+        spike_in_amount (list-like, dict, or pd.Series): added spike_in amount,
+          dict and pd.Series should have key of samples in base_table
+          list-like should have same length as number of samples (cols) in base_table
+        <<base_table, radius, unit, dist_type>>
+    """)
     def __init__(self, spike_in_seq, spike_in_amount, base_table, radius, unit, dist_type='edit'):
-        """Initialize a SpikeInNormalizer
-
-        Args:
-
-
-        """
         from landscape import Peak
 
         super().__init__()
@@ -134,11 +145,11 @@ class SpikeInNormalizer(Transformer):
 
     @staticmethod
     def func(target, norm_factor):
-        """Normalize counts in target by norm_factor"""
+        """Normalize counts in `name` by `norm_factor`"""
 
         if not isinstance(target, pd.DataFrame):
-            logging.error('target needs to be pd.DataFrame')
-            raise TypeError('target needs to be pd.DataFrame')
+            logging.error('name needs to be pd.DataFrame')
+            raise TypeError('name needs to be pd.DataFrame')
 
         sample_list = norm_factor.index
         sample_not_in = list(target.columns[~target.columns.isin(sample_list)])
@@ -149,6 +160,7 @@ class SpikeInNormalizer(Transformer):
         return target.loc[:, sample_list] * norm_factor
 
     def apply(self, target):
+        """Apply normalization to `name"""
         return self.func(target=target, norm_factor=self.norm_factor)
 
 
@@ -158,25 +170,24 @@ _total_dna_doc = DocHelper(
     unit=('str', 'Unit of amount measured'),
     norm_factor=('dict', 'Amount per sequence. Sequence amount = norm_factor * reads'),
     full_table=('pd.DataFrame', 'table where the total amount were measured and normalize to'),
-
 )
 
 
+@_total_dna_doc.compose("""Quantify the DNA amount by total DNA amount measured in each sample
+
+Amount for each sequence were normalized by direct fraction of the sequence
+seq amount = (seq counts / total counts) * total amount
+
+Attributes:
+<<full_table, total_amounts, norm_factor, unit>>
+""")
 class TotalAmountNormalizer(Transformer):
-    f"""Quantify the DNA amount by total DNA amount measured in each sample
 
-    Amount for each sequence were normalized by direct fraction of the sequence
-        seq amount = (seq counts / total counts) * total amount
-    
-    Attributes:
-    {_total_dna_doc.get(['full_table', 'total_amounts', 'norm_factor', 'unit'])}
-    """
-
+    @_total_dna_doc.compose("""Initialize a TotalAmountNormalizer
+    Args:
+    <<total_amounts, full_table, name, unit>>
+    """)
     def __init__(self, total_amounts, full_table, unit=None):
-        f"""Initialize a TotalAmountNormalizer
-        Args:
-        {_total_dna_doc.get(['total_amounts', 'full_table', 'target', 'unit'])}
-        """
 
         super().__init__()
         self._full_table = None
@@ -228,10 +239,10 @@ class TotalAmountNormalizer(Transformer):
 
     @staticmethod
     def func(target, norm_factor):
-        """Normalize target table w.r.t norm_factor
+        """Normalize name table w.r.t norm_factor
 
         Returns:
-            pd.DataFrame of normalized target table with only samples provided in norm_factor
+            pd.DataFrame of normalized name table with only samples provided in norm_factor
         """
 
         def sample_normalize(col):
@@ -246,15 +257,15 @@ class TotalAmountNormalizer(Transformer):
 
         return target[sample_list].apply(sample_normalize, axis=0)
 
-    def apply(self, target):
-        """Transform counts to absolute amount on columns in target that are in norm_factor 
-        
-        Args:
-        {args}
+    @_total_dna_doc.compose("""Transform counts to absolute amount on columns in name that are in norm_factor 
 
-        Returns:
-            pd.DataFrame of normalized target table with only samples in norm_factor
-        """.format(args=_total_dna_doc.get(['target']))
+    Args:
+    <<name>>
+
+    Returns:
+        pd.DataFrame of normalized name table with only samples in norm_factor
+    """)
+    def apply(self, target):
         return self.func(target=target, norm_factor=self.norm_factor)
 
 
@@ -306,7 +317,7 @@ class ReactedFractionNormalizer(Transformer):
         if target is None:
             target = self.target
         if target is None:
-            raise ValueError('No valid target found')
+            raise ValueError('No valid name found')
         if input_samples is None:
             input_samples = self.input_samples
         if input_samples is None:

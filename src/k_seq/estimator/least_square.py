@@ -546,7 +546,7 @@ class ConvergenceTester:
         """Apply convergence test to given fitter
 
         Args:
-            fitter (SingleFitter): the target single fitter
+            fitter (SingleFitter): the name single fitter
             reps (int): number of repeated fitting, default 10
             init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters.
               All parameters are initialized from (0, 1) with random uniform draw
@@ -902,7 +902,7 @@ class BatchFitResults:
     def to_pickle(self, output_dir, bs_record=True, sep_files=True):
         """Save fitting results as a pickled dict, notice: `dump_json` is preferred
         Args:
-             output_dir (str): path to saved results, should be the parent of target location
+             output_dir (str): path to saved results, should be the parent of name location
              bs_record (bool): if output bs_record as well
              sep_files (bool): if save bs_records as separate files
                  If True:
@@ -949,7 +949,7 @@ class BatchFitResults:
     def to_json(self, output_dir, bs_record=True, sep_files=True):
         """Serialize results as json format
         Args:
-             output_dir (str): path to save results, should be the parent of target location
+             output_dir (str): path to save results, should be the parent of name location
              bs_record (bool): if output bs_record as well
              sep_files (bool): if save bs_records as separate files
                  If True:

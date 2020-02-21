@@ -12,7 +12,7 @@
 # ## directory of input files
 # ARG.add_argument()
 #
-# ## sample name pattern
+# ## sample name template
 #
 #
 #

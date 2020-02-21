@@ -1,7 +1,3 @@
-from yuning_util.dev_mode import DevMode
-dev_mode = DevMode('k-seq')
-dev_mode.on()
-
 from k_seq.model import kinetic, count, pool
 
 import numpy as np

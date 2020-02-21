@@ -8,10 +8,19 @@ TODO:
 import numpy as np
 import pandas as pd
 from ..utility.func_tools import AttrScope
+from ..utility.file_tools import _name_template_example
 from ..utility.log import logging, Logger
-from .count_file import load_Seqtable_from_count_files
-from ..utility.doc_helper import DocHelper
-table_doc = DocHelper()
+from doc_helper import DocHelper
+
+
+_table_doc = DocHelper(
+    x_values=('list-like, or dict', 'optional. value for controlled variables. If list-like, should have same length '
+                                    'and order as samples; if dict, should have sample names as key'),
+    x_unit=('str', "optional. Unit for controlled variable. e.g. 'uM'"),
+    input_sample_name=('list of str', 'optional. Indicate input samples (unreacted)'),
+    sample_metadata=('dict or pd.DataFrame', 'optional. Extra sample metadata'),
+    note=('str', 'Note for dataset')
+)
 
 
 class Metadata(AttrScope):
@@ -30,6 +39,20 @@ class Metadata(AttrScope):
         self.sequences = None
         self.logger = Logger()
         super().__init__(attr_dict)
+
+
+class Tables(AttrScope):
+    """Scope to store different tables"""
+
+    def __init__(self, table):
+        super.__init_()
+        self.add(table, 'original')
+
+    def add(self, df, name):
+        if isinstance(df, pd.DataFrame):
+            setattr(self, name, df)
+        else:
+            logging.error('Table should be pd.DataFrame', error_type=TypeError)
 
 
 class SeqTable(object):
@@ -508,7 +531,7 @@ class SeqTable(object):
 #     #     self.logger.info('BatchFitting fitter added')
 #     #
 #     # @classmethod
-#     # def load_count_files(cls, folder_path, x_values, file_pattern=None, name_pattern=None, file_list=None, black_list=None,
+#     # def load_count_files(cls, folder_path, x_values, file_pattern=None, name_template=None, file_list=None, black_list=None,
 #     #                      x_unit=None, dna_unit=None,
 #     #                      spike_in_seq=None, spike_in_amount=None, spike_in_dia=None, ):
 #     #     """To accommodate for exploratery needs, this will be a wrapper for `count_file.CountFileSet"""
@@ -526,10 +549,28 @@ class SeqTable(object):
         with open(path, 'rb') as handle:
             return pickle.load(handle)
 
+    @staticmethod
+    @_table_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
 
-    @table_doc.compose(load_Seqtable_from_count_files.__doc__)
-    def from_count_file(self, **kwargs):
+    Args:
+        count_files (str): root directory to search for count files
+        file_list (list of str): optional, only includes the count files with names in the file_list
+        pattern_filter (str): optional, filter file names based on this pattern, wildcards ``*/?`` are allowed
+        black_list (list of str): optional, file names included in black_list will be excluded
+        name_template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
+            use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
+            ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
+        sort_by (str): sort the order of samples based on given domain
+        dry_run (bool): only return the parsed count file names and metadata without actual reading in data
+    <<x_values, x_unit, input_sample_name, sample_metadata, note>>
+
+    {_name_template_example}
+
+    """)
+    def from_count_file(**kwargs):
+        from .count_file import load_Seqtable_from_count_files
         return load_Seqtable_from_count_files(**kwargs)
+
 
 
 
@@ -537,7 +578,7 @@ def slice_table(table, axis, keys=None, filter_fn=None, remove_zero=False):
     """Utility function to slice pd.DataFrame table with a list of key values or filter functions along given axis
     Optional to remove all zero entries
     Args:
-        table (pd.DataFrame): target table to slice
+        table (pd.DataFrame): name table to slice
         keys (list-like): list of keys to preserve
         axis (0 or 1)
         remove_zero (bool): if remove all zero items in the other axis

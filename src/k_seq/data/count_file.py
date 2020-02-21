@@ -6,25 +6,47 @@ TODO:
   - clean up this module (after done with other data modules)
 """
 
+from ..utility.log import logging
+from .seq_table import _table_doc
+from ..utility.file_tools import _name_template_example
+import numpy as np
+import pandas as pd
 
-def load_Seqtable_from_count_files(cls,
-                                   file_root, file_list=None, pattern_filter=None, black_list=None, name_pattern=None, sort_by=None,
-                     x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
-                     silent=True, dry_run=False, **kwargs):
-    """todo: implement the method to generate directly from count files"""
+
+@_table_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
+
+Args:
+    count_files (str): root directory to search for count files
+    file_list (list of str): optional, only includes the count files with names in the file_list
+    pattern_filter (str): optional, filter file names based on this pattern, wildcards ``*/?`` are allowed
+    black_list (list of str): optional, file names included in black_list will be excluded
+    name_template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
+        use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
+        ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
+    sort_by (str): sort the order of samples based on given domain
+    dry_run (bool): only return the parsed count file names and metadata without actual reading in data
+<<x_values, x_unit, input_sample_name, sample_metadata, note>>
+
+{_name_template_example}
+
+""")
+def load_Seqtable_from_count_files(
+    count_files, file_list=None, pattern_filter=None, black_list=None, name_template=None, sort_by=None,
+    x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
+    dry_run=False, **kwargs
+):
+
     from ..utility.file_tools import get_file_list, extract_metadata
-    import numpy as np
-    import pandas as pd
 
     # parse file metadata
-    file_list = get_file_list(file_root=file_root, file_list=file_list,
+    file_list = get_file_list(file_root=count_files, file_list=file_list,
                               pattern=pattern_filter, black_list=black_list, full_path=True)
-    if name_pattern is None:
-        samples = {file.name: {'file_path': str(file), 'name':file.name} for file in file_list}
+    if name_template is None:
+        samples = {file.name: {'file_path': str(file), 'name': file.name} for file in file_list}
     else:
         samples = {}
         for file in file_list:
-            f_meta = extract_metadata(target=file.name, pattern=name_pattern)
+            f_meta = extract_metadata(name=file.name, template=name_template)
             samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
     if sample_metadata is not None:
         for file_name, f_meta in sample_metadata.items():
@@ -39,13 +61,12 @@ def load_Seqtable_from_count_files(cls,
         elif callable(sort_by):
             sort_fn = sort_by
         else:
-            raise TypeError('Unknown sort_by format')
+            logging.error('Unknown sort_by format', error_type=TypeError)
         sample_names = sorted(sample_names, key=sort_fn)
 
     if dry_run:
         return pd.DataFrame(samples)[sample_names].transpose()
 
-    from ..data.count_file import read_count_file
     data_mtx = {sample: read_count_file(file_path=samples[sample]['file_path'], as_dict=True)[2]
                 for sample in sample_names}
     data_mtx = pd.DataFrame.from_dict(data_mtx).fillna(0, inplace=False).astype(pd.SparseDtype(dtype='int'))
@@ -55,29 +76,29 @@ def load_Seqtable_from_count_files(cls,
     else:
         grouper = None
 
-    seq_table = cls(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
-                    x_values=x_values, x_unit=x_unit, note=note, silent=silent)
+    from .seq_table import SeqTable
 
-    if 'spike_in_seq' in kwargs.keys():
-        seq_table.add_spike_in(**kwargs)
-
-    if 'total_amounts' in kwargs.keys():
-        seq_table.add_sample_total_amounts(**kwargs)
+    seq_table = SeqTable(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
+                         x_values=x_values, x_unit=x_unit, note=note)
 
     return seq_table
 
 
+_count_file_format = """Count file format:
+::
+    number of unique sequences = 2825
+    total number of molecules = 29348173
+
+    AAAAAAAACACCACACA               2636463
+    AATATTACATCATCTATC              86763
+    ...
+"""
+
+
 def read_count_file(file_path, as_dict=False, number_only=False):
     """Read a single count file generated from Chen lab's customized scripts
-
-    Count file format:
-    ::
-        number of unique sequences = 2825
-        total number of molecules = 29348173
-
-        AAAAAAAACACCACACA               2636463
-        AATATTACATCATCTATC              86763
-        ...
+    
+    {}
 
     Args:
         file_path (str): full directory to the count file
@@ -85,11 +106,10 @@ def read_count_file(file_path, as_dict=False, number_only=False):
         number_only (bool): only return number of unique seqs and total counts if True
 
     Returns:
-        unique_seqs (`int`): number of unique sequences in the count file
-        total_counts (`int`): number of total reads in the count file
-        sequence_counts (`pd.DataFrame`): with `sequence` as index and `counts` as the first column
-    """
-    import pandas as pd
+        unique_seqs (int): number of unique sequences in the count file
+        total_counts (int): number of total reads in the count file
+        sequence_counts (pd.DataFrame): with ``sequence`` as index and ``counts`` as the first column
+    """.format(_count_file_format)
 
     with open(file_path, 'r') as file:
         unique_seqs = int([elem for elem in next(file).strip().split()][-1])

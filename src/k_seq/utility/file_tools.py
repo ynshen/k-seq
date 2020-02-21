@@ -1,22 +1,21 @@
 from .log import logging
+from pathlib import Path
 
 
 def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full_path=True):
-    """list all files under the given file root(s) follows the pattern if given, folders are not included
+    """Return files under the given `file root` match the `template` if applicable, folders are not included
 
     Args:
-        file_root (`str` of list of `str`): root directory or a list of root directory
-        pattern (`str`): optional, include all the files under directories if None
-        file_list (list of `str`): optional, only includes the files with names in the file_list
-        black_list (list of `str`): optional, file name include substring in black list will be excluded
-        full_path (`bool`): if return the full path or only name of the file, by default, if file_root is one string,
+        file_root (str of list of str): root directory/directories to search
+        pattern (str): optional, include all the files under directories if None
+        file_list (list of str): optional, only includes the files with names in the file_list if exists
+        black_list (list of str): optional, file names included in black_list will be excluded
+        full_path (bool): if return the full path or only name of the file, by default, if file_root is one string,
           only file name will be returned; if file_root contains multiple strings, full path will be returned
 
     Returns:
-        list of `str` or `path.Path`: list of file names/full directory
+        list of str (file names) or path.Path (full directory)
     """
-
-    from pathlib import Path
 
     if pattern is None:
         pattern = '*'
@@ -28,13 +27,12 @@ def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full
 
     if isinstance(file_root, (str, Path)):
         files = [file for file in Path(file_root).glob(pattern) if file.name not in black_list]
-
     elif isinstance(file_root, list):
         files = []
         for root_path in file_root:
             files += [file for file in Path(root_path).glob(pattern) if file.name not in black_list]
     else:
-        raise TypeError('file_root should be string or list of string')
+        logging.error('count_files should be a string or list of string', error_type=TypeError)
 
     if file_list is not None:
         files = [file for file in files if str(file.name) in file_list]
@@ -45,42 +43,59 @@ def get_file_list(file_root, pattern=None, file_list=None, black_list=None, full
         return [file.name for file in files]
 
 
-def extract_metadata(target, pattern):
-    """Function to extract metadata info from target given pattern
-    todo: update method to account for missing metadata situation. e.g. matching -A- to -{d1}{d2}-
-    Args:
+_name_template_example = """
+Example:
 
-        target (`str`): string to extract info from, e.g. sample file name
+    Example on metadata extraction from pattern:
+    >>> metadata = extract_metadata(
+            sample_name = "R4B-1250A_S16_counts.txt"
+            template = "R4[{exp_rep}-{concentration, float}{seq_rep}_S{id, int}]_counts.txt"
+        )
 
-        pattern (`str`): string indicate the method to extract metadata. Use ``[...]`` to include the region of sample_name,
-          use ``{domain_name[, int/float]}`` to indicate region of domain to extract as metadata, including
-          ``[,int/float]`` will convert the domain value to float in applicable, otherwise, string
+    >>> metadata
+    {
+        'name': 'B-1250A_S16',
+        'exp_rep': 'B',
+        'concentration': 1250.0,
+        'seq_rep': 'A',
+        'id': 16
+    }
 
-    Return:
+Notice: two back-to-back domain can only be parsed if one of them is numeric and one of them is alphabetic, and missing
+    value will raise error
 
-        dict: dictionary of all metadata extracted from domains indicated in ``pattern``
+    Valid: matching '-A1-' to '-{{sample}}{{replicate, int}}-' gives {{ 'sample': 'A', 'replicate': 1}}
+    Not valid: matching '-A-' to '-{{sample}}{{replicate, int}}-' will cause error
+               matching '-AA-' to '-{{sample}}{{replicate}}-' will cause error
+"""
 
-    Example:
-        Example on metadata extraction from pattern:
 
-        >>> extract_metadata(
-                sample_name = "R4B-1250A_S16_counts.txt"
-                pattern = "R4[{exp_rep}-{concentration, float}{seq_rep}_S{id, int}]_counts.txt"
-            )
-        metadata = {
-            'name': 'B-1250A_S16',
-            'exp_rep': 'B',
-            'concentration': 1250.0,
-            'seq_rep': 'A',
-            'id': 16
-            }
+_extract_metadata_doc = f"""Function to extract metadata info from a string (name, e.g. file name) given a template
+    indicating the position of each metadata domain.
+    
+Args:
 
-    """
+    name (str): string to extract info, e.g. sample file name
+    template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
+      use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
+      ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
+
+Return:
+
+    dict: dictionary of all metadata extracted from domains indicated in ``pattern``
+
+{_name_template_example} 
+    
+"""
+
+
+def extract_metadata(name, template):
+
     import numpy as np
 
     def extract_info_from_braces(target, pattern):
         """
-        Iterative algorithm to extract metadata info from target and pattern
+        Iterative algorithm to extract metadata info from name and template
         """
 
         def stop(string, ix):
@@ -97,17 +112,17 @@ def extract_metadata(target, pattern):
             if ',' in domain:
                 domain = domain.split(',')
                 if 'int' in domain[1] or 'i' in domain[1]:
-                    return (domain[0], np.int)
+                    return domain[0], np.int
                 elif 'float' in domain[1] or 'f' in domain[1]:
-                    return (domain[0], np.float32)
+                    return domain[0], np.float32
                 else:
-                    return (domain[0], str)
+                    return domain[0], str
             else:
                 return (domain, str)
 
         def get_domains(pattern):
             """
-            inspect pattern and extract domain(s) from it
+            inspect template and extract domain(s) from it
             multiple domains could be expected because of {}{} structure
             """
 
@@ -116,8 +131,8 @@ def extract_metadata(target, pattern):
 
         def extract_info(target, prefix, postfix):
             """
-            extract substring in target are flanked by pre-fix and post-fix
-            prefix: no need to find, always the first len(prefix) character of target
+            extract substring in name are flanked by pre-fix and post-fix
+            prefix: no need to find, always the first len(prefix) character of name
             postfix: the first occurrence of postfix substring after prefix, if not ''
             """
             if postfix == '':
@@ -142,7 +157,7 @@ def extract_metadata(target, pattern):
             split_ix = [-1] + [ix for ix in range(len(string) - 1) if label[ix] != label[ix + 1]] + [len(string)]
             return [string[split_ix[i] + 1: split_ix[i + 1] + 1] for i in range(len(split_ix) - 1)]
 
-        # anchor braces in pattern
+        # anchor braces in template
         brace_left = pattern.find('{')
         if brace_left == -1:
             return {}
@@ -154,7 +169,7 @@ def extract_metadata(target, pattern):
         prefix = pattern[:brace_left]
         postfix = pattern[brace_right + 1:pattern.find('{', brace_right + 1)
         if pattern.find('{', brace_right + 1) != -1 else len(pattern)]
-        # anchor info domain in target from prefix and postfix
+        # anchor info domain in name from prefix and postfix
         info = extract_info(target, prefix, postfix)
         if len(domains) > 1:
             info = divide_string(info)
@@ -175,14 +190,17 @@ def extract_metadata(target, pattern):
         return info_list
 
     metadata = {}  # dict to save extracted values
-    # Anchor the position of brackets and curly braces in name_pattern
-    brackets = [pattern.find('['), pattern.find(']')]
-    metadata = extract_info_from_braces(target=target,
-                                        pattern=pattern[:brackets[0]] + '{name}' + pattern[brackets[1] + 1:])
+    # Anchor the position of brackets and curly braces in name_template
+    brackets = [template.find('['), template.find(']')]
+    metadata = extract_info_from_braces(target=name,
+                                        pattern=template[:brackets[0]] + '{name}' + template[brackets[1] + 1:])
     metadata.update(extract_info_from_braces(target=metadata['name'],
-                                             pattern=pattern[brackets[0] + 1: brackets[1]]))
+                                             pattern=template[brackets[0] + 1: brackets[1]]))
 
     return metadata
+
+
+extract_metadata.__doc__ = _extract_metadata_doc
 
 
 def read_pickle(path):

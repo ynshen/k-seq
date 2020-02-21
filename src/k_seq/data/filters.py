@@ -9,7 +9,7 @@ class FilterBase(object):
     """Abstract template for constructing filters"""
 
     def __init__(self, target=None, axis=0, *args, **kwargs):
-        """A filter should contains at least target, axis, and reverse info for conducting filtering
+        """A filter should contains at least name, axis, and reverse info for conducting filtering
         They could be assigned during instantiation or later
         """
         self.target = target
@@ -18,14 +18,14 @@ class FilterBase(object):
     @staticmethod
     def func(target, *args, **kwargs):
         """Core method for filtering
-        Returns a boolean pd.Series with same shape and order of the given axis in the target
+        Returns a boolean pd.Series with same shape and order of the given axis in the name
         True for passed item, False for filtered item
         *reverse should apply outside this method
         """
         pass
 
     def mask(self, *args, **kwargs):
-        """Return the the boolean mask for given target table
+        """Return the the boolean mask for given name table
         Wrapper over func to for formatting and preprocessing over `func`
         """
         return self.func(*args, **kwargs)
@@ -51,7 +51,7 @@ class FilterBase(object):
         """Return a filtered table
 
         Args:
-            target (pd.DataFrame): target table to filter
+            target (pd.DataFrame): name table to filter
             remove_zero (bool): if remove all-zero items from another axis after filtering. Default True.
             reverse (bool): if return filtered items instead of items passed the filter. Default False.
             axis (0 or 1): if apply filter on index (0) or columns (1)

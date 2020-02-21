@@ -1,9 +1,5 @@
 """Test code for plugins: transformer, filter, etc"""
 
-from yuning_util.dev_mode import DevMode
-dev_mode = DevMode('k-seq')
-dev_mode.on()
-
 from k_seq.data import transform
 import pandas as pd
 import numpy as np

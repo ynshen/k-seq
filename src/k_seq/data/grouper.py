@@ -1,10 +1,10 @@
 from .seq_table import slice_table
 
-# TODO: formalize grouper to allow (1) apply same grouper to different target, (2) return a generator of groups
+# TODO: formalize grouper to allow (1) apply same grouper to different name, (2) return a generator of groups
 
 
 class Group(object):
-    # todo: bug: self.target did not change if the linked table change (SeqTable.table)
+    # todo: bug: self.name did not change if the linked table change (SeqTable.table)
 
     def __repr__(self):
         if self._type == 0:
