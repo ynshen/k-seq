@@ -1,7 +1,8 @@
 """Submodule of `SeqTable`, a rich functions class of table for sequencing manipulation This module contains methods for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
-  - add directly from count file
+  - move tables under scope of tables
+  - refactor plugins to plugins
   - write output function for each class as JSON file
   - Formalized filter and normalizer
 """
@@ -41,22 +42,74 @@ class Metadata(AttrScope):
         super().__init__(attr_dict)
 
 
-class Tables(AttrScope):
-    """Scope to store different tables"""
+class Table(pd.DataFrame):
+    """Subclass of pd.DataFrame with added property and functions for sequencing table
 
-    def __init__(self, table):
-        super.__init_()
-        self.add(table, 'original')
+    Additional properties and methods:
+        unit (str): unit of entries in this table
+        note (str): note for this table
+        sample_list (pd.Series): samples in the table
+        seq_list (pd.Series): sequences in the table
 
-    def add(self, df, name):
-        if isinstance(df, pd.DataFrame):
-            setattr(self, name, df)
+    """
+
+    @property
+    def _constructor_expanddim(self):
+        logging.error("Expand dimension constructor is not defined", error_type=NotImplemented)
+        return None
+
+    def get_info(self):
+        seq, sample = self.shape
+        r = "Table with {} sequences in {} samples (unit: {})".format(seq, sample, self.unit)
+        if self.note:
+            r += '\n' + self.note
+        return r
+
+    def __init__(self, data, sample_list=None, seq_list=None, unit='count', note=None, use_sparse=True, **kwargs):
+
+        if use_sparse:
+            dtype = pd.SparseDtype(
+                'int' if (unit is None or unit.lower() in ['count', 'counts', 'read', 'reads']) else 'float',
+                fill_value=0
+            )
         else:
-            logging.error('Table should be pd.DataFrame', error_type=TypeError)
+            dtype = int if unit.lower() in ['count', 'counts', 'read', 'reads'] else float
+
+        if isinstance(data, pd.DataFrame):
+            super().__init__(data.values, index=data.index, columns=data.columns, dtype=dtype, **kwargs)
+        elif isinstance(data, (np.ndarray, list)):
+            if (sample_list is None) or (seq_list is None):
+                logging.error("Please provide sample_list and seq_list if data is np.ndarray", error_type=ValueError)
+            super().__init__(data, index=seq_list, columns=sample_list, dtype=dtype, **kwargs)
+        else:
+            logging.error("data should be pd.DataFrame or 2-D np.ndarray", error_type=TypeError)
+        self.unit = unit
+        self.note = note
+        self.is_sparse = use_sparse
+
+    def describe(self, percentiles=None, include=None, exclude=None):
+        if self.is_sparse:
+            return self.sparse.to_dense().describe(percentiles=percentiles, include=include, exclude=exclude)
+        else:
+            return super().describe(percentiles=percentiles, include=include, exclude=exclude)
+
+    @property
+    def samples(self):
+        return self.columns.to_series()
+
+    @property
+    def seqs(self):
+        return self.index.to_series()
 
 
 class SeqTable(object):
-    """This class contains the dataset of valid sequences extracted and aligned from a list of `SeqSampleSet`
+    """Contingency table for sequences in each samples
+
+
+    Attributes:
+        table (Tables): a collection of tables for analysis. Including at least `original` created during initialization
+
+
     todo: fill up docstring
     Methods:
 
@@ -72,38 +125,33 @@ class SeqTable(object):
     #     #      include list of tables, number of samples, number of sequences
     #     pass
 
-    def __init__(self, data_mtx, data_unit='count',
-                 seq_list=None, sample_list=None, grouper=None,
+    def __init__(self, data, data_unit=None, sample_list=None, seq_list=None, data_note=None, use_sparse=True,
                  seq_metadata=None, sample_metadata=None,
-                 x_values=None, x_unit=None, note=None, dataset_metadata=None, silent=True):
-        """
+                 grouper=None, x_values=None, x_unit=None, note=None, dataset_metadata=None, silent=True):
+        """Initialize a `SeqTable` object
+
+        Args:
+            data (pd.DataFrame or np.ndarray): 2-D data with indices as sequences and columns as samples. If data is
+                pd.DataFrame, values in index and column will be used as sequences and samples; if data is a 2-D
+                np.ndarray, `sample_list` and `seq_list` are needed with same length and order as data
+            data_unit (str): optional.
+
         todo:
           - use hidden variable and seq/sample list for masking count table, amount table, dna amount
 
         Find all valid sequences that occur at least once in any 'input' sample and once in any 'reacted' sample
         """
 
-        # check input data unit type
-        allowed_data_unit_mapper = {'count': 'count',
-                                    'counts': 'count',
-                                    'read': 'count',
-                                    'reads': 'count',
-                                    'amount': 'amount'}
-        from ..utility import allowed_units
-        allowed_data_unit_mapper.update({unit: unit for unit in allowed_units})
-        if data_unit.lower() not in allowed_data_unit_mapper.keys():
-            raise ValueError('Unknown data_type, should be in {}'.format(allowed_data_unit_mapper.keys()))
-
         # initialize metadata
         from datetime import datetime
         self.metadata = Metadata({
             'dataset': AttrScope({
-                'time': datetime.now(),
-                'data_unit': allowed_data_unit_mapper[data_unit],
+                'created_time': datetime.now(),
                 'note': note,
                 'x_unit': x_unit
             }),
         })
+        # add metadata
         if dataset_metadata is not None:
             self.metadata.dataset.add(dataset_metadata)
         if sample_metadata is not None:
@@ -112,71 +160,21 @@ class SeqTable(object):
             self.metadata.sequences = AttrScope(seq_metadata)
         logging.info('SeqTable created')
 
-        # import table
-        self.table = None
-        if isinstance(data_mtx, pd.DataFrame):
-            if not data_mtx.apply(pd.api.types.is_sparse).all():
-                # not sparse, convert to sparse data
-                if self.metadata.dataset['data_unit'] in ['count']:
-                    dtype = pd.SparseDtype('int', fill_value=0)
-                else:
-                    dtype = pd.SparseDtype('float', fill_value=0.0)
-                self._raw_table = data_mtx.astype(dtype)
-                self.metadata.logger.info('Import type pd.Dataframe, not sparse, convert to sparse table')
-            else:
-                self._raw_table = data_mtx
-                self.metadata.logger.info('Import type pd.Dataframe, sparse')
-            self.seq_list = self._raw_table.index.to_series()
-            self.sample_list = self._raw_table.columns.to_series()
+        # add original table
+        self.tables = AttrScope(
+            original=Table(data=data, sample_list=sample_list, seq_list=seq_list, unit=data_unit, note=data_note,
+                           use_sparse=use_sparse)
+        )
 
-            if sample_list is not None:
-                # if sample list/seq list is also provided, it needs to be the subset of the Dataframe samples
-                if False in list(pd.Series(sample_list).isin(list(self._sample_list))):
-                    raise ValueError('Some samples are not found in data_mtx')
-                else:
-                    self.sample_list = sample_list
-
-            if seq_list is not None:
-                if False in list(pd.Series(seq_list).isin(list(self._seq_list))):
-                    raise ValueError('Some seq are not found in data_mtx')
-                else:
-                    self.seq_list = seq_list
-            self.metadata.logger.info('Data value imported from Pandas DataFrame, dtype={}'.format(
-                self.metadata.dataset['data_unit']
-            ))
-        elif isinstance(data_mtx, np.ndarray):
-            if (seq_list is None) or (sample_list is None):
-                raise ValueError('seq_list and sample_list must be indicated if using Numpy array')
-            else:
-                if len(sample_list) != data_mtx.shape[1]:
-                    raise ValueError('Length of sample_list does not match with data_mtx')
-                else:
-                    self.sample_list = sample_list
-
-                if len(seq_list) != data_mtx.shape[0]:
-                    raise ValueError('Length of seq_list does not match with data_mtx')
-                else:
-                    self.seq_list = seq_list
-
-                self._raw_table = pd.DataFrame(pd.SparseArray(data_mtx, fill_value=0),
-                                               columns=sample_list,
-                                               index=seq_list)
-                self.metadata.logger.info('Data value imported from Numpy array, dtype={}'.format(
-                    self.metadata.dataset['data_unit']
-                ))
-        else:
-            raise TypeError('data_mtx type is not supported')
-
-        self.table = self._raw_table.loc[self.seq_list][self.sample_list]
-
+        # add x values
         if x_values is None:
             self.x_values = None
         elif isinstance(x_values, dict):
             self.x_values = pd.Series(x_values)
         elif isinstance(x_values, (list, np.ndarray)):
-            self.x_values = pd.Series(x_values, index=self.table.columns)
+            self.x_values = pd.Series(x_values, index=self.tables.original.samples)
         else:
-            raise TypeError('Unknown type for x_values')
+            logging.error('Unknown type for x_values', error_type=TypeError)
 
         # import grouper
         from .grouper import Grouper
@@ -184,7 +182,7 @@ class SeqTable(object):
             if isinstance(grouper, Grouper):
                 self.grouper = grouper
             else:
-                self.grouper = Grouper(grouper, target=self.table)
+                self.grouper = Grouper(grouper)
         else:
             self.grouper = None
 
@@ -196,14 +194,10 @@ class SeqTable(object):
         #                                    rep_variability_plot
         #                                ])
 
-    # @property
-    # def table(self):
-    #     """Deprecated due to poor slicing performance on larget table"""
-    #     return self._raw_table.loc[self.seq_list][self.sample_list]
 
     @property
     def sample_list(self):
-        return self._sample_list
+        return self.tables.original.sample_list
 
     @sample_list.setter
     def sample_list(self, sample_list):
@@ -212,7 +206,7 @@ class SeqTable(object):
 
     @property
     def seq_list(self):
-        return self._seq_list
+        return self.tables.original.seq_list
 
     @seq_list.setter
     def seq_list(self, seq_list):
@@ -567,10 +561,9 @@ class SeqTable(object):
     {_name_template_example}
 
     """)
-    def from_count_file(**kwargs):
+    def from_count_files(**kwargs):
         from .count_file import load_Seqtable_from_count_files
         return load_Seqtable_from_count_files(**kwargs)
-
 
 
 

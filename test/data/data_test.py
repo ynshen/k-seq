@@ -8,7 +8,7 @@ def test_count_file_can_load():
     pattern_filter = '_counts.'
     name_template = 'd-[{byo}{exp_rep}]_S{smpl}_counts.txt'
 
-    seq_table = SeqTable.from_count_file(
+    seq_table = SeqTable.from_count_files(
         count_files=count_file_dir,
         pattern_filter=pattern_filter,
         name_template=name_template,

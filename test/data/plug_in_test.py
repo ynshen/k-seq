@@ -27,3 +27,31 @@ def test_TotalAmountNormalizer_correct_results_on_sparse():
     transformed = transform.TotalAmountNormalizer(full_table=full_table,
                                                   total_amounts=total_amounts).apply(full_table)
     np.testing.assert_array_almost_equal(transformed.values, mtx / mtx.sum(axis=0) * [0.5, 0.3])
+
+
+def test_Grouper_type1_works():
+    from k_seq.data.grouper import Grouper
+
+    data = pd.DataFrame([[0, 1, 2], [1, 2, 3]], index=['r1', 'r2'], columns=['c1', 'c2', 'c3'])
+    data2 = pd.DataFrame([[45, 23, 34], [45, 87, 11]], index=['r1', 'r2'], columns=['c1', 'c2', 'c3'])
+    gr = Grouper(target=data, group=['c1', 'c3'], axis=1)
+    assert gr.group == ['c1', 'c3']
+    pd.testing.assert_frame_equal(gr.split(), data[['c1', 'c3']])
+    pd.testing.assert_frame_equal(gr['nonsense'], data[['c1', 'c3']])
+    pd.testing.assert_frame_equal(gr(data2), data2[['c1', 'c3']])
+
+
+def test_Grouper_type2_works():
+    from k_seq.data.grouper import Grouper
+
+    data = pd.DataFrame([[0, 1, 2], [1, 2, 3]], index=['r1', 'r2'], columns=['c1', 'c2', 'c3'])
+    data2 = pd.DataFrame([[45, 23], [45, 87], [23, 99]], columns=['r1', 'r2'], index=['c1', 'c2', 'c3'])
+    gr = Grouper(target=data, group={'a': ['c1', 'c3'], 'b': ['c1', 'c2']}, axis=1)
+    assert gr.group == {'a': ['c1', 'c3'], 'b': ['c1', 'c2']}
+    split = gr.split()
+    pd.testing.assert_frame_equal(split['a'], data[['c1', 'c3']])
+    pd.testing.assert_frame_equal(split['b'], data[['c1', 'c2']])
+    pd.testing.assert_frame_equal(gr['a'], data[['c1', 'c3']])
+    pd.testing.assert_frame_equal(gr(target=data2, group='b', axis=0), data2.loc[['c1', 'c2']])
+
+

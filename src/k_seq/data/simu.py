@@ -333,22 +333,22 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
 
     input_samples = x.loc['c']
     input_samples = list(input_samples[input_samples < 0].index)
-    seq_table = SeqTable(data_mtx=Y, x_values=x.loc['c'].to_dict(), note=note,
+    seq_table = SeqTable(data=Y, x_values=x.loc['c'].to_dict(), note=note,
                          grouper={'input': input_samples,
                                   'reacted': [sample for sample in x.columns if sample not in input_samples]})
     seq_table.add_sample_total_amounts(total_amounts=dna_amount.to_dict(),
-                                       full_table=seq_table.table)
-    seq_table.table_abs_amnt = seq_table.sample_total_amounts.apply(target=seq_table.table)
+                                       full_table=seq_table.tables.original)
+    seq_table.tables.abs_amnt = seq_table.sample_total_amounts.apply(target=seq_table.tables.original)
 
     from .transform import ReactedFractionNormalizer
     reacted_frac = ReactedFractionNormalizer(input_samples=input_samples,
                                              reduce_method='median',
                                              remove_zero=True)
-    seq_table.table_reacted_frac = reacted_frac.apply(seq_table.table_abs_amnt)
+    seq_table.tables.reacted_frac = reacted_frac.apply(seq_table.tables.abs_amnt)
     from .filters import DetectedTimesFilter
-    seq_table.table_seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
-        min_detected_times=seq_table.table_reacted_frac.shape[1]
-    )(seq_table.table_reacted_frac)
+    seq_table.tables.seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
+        min_detected_times=seq_table.tables.reacted_frac.shape[1]
+    )(seq_table.tables.reacted_frac)
 
     if save_to is not None:
         from pathlib import Path
