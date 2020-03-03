@@ -77,9 +77,9 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         dna_amount = {name: dna_amount['total_amounts'][ix] for ix, name in enumerate(indices)}
 
         byo_doped = SeqTable.from_count_files(
-            file_root=BYO_DOPED_COUNT_FILE,
+            count_files=BYO_DOPED_COUNT_FILE,
             pattern_filter=pattern_filter,
-            name_pattern=name_pattern,
+            name_template=name_pattern,
             dry_run=False,
             sort_by='name',
             x_values=np.concatenate((
@@ -100,24 +100,22 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                 np.array([10])), axis=0  # input pool sequenced is 3-times of actual initial pool
             ),
             radius=radius,
+            dist_type='edit',
             unit='ng',
         )
 
         # temp note: DNA Amount normalizer is calculated on whichever table it applies to
         from . import filters
-        spike_in_filter = filters.SpikeInFilter(target=byo_doped.table.original)  # remove spike-in seqs
+        spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
         seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21)  # remove non-21 nt seq
 
         # filtered table by removing spike-in within 2 edit distance and seqs not with 21 nt
-        byo_doped.table_filtered = seq_length_filter.get_filtered_table(
-            target=spike_in_filter.get_filtered_table()
-        )
-        byo_doped.add_sample_total_amounts(
+        byo_doped.table.filtered = seq_length_filter(target=spike_in_filter(target=byo_doped.table.original))
+        byo_doped.add_sample_total(
             total_amounts=dna_amount,
             unit='ng',
             full_table=byo_doped.table.filtered
         )
-
 
         from . import landscape
         pool_peaks = {
@@ -126,46 +124,38 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
             'pk1B': 'CCACACTTCAAGCAATCGGTC',
             'pk3': 'AAGTTTGCTAATAGTCGCAAG'
         }
-        byo_doped.pool_peaks = [landscape.Peak(target=byo_doped.table_filtered, center_seq=seq,
-                                               name=name, use_hamming_dist=True)
-                                for name, seq in pool_peaks.items()]
+        byo_doped.pool_peaks = [landscape.Peak(seqs=byo_doped.table.filtered, center_seq=seq,
+                                               name=name, dist_type='hamming') for name, seq in pool_peaks.items()]
         # Add replicates grouper
-        byo_doped.grouper.add({'byo': {
+        byo_doped.grouper.add(byo={
             1250: ['A1', 'A2', 'A3'],
             250: ['B1', 'B2', 'B3'],
             50: ['C1', 'C2', 'C3'],
             10: ['D1', 'D2', 'D3'],
-            2: ['E1', 'E2', 'E3']
-        }}, target=byo_doped.table_filtered)
-
-        # normalized using spike-in
-        byo_doped.table_filtered_abs_amnt_spike_in = byo_doped.spike_in.apply(target=byo_doped.table_filtered)
-
-        # normalized using total dna amount
-        byo_doped.table_filtered_abs_amnt_total_dna = byo_doped.dna_amount.apply(target=byo_doped.table_filtered)
+            2: ['E1', 'E2', 'E3'],
+            'target': byo_doped.table.filtered
+        })
 
         # calculate reacted faction, remove seqs are not in input pools
         from .transform import ReactedFractionNormalizer
         reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
                                                  reduce_method='median',
                                                  remove_zero=True)
-        byo_doped.table_filtered_reacted_frac_spike_in = reacted_frac.apply(
-            target=byo_doped.table_filtered_abs_amnt_spike_in
-        )
+        # normalized using spike-in
+        byo_doped.table.reacted_frac_spike_in = reacted_frac(byo_doped.spike_in(target=byo_doped.table.filtered))
 
-        byo_doped.table_filtered_reacted_frac_total_dna = reacted_frac.apply(
-            target=byo_doped.table_filtered_abs_amnt_total_dna
-        )
+        # normalized using total dna amount
+        byo_doped.table.reacted_frac_qpcr = reacted_frac(byo_doped.sample_total(target=byo_doped.table.filtered))
+
         # further filter out sequences that are not detected in all samples
         min_detected_times_filter = filters.DetectedTimesFilter(
-            target=byo_doped.table_filtered_reacted_frac_spike_in,
-            min_detected_times=byo_doped.table_filtered_reacted_frac_spike_in.shape[1]
+            min_detected_times=byo_doped.table.reacted_frac_spike_in.shape[1]
         )
-        byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_spike_in = min_detected_times_filter(
-            byo_doped.table_filtered_reacted_frac_spike_in
+        byo_doped.table.seq_in_all_smpl_reacted_frac_spike_in = min_detected_times_filter(
+            byo_doped.table.reacted_frac_spike_in
         )
         byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_total_dna = min_detected_times_filter(
-            byo_doped.table_filtered_reacted_frac_total_dna
+            byo_doped.table.reacted_frac_qpcr
         )
         logging.info('Finished!')
     else:

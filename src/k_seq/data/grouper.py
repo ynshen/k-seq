@@ -2,6 +2,7 @@
 """
 
 from .seq_table import slice_table
+from ..utility.func_tools import AttrScope
 from yutility import logging
 
 
@@ -10,7 +11,7 @@ class Grouper(object):
 
     Two types of grouper accepted:
         Type 0: initialize with group as list-like. This defines a single set of samples/sequences
-        Type 1: initialzed with group as dict. This defines a collection of groups of samples/sequences
+        Type 1: initialize with group as dict. This defines a collection of groups of samples/sequences
 
     Attributes:
         target (pd.DataFrame): accessor for table to group
@@ -26,6 +27,13 @@ class Grouper(object):
             return f'Groups on:\n' + '\n'.join(f'{key}: {list(value)}' for key, value in self.group.items())
 
     def __init__(self, group, target=None, axis=1):
+        """Initialize a Grouper instance
+        Args:
+            group (list or dict): list creates a Type 0 Grouper (single group) and dict creates a Type 1 Grouper
+                (multiple groups)
+            target (pd.DataFrame): optional, target table
+            axis (0 or 1): axis to apply the grouper
+        """
         import numpy as np
         import pandas as pd
 
@@ -89,3 +97,21 @@ class Grouper(object):
             return {group: self.get_table(target=target, group=group, remove_zero=remove_zero)
                     for group in self.group.keys()}
 
+
+class GrouperCollection(AttrScope):
+    """A collection of groupers"""
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.add(**kwargs)
+
+    def add(self, **kwargs):
+        """add a grouper"""
+        for key, group in kwargs.items():
+            if isinstance(group, dict):
+                target = group.pop('target', None)
+                axis = group.pop('axis', 1)
+            else:
+                target = None
+                axis = 1
+            setattr(self, key, Grouper(group=group, target=target, axis=axis))

@@ -55,6 +55,15 @@ def test_Grouper_type2_works():
     pd.testing.assert_frame_equal(gr(target=data2, group='b', axis=0), data2.loc[['c1', 'c2']])
 
 
+def test_GrouperCollection_works():
+    from k_seq.data.grouper import GrouperCollection
+    gc = GrouperCollection(group1=[0, 1, 2], group2={'gp1': [1, 2, 3], 'gp2': [4, 5, 6]})
+    assert hasattr(gc, 'group1')
+    assert hasattr(gc, 'group2')
+    assert gc.group1.group == [0, 1, 2]
+    assert gc.group2.group == {'gp1': [1, 2, 3], 'gp2': [4, 5, 6]}
+
+
 def test_CustomizedFilter_works():
     from k_seq.data.filters import CustomizedFilter
 

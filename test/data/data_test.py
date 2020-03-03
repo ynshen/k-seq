@@ -4,7 +4,7 @@ import numpy as np
 
 
 def test_count_file_can_load():
-    count_file_dir = os.getenv('COUNT_FILE_DIR')
+    count_file_dir = os.getenv('BYODOPED_COUNT_FILE_DIR')
     pattern_filter = '_counts.'
     name_template = 'd-[{byo}{exp_rep}]_S{smpl}_counts.txt'
 
@@ -23,3 +23,13 @@ def test_count_file_can_load():
 
     assert seq_table.table.original.shape[1] == 16
     assert hasattr(seq_table.grouper, 'input')
+
+
+def test_can_lost_byo_doped():
+    from k_seq.data import datasets
+    byo_doped = datasets.load_dataset(
+        'byo-doped', from_count_file=True,
+        count_file_path=os.getenv('BYODOPED_COUNT_FILE_DIR'),
+        doped_norm_path=os.getenv('BYODOPED_NORM_DIR'),
+        pandaseq_joined=True
+    )

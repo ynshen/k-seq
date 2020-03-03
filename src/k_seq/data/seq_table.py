@@ -156,15 +156,10 @@ class SeqTable(object):
         else:
             logging.error('Unknown type for x_values', error_type=TypeError)
 
-        # import grouper
-        self.grouper = AttrScope()
+        from .grouper import GrouperCollection
+        self.grouper = GrouperCollection()
         if grouper is not None:
-            from .grouper import Grouper
-            if isinstance(grouper, Grouper):
-                self.grouper.add(default=grouper)
-            else:
-                self.grouper.add({name: Grouper(group=value, target=self.table.original)
-                                  for name, value in grouper.items()})
+            self.grouper.add(**grouper)
 
         # from .visualizer import seq_occurrence_plot, rep_variability_plot
         # from ..utility.func_tools import FuncToMethod
@@ -201,9 +196,9 @@ class SeqTable(object):
                 SpikeInNormalizer(base_table=base_table, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
                                   radius=radius, unit=unit, dist_type=dist_type))
 
-    def add_sample_total_amounts(self, total_amounts, full_table, unit=None):
+    def add_sample_total(self, total_amounts, full_table, unit=None):
         """Add TotalAmountNormalizer to quantify sequences with their total amount in each sample
-          as `sample_total_amounts`
+          as `sample_total`
 
         Args:
             total_amounts (dict or pd.Series): total amount for each sample
@@ -215,7 +210,7 @@ class SeqTable(object):
         if isinstance(full_table, str):
             full_table = getattr(self.table, full_table)
 
-        setattr(self, 'sample_total_amounts',
+        setattr(self, 'sample_total',
                 TotalAmountNormalizer(full_table=full_table,
                                       total_amounts=total_amounts,
                                       unit=unit))

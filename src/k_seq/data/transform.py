@@ -45,6 +45,9 @@ class Transformer(ABC):
         Logic and preprocessing of data and arguments should be done here
         """
         raise NotImplementedError()
+    
+    def __call__(self, target, **kwargs):
+        return self.apply(target=target, **kwargs)
 
 
 _spike_in_doc = DocHelper(
@@ -91,15 +94,15 @@ class SpikeInNormalizer(Transformer):
                          seqs=base_table,
                          dist_type=dist_type, name='spike-in')
         self.base_table = self.peak.seqs
+        self.radius = radius
         self.spike_in_amount = spike_in_amount
         self.unit = unit
-        self.radius = radius
         self.dist_type = dist_type
         self.plot_spike_in_peak = self.peak.vis.peak_plot
 
     def _update_spike_in_members(self):
         """Update spike-in members based on current distance and radius"""
-        self.spike_in_members = self.peak.dist_to_center[self.peak.dist_to_center <= self.radius]
+        self.spike_in_members = self.peak.dist_to_center[self.peak.dist_to_center <= self.radius].index
 
     def _update_norm_factors(self):
         """Update normalization factor for each sample"""
@@ -124,7 +127,8 @@ class SpikeInNormalizer(Transformer):
         elif isinstance(spike_in_amount, dict):
             self._spike_in_amount = pd.Series(spike_in_amount)
 
-        self._update_norm_factors()
+        if hasattr(self, 'spike_in_members'):
+            self._update_norm_factors()
 
     @property
     def radius(self):
@@ -138,10 +142,11 @@ class SpikeInNormalizer(Transformer):
             self.norm_factor = None
             self.spike_in_amount = None
         else:
-            if value != self.radius:
+            if not hasattr(self, '_radius') or value != self._radius:
                 self._radius = value
                 self._update_spike_in_members()
-                self._update_norm_factors()
+                if hasattr(self, '_spike_in_amount'):
+                    self._update_norm_factors()
 
     @staticmethod
     def func(target, norm_factor):
@@ -160,7 +165,7 @@ class SpikeInNormalizer(Transformer):
         return target.loc[:, sample_list] * norm_factor
 
     def apply(self, target):
-        """Apply normalization to `name"""
+        """Apply normalization to target"""
         return self.func(target=target, norm_factor=self.norm_factor)
 
 
@@ -267,7 +272,7 @@ class TotalAmountNormalizer(Transformer):
     """)
     def apply(self, target):
         return self.func(target=target, norm_factor=self.norm_factor)
-
+    
 
 class ReactedFractionNormalizer(Transformer):
     """Get reacted fraction of each sequence from an absolute amount table"""

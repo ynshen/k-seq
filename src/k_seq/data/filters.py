@@ -258,7 +258,6 @@ class SpikeInFilter(Filter):
 
         if isinstance(target, pd.DataFrame) or (isinstance(target, SeqTable) and not hasattr(target, 'spike_in')):
             # if not spike-in info could infer
-            self.target = target if isinstance(target, pd.DataFrame) else target.table.original
             if center_seq is None:
                 logging.error('center_seq is None', error_type=ValueError)
             else:
@@ -273,14 +272,15 @@ class SpikeInFilter(Filter):
                 self.dist_type = dist_type
             from landscape import Peak
             self.peak = Peak(center_seqs=center_seq, seqs=target, radius=radius, dist_type=dist_type, name='spike-in')
+            self.target = target if isinstance(target, pd.DataFrame) else target.table.original
         elif isinstance(target, SeqTable):
             if ((center_seq is not None) and (center_seq != target.spike_in.peak.center_seq)) or \
                     ((radius is not None) and (radius != target.spike_in.peak.radius)) or \
                     ((dist_type is not None) and (dist_type != target.spike_in.peak.dist_type)):
                 logging.error("spike-in info found in target and does not match argument", error_type=ValueError)
             else:
-                self.target = target.table.original
                 self.peak = target.spike_in.peak
+                self.target = target.table.original
         else:
             logging.error("Unknown target type", error_type=TypeError)
         self.reverse = reverse
@@ -307,13 +307,13 @@ class SeqLengthFilter(Filter):
     def __init__(self, target=None, min_len=None, max_len=None, axis=0):
 
         super().__init__(target)
+        self.min_len = min_len
+        self.max_len = max_len
+        self.axis = axis
         if isinstance(target, pd.DataFrame):
             self.target = target
         else:
             self.target = target.table.original
-        self.min_len = min_len
-        self.max_len = max_len
-        self.axis = axis
 
     @staticmethod
     def _get_mask(target, min_len=None, max_len=None, axis=0):
@@ -343,11 +343,11 @@ class SingletonFilter(Filter):
     def __init__(self, target, axis=0):
 
         super().__init__(target)
+        self.axis = axis
         if isinstance(target, pd.DataFrame):
             self.target = target
         else:
             self.target = target.table.original
-        self.axis = axis
 
     @staticmethod
     def _get_mask(target, axis=0):
@@ -367,13 +367,13 @@ class DetectedTimesFilter(Filter):
         """Filter"""
 
         super().__init__(target)
+        self.min_detected_times = min_detected_times
+        self.axis = axis
         if target is not None:
             if isinstance(target, pd.DataFrame):
                 self.target = target
             else:
                 self.target = target.table.original
-        self.min_detected_times = min_detected_times
-        self.axis = axis
 
     @staticmethod
     def _get_mask(target, min_detected_times, axis=0):
