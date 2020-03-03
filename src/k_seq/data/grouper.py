@@ -1,10 +1,8 @@
-"""Grouper slice tables into pre-defined groups. E.g. input samples, reacted samples, different concentrations
+"""Grouper slice table into pre-defined groups. E.g. input samples, reacted samples, different concentrations
 """
 
 from .seq_table import slice_table
 from yutility import logging
-
-# TODO: formalize grouper to allow (1) apply same grouper to different name, (2) return a generator of groups
 
 
 class Grouper(object):
@@ -13,7 +11,6 @@ class Grouper(object):
     Two types of grouper accepted:
         Type 0: initialize with group as list-like. This defines a single set of samples/sequences
         Type 1: initialzed with group as dict. This defines a collection of groups of samples/sequences
-
 
     Attributes:
         target (pd.DataFrame): accessor for table to group
@@ -61,7 +58,8 @@ class Grouper(object):
             return (self.get_table(group) for group in self.group.keys())
 
     def __getitem__(self, group=None):
-        """Index-like access to return a sub-table with indicated group name; type 1 table will just return the subtable"""
+        """Index-like access to return a sub-table with indicated group name;
+        type 1 table will just return the subtable"""
         return self.get_table(group=group)
 
     def get_table(self, group=None, target=None, axis=None, remove_zero=False):

@@ -20,3 +20,6 @@ def test_count_file_can_load():
         x_unit='M',
         input_sample_name=['R0']
     )
+
+    assert seq_table.table.original.shape[1] == 16
+    assert hasattr(seq_table.grouper, 'input')

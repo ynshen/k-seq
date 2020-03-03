@@ -5,7 +5,7 @@ Available datasets:
 """
 
 from ..utility.log import logging
-from .seq_table import SeqTable
+from .seq_table import SeqTable, Table
 
 
 def load_dataset(dataset, from_count_file=False, **kwargs):
@@ -24,13 +24,14 @@ def load_dataset(dataset, from_count_file=False, **kwargs):
 
 
 def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
-                    pandaseq_joined=True, radius=2):
-    """BYO doped pool k-seq datatable
-    contains k-seq results for seqs from BYO doped-pool, this dataset contains following pre-computed tables to use
+                   pandaseq_joined=True, radius=2):
+    """BYO doped pool k-seq datatable contains k-seq results for seqs from BYO doped-pool,
 
-        - table: original count table contains all sequences detected in any samples and all the samples
-        - table_filtered: count table with non-21 nt sequences and spike-in sequences filtered
-        - table_filtered_abs_amnt_spike_in: absolute amount in ng for seqs quantified by spike-in
+    this dataset contains following pre-computed table (under ``.tables`` accessor) to use
+
+        - original: count table contains all sequences detected in any samples and all the samples
+        - filtered: count table with non 21 nt sequences and spike-in sequences filtered
+        - filtered_abs_amnt_spike_in: absolute amount in ng for seqs quantified by spike-in
         - table_filtered_abs_amnt_total_dna: absolute amount in ng for seqs quantified by total DNA amount
         - table_filtered_reacted_frac_spike_in: reacted fraction for valid seqs quantified by spike-in
         - table_filtered_reacted_frac_total_dna: reacted fraction for valid seqs quantified by total DNA amount
@@ -39,7 +40,7 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
 
     Note:
        By default, sequences within 2 edit distance (including insertion and deletion) of spike-in sequences were
-         considered as spike-in seq
+           considered as spike-in seq
     """
 
     if pickled_path:
@@ -75,11 +76,6 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                 indices.append(f'{sample}{rep + 1}')
         dna_amount = {name: dna_amount['total_amounts'][ix] for ix, name in enumerate(indices)}
 
-        # TODO: move spike-in and total DNA out of from_count_file
-        # temp note: spike-in norm factor were calculated on original table, notice the table normalized on were already
-        #   without some (~10%) sequence Abe used for qPRC, Qubit quantification
-        # temp note: DNA Amount normalizer is calculated on whichever table it applies to
-
         byo_doped = SeqTable.from_count_files(
             file_root=BYO_DOPED_COUNT_FILE,
             pattern_filter=pattern_filter,
@@ -91,26 +87,38 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                 np.array([np.nan])), axis=0
             ),
             x_unit='mol',
-            spike_in_seq='AAAAACAAAAACAAAAACAAA',
-            spike_in_amount=np.concatenate((
-                np.repeat([2, 2, 1, 0.2, .04], repeats=3),
-                np.array([10])), axis=0    # input pool sequenced is 3-times of actual initial pool
-            ),
-            radius=radius,
-            dna_unit='ng',
-            dna_amount=dna_amount,
             input_sample_name=['R0']
         )
 
-        # Add standard filters
+        # temp note: spike-in norm factor were calculated on original table when a SpikeInNormalizer is created,
+        # notice the table normalized on were already without some (~10%) sequence Abe used for qPRC quantification
+        byo_doped.add_spike_in(
+            base_table=byo_doped.table.original,
+            spike_in_seq='AAAAACAAAAACAAAAACAAA',
+            spike_in_amount=np.concatenate((
+                np.repeat([2, 2, 1, 0.2, .04], repeats=3),
+                np.array([10])), axis=0  # input pool sequenced is 3-times of actual initial pool
+            ),
+            radius=radius,
+            unit='ng',
+        )
+
+        # temp note: DNA Amount normalizer is calculated on whichever table it applies to
         from . import filters
-        spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
+        spike_in_filter = filters.SpikeInFilter(target=byo_doped.table.original)  # remove spike-in seqs
         seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21)  # remove non-21 nt seq
 
         # filtered table by removing spike-in within 2 edit distance and seqs not with 21 nt
         byo_doped.table_filtered = seq_length_filter.get_filtered_table(
-                target=spike_in_filter.get_filtered_table()
+            target=spike_in_filter.get_filtered_table()
         )
+        byo_doped.add_sample_total_amounts(
+            total_amounts=dna_amount,
+            unit='ng',
+            full_table=byo_doped.table.filtered
+        )
+
+
         from . import landscape
         pool_peaks = {
             'pk2': 'ATTACCCTGGTCATCGAGTGA',
@@ -170,7 +178,7 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
 
 
 _byo_selected_description = """
-        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed tables to 
+        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed table to 
           use
 
             - table: original count table contains all sequences detected in any samples and all the samples

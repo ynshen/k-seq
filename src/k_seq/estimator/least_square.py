@@ -1291,7 +1291,7 @@ class BatchFitter(EstimatorType):
             bs_results (bool): if save bootstrap results
             sep_files (bool): if save the record of bootstrap as separate files in a subfolder `results/seqs/`
                 Default True
-            tables (bool): if save tables (y_data_batch, sigma) in the folder. Default True
+            tables (bool): if save table (y_data_batch, sigma) in the folder. Default True
         """
         from ..utility.file_tools import dump_pickle
 

@@ -55,3 +55,13 @@ def test_Grouper_type2_works():
     pd.testing.assert_frame_equal(gr(target=data2, group='b', axis=0), data2.loc[['c1', 'c2']])
 
 
+def test_CustomizedFilter_works():
+    from k_seq.data.filters import CustomizedFilter
+
+    def filter_fn(df):
+        return df.sum(axis=1) > 10
+
+    one_filter = CustomizedFilter(filter_fn)
+    df = pd.DataFrame([[0, 1, 2, 3], [9, 1, 2, 23]])
+    pd.testing.assert_frame_equal(one_filter(df), df.iloc[1:, :])
+

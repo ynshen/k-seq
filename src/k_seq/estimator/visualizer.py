@@ -234,19 +234,19 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
     return ax
 
 
-# def get_loss(x, y, params, func=, weights=None):
-#     y_ = func(x, *params)
+# def get_loss(x, y, params, _get_mask=, weights=None):
+#     y_ = _get_mask(x, *params)
 #     if not weights:
 #         weights = np.ones(len(x))
 #     return sum(((y_-y) / weights)**2)
 
 
-# def convergence_test(x, y, func=func_default, weights=None, param_bounds=([0, 0], [1., np.inf]),
+# def convergence_test(x, y, _get_mask=func_default, weights=None, param_bounds=([0, 0], [1., np.inf]),
 #                      test_size=100, return_verbose=True, key_value='loss',
 #                      statistics=None):
 #
 #     from inspect import signature
-#     param_num = len(str(signature(func)).split(',')) - 1
+#     param_num = len(str(signature(_get_mask)).split(',')) - 1
 #     results = {
 #         'params': np.zeros((param_num, test_size)),
 #         'loss': np.zeros(test_size)
@@ -256,14 +256,14 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #         try:
 #             init_guess = ([np.random.random() for _ in range(param_num)])
 #             if param_bounds:
-#                 popt, pcov = curve_fit(func, x, y, method='trf', bounds=param_bounds, p0=init_guess, sigma=weights)
+#                 popt, pcov = curve_fit(_get_mask, x, y, method='trf', bounds=param_bounds, p0=init_guess, sigma=weights)
 #             else:
-#                 popt, pcov = curve_fit(func, x, y, method='trf', p0=init_guess, sigma=weights)
+#                 popt, pcov = curve_fit(_get_mask, x, y, method='trf', p0=init_guess, sigma=weights)
 #         except RuntimeError:
 #             popt = None
 #         if popt is not None:
 #             results['params'][:, rep] = popt
-#             results['loss'][rep] = get_loss(x, y, params=popt, func=func, weights=weights)
+#             results['loss'][rep] = get_loss(x, y, params=popt, _get_mask=_get_mask, weights=weights)
 #     if return_verbose:
 #         return results
 #     else:
@@ -308,7 +308,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #         initGuess = (np.random.random(), np.random.random())
 #
 #         try:
-#             popt, pcov = curve_fit(func, x_, y_, method='trf', bounds=([0, 0], [1., np.inf]), p0=initGuess)
+#             popt, pcov = curve_fit(_get_mask, x_, y_, method='trf', bounds=([0, 0], [1., np.inf]), p0=initGuess)
 #         except RuntimeError:
 #             popt = [np.nan, np.nan]
 #

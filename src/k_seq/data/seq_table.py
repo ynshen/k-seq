@@ -1,7 +1,8 @@
-"""Submodule of `SeqTable`, a rich functions class of table for sequencing manipulation This module contains methods for data pre-processing from count files to ``CountFile`` for estimator
+"""Submodule of `SeqTable`, a rich functions class of table for sequencing manipulation This module contains methods
+for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
-  - move tables under scope of tables
+  - move table under scope of table
   - refactor plugins to plugins
   - write output function for each class as JSON file
   - Formalized filter and normalizer
@@ -22,24 +23,6 @@ _table_doc = DocHelper(
     sample_metadata=('dict or pd.DataFrame', 'optional. Extra sample metadata'),
     note=('str', 'Note for dataset')
 )
-
-
-class Metadata(AttrScope):
-    """Scope to store metadata for SeqTable
-    Attributes:
-        dataset
-        samples
-        sequences
-        logger
-    """
-
-    def __init__(self, attr_dict):
-
-        self.dataset = None
-        self.samples = None
-        self.sequences = None
-        self.logger = Logger()
-        super().__init__(attr_dict)
 
 
 class Table(pd.DataFrame):
@@ -107,7 +90,7 @@ class SeqTable(object):
 
 
     Attributes:
-        table (Tables): a collection of tables for analysis. Including at least `original` created during initialization
+        table (Tables): a collection of table for analysis. Including at least `original` created during initialization
 
 
     todo: fill up docstring
@@ -122,7 +105,7 @@ class SeqTable(object):
 
     # def __repr__(self):
     #     # todo: update to include key information for the seq table
-    #     #      include list of tables, number of samples, number of sequences
+    #     #      include list of table, number of samples, number of sequences
     #     pass
 
     def __init__(self, data, data_unit=None, sample_list=None, seq_list=None, data_note=None, use_sparse=True,
@@ -144,24 +127,18 @@ class SeqTable(object):
 
         # initialize metadata
         from datetime import datetime
-        self.metadata = Metadata({
-            'dataset': AttrScope({
-                'created_time': datetime.now(),
-                'note': note,
-                'x_unit': x_unit
-            }),
-        })
+        self.metadata = AttrScope(created_time=datetime.now(), note=note)
         # add metadata
         if dataset_metadata is not None:
-            self.metadata.dataset.add(dataset_metadata)
+            self.metadata.add(dataset_metadata)
         if sample_metadata is not None:
-            self.metadata.samples = AttrScope(sample_metadata)
+            self.metadata_samples = AttrScope(sample_metadata)
         if seq_metadata is not None:
-            self.metadata.sequences = AttrScope(seq_metadata)
+            self.metadata_seqs = AttrScope(seq_metadata)
         logging.info('SeqTable created')
 
         # add original table
-        self.tables = AttrScope(
+        self.table = AttrScope(
             original=Table(data=data, sample_list=sample_list, seq_list=seq_list, unit=data_unit, note=data_note,
                            use_sparse=use_sparse)
         )
@@ -169,22 +146,25 @@ class SeqTable(object):
         # add x values
         if x_values is None:
             self.x_values = None
+            self.x_unit = None
         elif isinstance(x_values, dict):
             self.x_values = pd.Series(x_values)
+            self.x_unit = x_unit
         elif isinstance(x_values, (list, np.ndarray)):
-            self.x_values = pd.Series(x_values, index=self.tables.original.samples)
+            self.x_values = pd.Series(x_values, index=self.table.original.samples)
+            self.x_unit = x_unit
         else:
             logging.error('Unknown type for x_values', error_type=TypeError)
 
         # import grouper
-        from .grouper import Grouper
+        self.grouper = AttrScope()
         if grouper is not None:
+            from .grouper import Grouper
             if isinstance(grouper, Grouper):
-                self.grouper = grouper
+                self.grouper.add(default=grouper)
             else:
-                self.grouper = Grouper(grouper)
-        else:
-            self.grouper = None
+                self.grouper.add({name: Grouper(group=value, target=self.table.original)
+                                  for name, value in grouper.items()})
 
         # from .visualizer import seq_occurrence_plot, rep_variability_plot
         # from ..utility.func_tools import FuncToMethod
@@ -194,10 +174,9 @@ class SeqTable(object):
         #                                    rep_variability_plot
         #                                ])
 
-
     @property
     def sample_list(self):
-        return self.tables.original.sample_list
+        return self.table.original.sample_list
 
     @sample_list.setter
     def sample_list(self, sample_list):
@@ -206,19 +185,21 @@ class SeqTable(object):
 
     @property
     def seq_list(self):
-        return self.tables.original.seq_list
+        return self.table.original.seq_list
 
     @seq_list.setter
     def seq_list(self, seq_list):
         logging.error("seq_list is inferred from original table and should not be changed",
                       error_type=PermissionError)
 
-    def add_spike_in(self, spike_in_seq, spike_in_amount, radius=2, dna_unit=None, black_list=None, **kwargs):
+    def add_spike_in(self, base_table, spike_in_seq, spike_in_amount, radius=2, unit=None, dist_type='edit'):
         """Accessor to add SpikeInNormalizer"""
         from .transform import SpikeInNormalizer
+        if isinstance(base_table, str):
+            base_table = getattr(self.table, base_table)
         setattr(self, 'spike_in',
-                SpikeInNormalizer(base_table=self, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
-                                  radius=radius, unit=dna_unit, blacklist=black_list))
+                SpikeInNormalizer(base_table=base_table, spike_in_seq=spike_in_seq, spike_in_amount=spike_in_amount,
+                                  radius=radius, unit=unit, dist_type=dist_type))
 
     def add_sample_total_amounts(self, total_amounts, full_table, unit=None):
         """Add TotalAmountNormalizer to quantify sequences with their total amount in each sample
@@ -232,7 +213,7 @@ class SeqTable(object):
         """
         from .transform import TotalAmountNormalizer
         if isinstance(full_table, str):
-            full_table = getattr(self, full_table)
+            full_table = getattr(self.table, full_table)
 
         setattr(self, 'sample_total_amounts',
                 TotalAmountNormalizer(full_table=full_table,
@@ -312,6 +293,48 @@ class SeqTable(object):
             target = target
         pass
 
+    def to_json(self):
+        """More generalized JSON file
+        TODO: add to_json and from_json
+        """
+        pass
+
+    def from_json(self):
+        pass
+
+    def to_pickle(self, path):
+        import pickle
+        with open(path, 'wb') as handle:
+            pickle.dump(self, handle, protocol=-1)
+
+    @staticmethod
+    def from_pickle(path):
+        import pickle
+        with open(path, 'rb') as handle:
+            return pickle.load(handle)
+
+    @staticmethod
+    @_table_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
+
+    Args:
+        count_files (str): root directory to search for count files
+        file_list (list of str): optional, only includes the count files with names in the file_list
+        pattern_filter (str): optional, filter file names based on this pattern, wildcards ``*/?`` are allowed
+        black_list (list of str): optional, file names included in black_list will be excluded
+        name_template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
+            use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
+            ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
+        sort_by (str): sort the order of samples based on given domain
+        dry_run (bool): only return the parsed count file names and metadata without actual reading in data
+    <<x_values, x_unit, input_sample_name, sample_metadata, note>>
+
+    {_name_template_example}
+
+    """)
+    def from_count_files(**kwargs):
+        from .count_file import load_Seqtable_from_count_files
+        return load_Seqtable_from_count_files(**kwargs)
+
     #     # @property
     #     # def seq_info(self): todo: revive this
     #     #     import pandas as pd
@@ -377,106 +400,9 @@ class SeqTable(object):
 
 
 
-#     @classmethod
-#     def from_SeqSampleSet(cls, sample_set,  sample_list=None, black_list=None, seq_list=None, with_spike_in=True,
-#                           keep_all_seqs=False, use_count=False, note=None):
-#         """
-#         todo: move this to SeqSampleSet as to_SeqTable
-#         Args:
-#
-#             sample_set (`SeqSampleSet`): valid samples to convert to ``SequenceSet``
-#
-#             remove_spike_in (`bool`): sequences considered as spike-in will be removed, all number are calculated after
-#               removal of spike-in
-#
-#             note (`str`): optional. Additional note to add to the dataset
-#
-#
-#         Attributes:
-# `
-#             metadata (`dict`): dictionary of basic info of dataset:
-#
-#                 - input_seq_num (int): number of unique sequences in all "input" samples
-#
-#                 - reacted_seq_num (int): number of unique sequences in all "reacted" samples
-#
-#                 - valid_seq_num (int): number of valid unqiue sequences that detected in at least one "input" sample
-#                   and one "reacted" sample
-#
-#                 - remove_spike_in (bool): indicate if spike-in sequences are removed
-#
-#                 - timestamp (time): time the instance created
-#
-#                 - note (str): optional. Additional notes of the dataset
-#
-#             sample_info (list): a list of dictionaries that preserve original sample information (exclude
-#                 ``SequencingSample.sequences``). Two new item:
-#
-#                 - valid_seq_num (int): number of valid sequences in this sample
-#
-#                 - valid_seq_count (int): total counts of valid sequences in this sample
-#
-#             count_table (``pandas.DataFrame``): valid sequences and their original counts in valid samples"""
-#         pass
-#
-#     # def get_reacted_frac(self, input_average='median', black_list=None, inplace=True):
-#     #     """Calculate reacted fraction for sequences
-#     #
-#     #     Args:
-#     #
-#     #         input_average ('median' or 'mean'): method to calculate the average amount of input for a sequence
-#     #
-#     #         black_list (list of `str`): optional, list of names of samples to be excluded in calculation
-#     #
-#     #         inplace (bool): add ``reacted_frac_table`` to the attribute of instance if True; return
-#     #             ``reacted_frac_table`` if False
-#     #
-#     #     Returns:
-#     #
-#     #         reacted_frac_table (if *inplace* is False)
-#     #
-#     #     Attributes:
-#     #
-#     #         reacted_frac_table (``pandas.DataFrame``): a ``DataFrame`` object containing the reacted fraction of "reacted"
-#     #             samples for all valid sequences. Extra attributes are added to the ``DataFrame``:
-#     #
-#     #             - input_avg_type ('median' or 'mean'): method used to calculate input average
-#     #
-#     #             - col_x_values (list of float): time points or concentration points values for "reacted" samples
-#     #
-#     #             - input_avg (numpy.Array): 1D array containing the average values on input for valid sequences
-#     #     """
-#     #
-#     #     if not black_list:
-#     #         black_list = []
-#     #     col_to_use = [col_name for col_name in self.count_table_reacted.columns if col_name not in black_list]
-#     #     reacted_frac_table = self.count_table_reacted[col_to_use]
-#     #     reacted_frac_table = reacted_frac_table.apply(
-#     #         lambda sample: sample/self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
-#     #         axis=0
-#     #     )
-#     #     self.metadata['input_avg_type'] = input_average
-#     #     input_amount = self.count_table_input.loc[reacted_frac_table.index]
-#     #     input_amount = input_amount.apply(
-#     #         lambda sample: sample / self.sample_info[sample.name]['total_counts'] * self.sample_info[sample.name]['quant_factor'],
-#     #         axis=0
-#     #     )
-#     #     if input_average == 'median':
-#     #         input_amount_avg = input_amount.median(axis=1)
-#     #     elif input_average == 'mean':
-#     #         input_amount_avg = input_amount.median(axis=1)
-#     #     else:
-#     #         raise Exception("Error: input_average should be 'median' or 'mean'")
-#     #     reacted_frac_table = reacted_frac_table.divide(input_amount_avg, axis=0)
-#     #     if inplace:
-#     #         self.reacted_frac_table = reacted_frac_table
-#     #         self.logger.info('reacted_frac_tabled added using {} as input average'.format(input_average))
-#     #     else:
-#     #         return reacted_frac_table
-#     #
 
 #     #
-#     #
+#     # TODO: consider add accessor to fitting
 #     # def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
 #     #                 bootstrap_depth=0, bs_return_size=None,
 #     #                 resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None):
@@ -531,39 +457,6 @@ class SeqTable(object):
 #     #     """To accommodate for exploratery needs, this will be a wrapper for `count_file.CountFileSet"""
 #     #     note = f'Loaded from {folder_path}'
 #     #
-
-    def to_pickle(self, path):
-        import pickle
-        with open(path, 'wb') as handle:
-            pickle.dump(self, handle, protocol=-1)
-
-    @staticmethod
-    def from_pickle(path):
-        import pickle
-        with open(path, 'rb') as handle:
-            return pickle.load(handle)
-
-    @staticmethod
-    @_table_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
-
-    Args:
-        count_files (str): root directory to search for count files
-        file_list (list of str): optional, only includes the count files with names in the file_list
-        pattern_filter (str): optional, filter file names based on this pattern, wildcards ``*/?`` are allowed
-        black_list (list of str): optional, file names included in black_list will be excluded
-        name_template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
-            use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
-            ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
-        sort_by (str): sort the order of samples based on given domain
-        dry_run (bool): only return the parsed count file names and metadata without actual reading in data
-    <<x_values, x_unit, input_sample_name, sample_metadata, note>>
-
-    {_name_template_example}
-
-    """)
-    def from_count_files(**kwargs):
-        from .count_file import load_Seqtable_from_count_files
-        return load_Seqtable_from_count_files(**kwargs)
 
 
 

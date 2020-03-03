@@ -1,5 +1,5 @@
 """
-Module contains the classes to transform tables (`pd.DataFrame` or `SeqTable`) instance as well as related calculation
+Module contains the classes to transform table (`pd.DataFrame` or `SeqTable`) instance as well as related calculation
     and visualizations
 
 Current available transformers:
@@ -25,7 +25,7 @@ class Transformer(ABC):
 
     To write your transformer, components are:
         - Attributes to store parameters
-        - A static `func` function to perform transformation
+        - A static `_get_mask` function to perform transformation
         - A `apply` wrapper function for ease of use
         - Other Transformer specific utility and visualization functions
     """
@@ -65,7 +65,7 @@ Attributes:
 Methods:
     plot_spike_in_peak: plot the shape of spike-in sequences for each sample
     apply: apply the normalization to a `name` table
-    func: static method to calculate normalization
+    _get_mask: static method to calculate normalization
 """)
 class SpikeInNormalizer(Transformer):
 

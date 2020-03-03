@@ -75,7 +75,7 @@ class PoolModel(ModelBase):
         return np.sum(pt), self.count_model(pt / np.sum(pt), **count_params)
 
     def predict(self, **params):
-        """Wrapper over func, can accept parameters to overwrite current ones if exist"""
+        """Wrapper over _get_mask, can accept parameters to overwrite current ones if exist"""
         params = {**self.params, **params}
         return self.func(**params)
 

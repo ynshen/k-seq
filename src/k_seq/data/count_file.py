@@ -1,9 +1,6 @@
-"""Module to parse, convert, characterize count files.
+"""Parse, convert, characterize count files generated from Chen lab's customized scripts
 
-Read directly from count file function was added to `data.SeqTable` thus this module is no long required in processing
-count files
-TODO:
-  - clean up this module (after done with other data modules)
+TODO: add Sam and Celia's code reference here
 """
 
 from ..utility.log import logging
@@ -33,7 +30,7 @@ Args:
 def load_Seqtable_from_count_files(
     count_files, file_list=None, pattern_filter=None, black_list=None, name_template=None, sort_by=None,
     x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
-    dry_run=False, **kwargs
+    dry_run=False
 ):
 
     from ..utility.file_tools import get_file_list, extract_metadata
@@ -65,6 +62,7 @@ def load_Seqtable_from_count_files(
         sample_names = sorted(sample_names, key=sort_fn)
 
     if dry_run:
+        # return a list of samples without importing
         return pd.DataFrame(samples)[sample_names].transpose()
 
     data_mtx = {sample: read_count_file(file_path=samples[sample]['file_path'], as_dict=True)[2]

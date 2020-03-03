@@ -337,18 +337,18 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                          grouper={'input': input_samples,
                                   'reacted': [sample for sample in x.columns if sample not in input_samples]})
     seq_table.add_sample_total_amounts(total_amounts=dna_amount.to_dict(),
-                                       full_table=seq_table.tables.original)
-    seq_table.tables.abs_amnt = seq_table.sample_total_amounts.apply(target=seq_table.tables.original)
+                                       full_table=seq_table.table.original)
+    seq_table.table.abs_amnt = seq_table.sample_total_amounts.apply(target=seq_table.table.original)
 
     from .transform import ReactedFractionNormalizer
     reacted_frac = ReactedFractionNormalizer(input_samples=input_samples,
                                              reduce_method='median',
                                              remove_zero=True)
-    seq_table.tables.reacted_frac = reacted_frac.apply(seq_table.tables.abs_amnt)
+    seq_table.table.reacted_frac = reacted_frac.apply(seq_table.table.abs_amnt)
     from .filters import DetectedTimesFilter
-    seq_table.tables.seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
-        min_detected_times=seq_table.tables.reacted_frac.shape[1]
-    )(seq_table.tables.reacted_frac)
+    seq_table.table.seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
+        min_detected_times=seq_table.table.reacted_frac.shape[1]
+    )(seq_table.table.reacted_frac)
 
     if save_to is not None:
         from pathlib import Path
@@ -628,13 +628,13 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 #         return (x_.reshape(x_.shape[0] * x_.shape[1]), y_.reshape(y_.shape[0] * y_.shape[1]))
 #
 #
-# def data_simulator_convergence_map(A_range, k_range, x, save_dir=None, percent_noise=0.0, func=func_default, replicates=5, A_res=100, k_res=100, A_log=False, k_log=True):
+# def data_simulator_convergence_map(A_range, k_range, x, save_dir=None, percent_noise=0.0, _get_mask=func_default, replicates=5, A_res=100, k_res=100, A_log=False, k_log=True):
 #     """
 #
 #     :param A_range: param k_range:
 #     :param x: param save_dir:  (Default value = None)
 #     :param percent_noise: Default value = 0.0)
-#     :param func: Default value = func_default)
+#     :param _get_mask: Default value = func_default)
 #     :param replicates: Default value = 5)
 #     :param A_res: Default value = 100)
 #     :param k_res: Default value = 100)
@@ -661,7 +661,7 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 #                 data_tensor[A_ix, k_ix, rep, :] = y_value_simulator(
 #                     params=[A_values[A_ix], k_values[k_ix]],
 #                     x_true=x,
-#                     func=func,
+#                     _get_mask=_get_mask,
 #                     percent_noise=percent_noise,
 #                     y_allow_zero=False,
 #                     average=False

@@ -133,7 +133,7 @@ def get_func_params(func, exclude_x=True):
     if callable(func):
         arg_tuple = tuple(signature(func).parameters.keys())
     else:
-        raise TypeError('Unidentified func passed')
+        raise TypeError('Unidentified _get_mask passed')
     if exclude_x:
         return arg_tuple[1:]
     else:

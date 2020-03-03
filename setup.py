@@ -19,7 +19,8 @@ setup(
         'scipy',
         'seaborn',
         'doc-helper',
-        'seq-landscape'
+        'seq-landscape',
+        'yutility'
     ],
     zip_safe=False
 )
