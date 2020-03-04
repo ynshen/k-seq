@@ -1,6 +1,8 @@
 kinetic sequencing: high through-put kinetic parameter estimation for genetic encoded biomolecules 
 ==============================
 
+### Issue report:
+https://github.com/ynshen/k-seq/issues
 
 ## Installation / update 
 
