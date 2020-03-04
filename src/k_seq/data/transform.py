@@ -162,12 +162,12 @@ class SpikeInNormalizer(Transformer):
         for sample in sample_not_in:
             logging.warning(f'Sample {sample} is not found in the normalizer, normalization is not performed')
 
-        from .seq_data import SeqTable
-        return SeqTable(target.loc[:, sample_list] * norm_factor)
+        return target.loc[:, sample_list] * norm_factor
 
     def apply(self, target):
         """Apply normalization to target"""
-        return self.func(target=target, norm_factor=self.norm_factor)
+        from .seq_data import SeqTable
+        return SeqTable(self.func(target=target, norm_factor=self.norm_factor), unit=self.unit)
 
 
 _total_dna_doc = DocHelper(
@@ -261,8 +261,7 @@ class TotalAmountNormalizer(Transformer):
             else:
                 logging.warning(f'Sample {sample} is not in norm_factor, skip this sample')
 
-        from .seq_data import SeqTable
-        return SeqTable(target[sample_list].apply(sample_normalize, axis=0))
+        return target[sample_list].apply(sample_normalize, axis=0)
 
     @_total_dna_doc.compose("""Transform counts to absolute amount on columns in name that are in norm_factor 
 
@@ -273,7 +272,8 @@ class TotalAmountNormalizer(Transformer):
         pd.DataFrame of normalized name table with only samples in norm_factor
     """)
     def apply(self, target):
-        return self.func(target=target, norm_factor=self.norm_factor)
+        from .seq_data import SeqTable
+        return SeqTable(self.func(target=target, norm_factor=self.norm_factor), unit=self.unit)
     
 
 class ReactedFractionNormalizer(Transformer):
@@ -305,11 +305,10 @@ class ReactedFractionNormalizer(Transformer):
 
         mask = base > 0  # if any does not exist in input samples
         reacted_frac = target.loc[mask, ~target.columns.isin(input_samples)].divide(base[mask], axis=0)
-        from .seq_data import SeqTable
         if remove_empty:
-            return SeqTable(reacted_frac[reacted_frac.sum(axis=1) > 0])
+            return reacted_frac[reacted_frac.sum(axis=1) > 0]
         else:
-            return SeqTable(reacted_frac)
+            return reacted_frac
 
     def apply(self, target=None, input_samples=None, reduce_method=None, remove_empty=None):
         """Convert absolute amount to reacted fraction
@@ -337,8 +336,9 @@ class ReactedFractionNormalizer(Transformer):
         if remove_empty is None:
             remove_empty = self.remove_empty
 
-        return self.func(target=target, input_samples=input_samples,
-                         reduce_method=reduce_method, remove_empty=remove_empty)
+        from .seq_data import SeqTable
+        return SeqTable(self.func(target=target, input_samples=input_samples,
+                                  reduce_method=reduce_method, remove_empty=remove_empty), unit='fraction')
 
 
 class BYOSelectedCuratedNormalizerByAbe(Transformer):
@@ -350,7 +350,7 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
         # import curated quantification factor by Abe
         # q_facter is defined in this way: abs_amnt = q * counts / total_counts
         self.q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
-
+        # TODO: check unit
         # q_factor should be:
         # self.q_factors = {'0.0005,
         #             0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133,
@@ -364,8 +364,7 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
         if isinstance(q_factor, pd.DataFrame):
             q_factor = q_factor.iloc[:, 0]
         q_factor = q_factor.reindex(total_counts.index)
-        from .seq_data import SeqTable
-        return SeqTable(target / total_counts / q_factor)
+        return target / total_counts / q_factor
 
     def apply(self, target=None, q_factor=None):
         """Normalize counts using Abe's curated quantification factor
@@ -383,4 +382,5 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
             q_factor = self.q_factor
         q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
 
-        return self.func(target=target, q_factor=q_factor)
+        from .seq_data import SeqTable
+        return SeqTable(self.func(target=target, q_factor=q_factor), unit='ng')

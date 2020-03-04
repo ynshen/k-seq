@@ -59,7 +59,7 @@ class SeqTable(pd.DataFrame):
 
         if use_sparse:
             dtype = pd.SparseDtype(
-                'int' if (unit is None or unit.lower() in ['count', 'counts', 'read', 'reads']) else 'float',
+                'int' if (unit is not None and unit.lower() in ['count', 'counts', 'read', 'reads']) else 'float',
                 fill_value=0
             )
         else:

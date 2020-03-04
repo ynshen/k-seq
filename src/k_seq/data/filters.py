@@ -132,10 +132,14 @@ class Filter(ABC):
             keys = self.get_passed_item(target, reverse=reverse)
         axis = update_none(axis, self.axis)
         from .seq_data import SeqTable
+        if isinstance(target, SeqTable):
+            unit = target.unit
+        else:
+            unit = None
         return SeqTable(slice_table(table=target,
                                     keys=keys,
                                     axis=axis,
-                                    remove_empty=remove_empty))
+                                    remove_empty=remove_empty), unit=unit)
 
     def summary(self, target=None, axis=None, **kwargs):
         """Returns a pd.DataFrame as the summary"""

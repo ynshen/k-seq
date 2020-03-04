@@ -72,5 +72,5 @@ def test_CustomizedFilter_works():
 
     one_filter = CustomizedFilter(filter_fn)
     df = pd.DataFrame([[0, 1, 2, 3], [9, 1, 2, 23]])
-    pd.testing.assert_frame_equal(one_filter(df), df.iloc[1:, :])
+    pd.testing.assert_frame_equal(one_filter(df), df.iloc[1:, :], check_dtype=False)
 
