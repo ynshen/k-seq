@@ -5,7 +5,7 @@ todo:
 
 """
 
-from .seq_table import SeqTable
+from .seq_data import SeqData
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -96,8 +96,8 @@ def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_
     if scatter_kwargs is None:
         scatter_kwargs = {}
     #
-    # if not isinstance(seq_table, SeqTable):
-    #     raise TypeError('seq_table needs to be a SeqTable instance')
+    # if not isinstance(seq_table, SeqData):
+    #     raise TypeError('seq_table needs to be a SeqData instance')
     samples = seq_table.sample_list
     if black_list is not None:
         samples = [sample for sample in samples if sample not in black_list]
@@ -145,7 +145,7 @@ def sample_overview_plots(seq_table, plot_unique_seq=True, plot_total_counts=Tru
 
     Args:
 
-        seq_table (`SeqTable`): sample set to survey
+        seq_table (`SeqData`): sample set to survey
 
         plot_unique_seq (`bool`): plot bar plot for unique sequences if True
 

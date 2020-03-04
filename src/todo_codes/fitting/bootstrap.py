@@ -11,7 +11,7 @@ def fitting(ydata, xdata, maxFold=None, fitMtd='trf', ciEst=True, alpha=0.479, f
     :param fitMtd: estimator method to use
     :param ciEst: If the confidence interval will be estimated by bootstrapping
     :param alpha: degradation factor, default is measured factor for BYO
-    :param func: func to fit, if None will fit to default exponential function
+    :param func: _get_mask to fit, if None will fit to default exponential function
     :return: seq with estimator results
     """
     from scipy.optimize import curve_fit

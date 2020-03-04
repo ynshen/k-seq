@@ -8,6 +8,6 @@
 """
 
 
-from . import io, visualizer, simu
-from .count_file import CountFile, CountFileSet
+from . import visualization, simu
+import landscape
 

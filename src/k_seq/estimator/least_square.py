@@ -12,8 +12,8 @@ Several functions are included:
 
 from ..estimator import EstimatorType
 from ..utility.doc_helper import DocHelper
-from ..utility.file_tools import read_json, to_json, check_dir
-import logging
+from ..utility.file_tools import read_json, dump_json, check_dir
+from ..utility.log import logging
 import pandas as pd
 import numpy as np
 
@@ -387,15 +387,15 @@ class SingleFitter(EstimatorType):
             if path.suffix == '.json':
                 # its a named json file
                 check_dir(path.parent)
-                to_json(obj=config_dict, path=path, indent=2)
+                dump_json(obj=config_dict, path=path, indent=2)
             elif path.suffix == '':
                 # its a directory
                 check_dir(path)
-                to_json(obj=config_dict, path=str(path) + '/config.json', indent=2)
+                dump_json(obj=config_dict, path=str(path) + '/config.json', indent=2)
             else:
                 raise NameError('Unrecognized saving path')
         else:
-            return to_json(config_dict, indent=0)
+            return dump_json(config_dict, indent=0)
 
     @classmethod
     def from_json(cls, file_path, model):
@@ -483,7 +483,7 @@ class FitResults:
 
         def jsonfy(target):
             try:
-                return target.to_json()
+                return target.dump_json()
             except:
                 return None
 
@@ -498,9 +498,9 @@ class FitResults:
             }
         }
         if path is None:
-            return to_json(data_to_dump)
+            return dump_json(data_to_dump)
         else:
-            to_json(data_to_dump, path=path)
+            dump_json(data_to_dump, path=path)
 
     @classmethod
     def from_json(cls, json_path, fitter=None):
@@ -546,7 +546,7 @@ class ConvergenceTester:
         """Apply convergence test to given fitter
 
         Args:
-            fitter (SingleFitter): the target single fitter
+            fitter (SingleFitter): the name single fitter
             reps (int): number of repeated fitting, default 10
             init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters.
               All parameters are initialized from (0, 1) with random uniform draw
@@ -763,7 +763,7 @@ class BatchFitResults:
 
     Methods:
         summary_to_csv: export summary dataframe as csv file
-        to_json: preferred format to save results
+        dump_json: preferred format to save results
         to_pickle: save results as pickled dictionary
         from_pickle: load bootstrapping results from picked dictionary
         from_folder: link results to a saved folder
@@ -900,9 +900,9 @@ class BatchFitResults:
         self.summary.to_csv(path)
 
     def to_pickle(self, output_dir, bs_record=True, sep_files=True):
-        """Save fitting results as a pickled dict, notice: `to_json` is preferred
+        """Save fitting results as a pickled dict, notice: `dump_json` is preferred
         Args:
-             output_dir (str): path to saved results, should be the parent of target location
+             output_dir (str): path to saved results, should be the parent of name location
              bs_record (bool): if output bs_record as well
              sep_files (bool): if save bs_records as separate files
                  If True:
@@ -949,7 +949,7 @@ class BatchFitResults:
     def to_json(self, output_dir, bs_record=True, sep_files=True):
         """Serialize results as json format
         Args:
-             output_dir (str): path to save results, should be the parent of target location
+             output_dir (str): path to save results, should be the parent of name location
              bs_record (bool): if output bs_record as well
              sep_files (bool): if save bs_records as separate files
                  If True:
@@ -973,16 +973,16 @@ class BatchFitResults:
         check_dir(output_dir)
         if sep_files:
             check_dir(f'{output_dir}/results/')
-            to_json(obj=self.summary.to_json(), path=f'{output_dir}/results/summary.json')
+            dump_json(obj=self.summary.dump_json(), path=f'{output_dir}/results/summary.json')
             if bs_record and self.bs_record is not None:
                 check_dir(f'{output_dir}/seqs')
                 for seq, record in self.bs_record.items():
-                    to_json(obj=record.to_json(), path=f"{output_dir}/results/seqs/{seq}.json")
+                    dump_json(obj=record.dump_json(), path=f"{output_dir}/results/seqs/{seq}.json")
         else:
-            data_to_json = {'summary': self.summary.to_json()}
+            data_to_json = {'summary': self.summary.dump_json()}
             if bs_record and self.bs_record is not None:
-                data_to_json['bs_record'] = {seq: record.to_json() for seq, record in self.bs_record}
-            to_json(obj=data_to_json, path=f"{output_dir}/results.json")
+                data_to_json['bs_record'] = {seq: record.dump_json() for seq, record in self.bs_record}
+            dump_json(obj=data_to_json, path=f"{output_dir}/results.json")
 
     @classmethod
     def from_json(cls, fitter, json_o_path):
@@ -1187,7 +1187,7 @@ class BatchFitter(EstimatorType):
             self._hash()
             if stream_to_disk:
                 check_dir(stream_to_disk + '/seqs/')
-                to_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
+                dump_json(obj=self._seq_to_hash, path=f"{stream_to_disk}/seqs/seq_to_hash.json")
 
         from functools import partial
         work_fn = partial(_work_fn, point_estimate=point_estimate,
@@ -1288,7 +1288,7 @@ class BatchFitter(EstimatorType):
             bs_results (bool): if save bootstrap results
             sep_files (bool): if save the record of bootstrap as separate files in a subfolder `results/seqs/`
                 Default True
-            tables (bool): if save tables (y_data_batch, sigma) in the folder. Default True
+            tables (bool): if save table (y_data_batch, sigma) in the folder. Default True
         """
         from ..utility.file_tools import dump_pickle
 
@@ -1349,14 +1349,13 @@ class BatchFitter(EstimatorType):
         return cls(y_data_batch=y_data_batch, sigma=sigma, result_path=result_path, **model_config)
 
 
-def load_estimation_results(count_table=None, table_name=None, input_samples=None,
-                            point_est_csv=None, seqtable_path=None, bootstrap_csv=None, convergence_csv=None,
+def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_csv=None,
                             **kwargs):
     """Collect estimation results (summary.csv files)and compose a table
     As
 
     Args:
-        seq_table (str): path to pickled `SeqTable` or `pd.DataFrame` object,
+        seq_table (str): path to pickled `SeqData` or `pd.DataFrame` object,
             will import 'input_counts'/, 'mean_counts'
         point_est_csv (str): optional, path to reported csv file from point estimation
         seqtable_path (str): optional. path to original seqTable object for count info
@@ -1371,7 +1370,6 @@ def load_estimation_results(count_table=None, table_name=None, input_samples=Non
     point_est_res = pd.read_csv(point_est_csv, index_col=0)
     est_res = point_est_res[point_est_res.columns]
     seq_list = est_res.index.values
-    bootstrap_res = pd.read_csv(bootstrap_csv, index_col=0)
 
     if seqtable_path:
         # add counts in input pool
@@ -1389,6 +1387,7 @@ def load_estimation_results(count_table=None, table_name=None, input_samples=Non
             est_res['dist_to_center'] = mega_peak.dist_to_center
 
     if bootstrap_csv:
+        bootstrap_res = pd.read_csv(bootstrap_csv, index_col=0)
         # add bootstrap results
         est_res[['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']] = bootstrap_res[
             ['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']]
@@ -1399,6 +1398,5 @@ def load_estimation_results(count_table=None, table_name=None, input_samples=Non
             if callable(func):
                 est_res[key] = est_res.apply(func, axis=1)
             else:
-                logging.error(f'Keyword argument {key} is not a function')
-                raise TypeError(f'Keyword argument {key} is not a function')
+                logging.error(f'Keyword argument {key} is not a function', error_type=TypeError)
     return est_res

@@ -9,11 +9,11 @@ def kA(params):
 
 
 def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=False):
-    """Parse data table source SeqTable
+    """Parse data table source SeqData
 
     Args:
-        seq_table (str): path to a SeqTable instance with x_value
-        table_name (str): the table to use in SeqTable, default 'table'
+        seq_table (str): path to a SeqData instance with x_value
+        table_name (str): the table to use in SeqData, default 'table'
         fit_partial (int): if fit the first k sequences in the table. Fit all sequences if negative
         inverse_weight (bool): if weight the data by the inverse of their counts (sigma = counts + 0.5)
 

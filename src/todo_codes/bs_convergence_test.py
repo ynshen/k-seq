@@ -13,7 +13,7 @@ def fitting(seq, xdata, maxFold=None, fitMtd='trf', ciEst=True, func=None, bsDep
     :param maxFold: if the maximum reacted fraction can exceed the indicated value, default None
     :param fitMtd: fitting method to use
     :param ciEst: If the confidence interval will be estimated by bootstrapping
-    :param func: func to fit, if None will fit to default exponential function
+    :param func: _get_mask to fit, if None will fit to default exponential function
     :return: seq with fitting results
     """
     from scipy.optimize import curve_fit

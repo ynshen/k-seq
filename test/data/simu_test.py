@@ -1,10 +1,8 @@
 """Test code for simulation"""
-from yuning_util.dev_mode import DevMode
-dev_mode = DevMode('k-seq')
-dev_mode.on()
 
 from k_seq.data import simu
-from pytest import approx, raises
+from k_seq.data.seq_data import SeqData
+from pytest import approx
 import numpy as np
 import pandas as pd
 
@@ -65,10 +63,9 @@ def test_sample_from_iid_dist_takes_callable_for_generator():
 
     size = 3
     callable_gen = fake_callable_return_generator_no_size
-    with raises(TypeError):
-        case = simu.PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=size, p0=callable_gen, param1=callable_gen)
-        check_returns_correct_df(case, size=size)
-        assert case.shape[1] == 2
+    case = simu.PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=size, p0=callable_gen, param1=callable_gen)
+    check_returns_correct_df(case, size=size)
+    assert case.shape[1] == 2
 
 
 def test_sample_from_dataframe_returns_df():
@@ -85,7 +82,47 @@ def test_sample_from_dataframe():
     check_returns_correct_df(simu.PoolParamGenerator.sample_from_dataframe(df=df, uniq_seq_num=size, weights=weights),
                              size=size)
 
-# TODO: simulate_counts returns x, Y, parameters, and a SeqTable
 
 def test_simulate_counts_return_correct():
-    return True
+    x, Y, dna_amount, param_table, seq_table = simu.simulate_counts(
+        uniq_seq_num=10,
+        x_values=[-1, 2e-6, 50e-6],
+        total_reads=1000,
+        p0=[0.1, 0.5, 0.4, 0.6, 0.2],
+        reps=3,
+        k=[10, 5, 30],
+        A=[0.8, 0.9]
+    )
+    assert x.shape == (2, 9)
+    assert Y.shape == (10, 9)
+    assert all([val == 1000 for val in Y.sum(axis=0)])
+    assert param_table.shape == (10, 3)
+    assert isinstance(seq_table, SeqData)
+
+
+def test_simulate_w_byo_doped_condition_from_param_dist_returns_correct_shape():
+    x, Y, dna_amount, truth, seq_table = simu.simulate_w_byo_doped_condition_from_param_dist(
+        uniq_seq_num=20, depth=40, p0_loc=1, p0_scale=0.1, k_95=(0.1, 100),
+        total_dna_error_rate=0.1, save_to=None, plot_dist=False
+    )
+    assert x.shape == (2, 16)
+    assert Y.shape == (20, 16)
+    assert Y.iloc[:, 0].sum() == 2400
+    assert all([val == 800 for val in Y.iloc[:, 1:].sum(axis=0)])
+    assert truth.shape == (20, 4)
+    assert isinstance(seq_table, SeqData)
+
+
+# def test_simulate_w_byo_doped_condition_from_exp_results_can_return():
+    # TODO: Need to avoid load data from csv files
+    # x, Y, dna_amount, truth, seq_table = simu.simulate_w_byo_doped_condition_from_exp_results(
+    #     uniq_seq_num=20, depth=40, p0_loc=1, p0_scale=0.1, k_95=(0.1, 100),
+    #     total_dna_error_rate=0.1, save_to=None, plot_dist=False
+    # )
+    # assert x.shape == (2, 16)
+    # assert Y.shape == (20, 16)
+    # assert Y.iloc[:, 0].sum() == 2400
+    # assert all([val == 800 for val in Y.iloc[:, 1:].sum(axis=0)])
+    # assert truth.shape == (20, 4)
+    # assert isinstance(seq_table, SeqData)
+

@@ -18,6 +18,9 @@ setup(
         'python-levenshtein',
         'scipy',
         'seaborn',
+        'doc-helper',
+        'seq-landscape',
+        'yutility'
     ],
     zip_safe=False
 )

@@ -3,6 +3,7 @@
 
 from time import time
 import logging as lg
+import pandas as pd
 
 
 class UnknownError(Exception):
@@ -76,6 +77,20 @@ class logging:
             file_handler.set_name(name)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
+
+
+class Logger:
+    """Logger associate with some object to record processing steps"""
+
+    def __init__(self, silent=False):
+        self.log = pd.DataFrame(columns=['time', 'message']).set_index('time')
+        self.silent = silent
+
+    def info(self, msg, silent=False):
+        from datetime import datetime
+        self.log.loc[datetime.now()] = msg
+        if not (self.silent and silent):
+            logging.info(msg)
 
 
 class Timer:

@@ -1,36 +1,20 @@
-def var_to_doc(doc_var):
-    """Deprecated.
-    Convert a variable (dictionary or list/tuple)of args/attrs/methods documents to a string of documentation
+import numpy as np
+import pandas as pd
 
-    Args:
-        doc_var ('dict` or list-like): variable contains document info
 
-    Returns:
-        `str` of docstring
-    """
+def is_int(x):
+    return isinstance(x, (int, np.int_, np.int0, np.int8, np.int16, np.int32, np.int64))
 
-    def parse_dict_value(single_var):
 
-        if isinstance(single_var, str):
-            return f': {single_var}\n'
-        elif isinstance(single_var, (tuple, list)):
-            if len(single_var) == 1:
-                return f': {single_var[0]}\n'
-            elif len(single_var) >= 2:
-                return f"(`{' or '.join(single_var[0:-1])}`): {single_var[-1]}\n"
-            else:
-                raise TypeError('List should have format (var_doc), or (var_type, var_doc)')
-        else:
-            raise TypeError('Unknown variable doc string type')
+def is_numeric(x):
+    return is_int(x) or isinstance(x, (float, np.float_, np.float16, np.float32, np.float64))
 
-    if isinstance(doc_var, dict):
-        doc_string = '\n  '.join([f'{key}{parse_dict_value(value)}' for key, value in doc_var.items()])
-    elif isinstance(doc_var, (list, tuple)):
-        raise NotImplementedError('list-like docstring not implemented yet')
-    else:
-        raise TypeError('Unknown docstring type doc_dict')
 
-    return doc_string
+def is_sparse(obj):
+    if isinstance(obj, pd.Series):
+        return pd.api.types.is_sparse(obj)
+    elif isinstance(obj, pd.DataFrame):
+        return obj.apply(pd.api.types.is_sparse).all()
 
 
 def update_none(arg, update_by):
@@ -43,49 +27,6 @@ def update_none(arg, update_by):
         return update_by
     else:
         return arg
-
-
-def get_object_hex(obj):
-    return f"<{obj.__class__.__module__}{obj.__class__.__name__} at {hex(id(obj))}>"
-
-
-def param_to_dict(key_list, **kwargs):
-    """Assign kwargs to the dictionary with key from key_list
-    - if the arg is a single value, it will be assigned to all keys
-    - if the arg is a list, it will should have same length as key_list
-    - if the arg is a dict, it should contain all members in the key
-    """
-    import numpy as np
-    import pandas as pd
-
-    def parse_args(kwargs, key, ix):
-        arg_dict = {}
-        for arg_name, arg in kwargs.items():
-            if isinstance(arg, (list, np.ndarray, pd.Series)):
-                if len(arg) == len(key_list):
-                    arg_dict[arg_name] = arg[ix]
-                else:
-                    raise ValueError(f"{arg_name} is a list, but the length does not match sample files")
-            elif isinstance(arg, dict):
-                if key in arg.keys():
-                    arg_dict[arg_name] = arg[key]
-                else:
-                    raise KeyError(f'Sample {key} not found in {arg_name}')
-            else:
-                arg_dict[arg_name] = arg
-        return arg_dict
-
-    if isinstance(key_list, dict):
-        key_list = list(key_list.keys())
-
-    return {key:parse_args(kwargs, key, ix) for ix,key in enumerate(key_list)}
-
-
-def check_attr_value(obj, **attr):
-    for name, value in attr.items():
-        if value is None:
-            attr[name] = getattr(obj, name)
-    return attr
 
 
 def dict_flatten(d, parent_key='', sep='_'):
@@ -101,14 +42,12 @@ def dict_flatten(d, parent_key='', sep='_'):
 
 
 def get_func_params(func, exclude_x=True):
-    """
-    Utility function to get the number of arguments for a function (callable)
+    """Utility function to get the number of arguments for a function (callable)
     Args:
         func (`callable`): the function
         exclude_x (`bool`): if exclude the first argument (usually `x`)
 
     Returns: a tuple of arguments name in order
-
     """
     from inspect import signature
 
@@ -176,3 +115,43 @@ class AttrScope(object):
         if kwargs is None:
             kwargs = {}
         self.__dict__.update({**kwargs, **attr_dict})
+
+
+
+def param_to_dict(key_list, **kwargs):
+    """Assign kwargs to the dictionary with key from key_list
+    - if the arg is a single value, it will be assigned to all keys
+    - if the arg is a list, it will should have same length as key_list
+    - if the arg is a dict, it should contain all members in the key
+    """
+    import pandas as pd
+
+    def parse_args(kwargs, key, ix):
+        arg_dict = {}
+        for arg_name, arg in kwargs.items():
+            if isinstance(arg, (list, np.ndarray, pd.Series)):
+                if len(arg) == len(key_list):
+                    arg_dict[arg_name] = arg[ix]
+                else:
+                    raise ValueError(f"{arg_name} is a list, but the length does not match sample files")
+            elif isinstance(arg, dict):
+                if key in arg.keys():
+                    arg_dict[arg_name] = arg[key]
+                else:
+                    raise KeyError(f'Sample {key} not found in {arg_name}')
+            else:
+                arg_dict[arg_name] = arg
+        return arg_dict
+
+    if isinstance(key_list, dict):
+        key_list = list(key_list.keys())
+
+    return {key:parse_args(kwargs, key, ix) for ix,key in enumerate(key_list)}
+
+
+
+def check_attr_value(obj, **attr):
+    for name, value in attr.items():
+        if value is None:
+            attr[name] = getattr(obj, name)
+    return attr

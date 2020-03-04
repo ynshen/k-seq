@@ -3,7 +3,7 @@
 Test script for least-squares fitting
 
 Includes:
-  - Read in a pickled `SeqTable` object
+  - Read in a pickled `SeqData` object
   - SingleFitter
     - construct
     - fit (point_est, bootstrap, convergence)
@@ -23,14 +23,14 @@ def test_env():
 
 
 def read_seqtable(path):
-    """Test SeqTable read function"""
+    """Test SeqData read function"""
 
     from k_seq.utility.file_tools import read_pickle
-    print(f'Load SeqTable from {path}...', end='')
+    print(f'Load SeqData from {path}...', end='')
     seq_table = read_pickle(path)
     print('success!')
-    from k_seq.data.seq_table import SeqTable
-    assert isinstance(seq_table, SeqTable)
+    from k_seq.data.seq_data import SeqData
+    assert isinstance(seq_table, SeqData)
     return seq_table
 
 

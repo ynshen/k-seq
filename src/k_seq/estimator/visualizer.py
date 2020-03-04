@@ -1,6 +1,6 @@
 def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
     from .least_square import BatchFitter, SingleFitter
-    from ..data.seq_table import SeqTable
+    from ..data.seq_data import SeqData
 
     def extract_info_from_SingleFitting(single_res):
         data = {
@@ -20,7 +20,7 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
 
     if num_bootstrap_records == 0:
         num_bootstrap_records = None
-    if isinstance(fitting_res, SeqTable):
+    if isinstance(fitting_res, SeqData):
         fitting_res = fitting_res.fitting
     if isinstance(fitting_res, BatchFitter):
         if seq_ix is None:
@@ -45,7 +45,7 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
             seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
         }
     else:
-        raise Exception('The input fitting_res should be SeqTable, SingleFitting or BatchFitting')
+        raise Exception('The input fitting_res should be SeqData, SingleFitting or BatchFitting')
 
     return model, data_to_plot
 
@@ -156,7 +156,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
     import numpy as np
     import pandas as pd
     from .least_square import BatchFitResults, BatchFitter
-    from ..data.seq_table import SeqTable
+    from ..data.seq_data import SeqData
 
     def get_res_col():
         """parse col name to use"""
@@ -188,10 +188,10 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
             return fitting_res.results.summary()
         elif isinstance(fitting_res, BatchFitResults):
             return fitting_res.summary()
-        elif isinstance(fitting_res, SeqTable):
+        elif isinstance(fitting_res, SeqData):
             return fitting_res.fitter.results.summary
         else:
-            raise Exception('Error: fitting_res has to be an either SeqTable or BatchFitting instance')
+            raise Exception('Error: fitting_res has to be an either SeqData or BatchFitting instance')
 
     param_values = parse_fitting_res()
     line_col, lower_col, upper_col = get_res_col()
@@ -234,19 +234,19 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
     return ax
 
 
-# def get_loss(x, y, params, func=, weights=None):
-#     y_ = func(x, *params)
+# def get_loss(x, y, params, _get_mask=, weights=None):
+#     y_ = _get_mask(x, *params)
 #     if not weights:
 #         weights = np.ones(len(x))
 #     return sum(((y_-y) / weights)**2)
 
 
-# def convergence_test(x, y, func=func_default, weights=None, param_bounds=([0, 0], [1., np.inf]),
+# def convergence_test(x, y, _get_mask=func_default, weights=None, param_bounds=([0, 0], [1., np.inf]),
 #                      test_size=100, return_verbose=True, key_value='loss',
 #                      statistics=None):
 #
 #     from inspect import signature
-#     param_num = len(str(signature(func)).split(',')) - 1
+#     param_num = len(str(signature(_get_mask)).split(',')) - 1
 #     results = {
 #         'params': np.zeros((param_num, test_size)),
 #         'loss': np.zeros(test_size)
@@ -256,14 +256,14 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #         try:
 #             init_guess = ([np.random.random() for _ in range(param_num)])
 #             if param_bounds:
-#                 popt, pcov = curve_fit(func, x, y, method='trf', bounds=param_bounds, p0=init_guess, sigma=weights)
+#                 popt, pcov = curve_fit(_get_mask, x, y, method='trf', bounds=param_bounds, p0=init_guess, sigma=weights)
 #             else:
-#                 popt, pcov = curve_fit(func, x, y, method='trf', p0=init_guess, sigma=weights)
+#                 popt, pcov = curve_fit(_get_mask, x, y, method='trf', p0=init_guess, sigma=weights)
 #         except RuntimeError:
 #             popt = None
 #         if popt is not None:
 #             results['params'][:, rep] = popt
-#             results['loss'][rep] = get_loss(x, y, params=popt, func=func, weights=weights)
+#             results['loss'][rep] = get_loss(x, y, params=popt, _get_mask=_get_mask, weights=weights)
 #     if return_verbose:
 #         return results
 #     else:
@@ -308,7 +308,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
 #         initGuess = (np.random.random(), np.random.random())
 #
 #         try:
-#             popt, pcov = curve_fit(func, x_, y_, method='trf', bounds=([0, 0], [1., np.inf]), p0=initGuess)
+#             popt, pcov = curve_fit(_get_mask, x_, y_, method='trf', bounds=([0, 0], [1., np.inf]), p0=initGuess)
 #         except RuntimeError:
 #             popt = [np.nan, np.nan]
 #

@@ -1,7 +1,13 @@
-"""A collection of commonly used kinetic models used in the project
+"""A collection of commonly used kinetic models
+
+Notes:
+    kinetic models were currently implemented as callable function. It might migrate to `Model` subclass for
+      storing parameters, set required parameters, etc
 """
+
 import numpy as np
-from ..utility.doc_helper import DocHelper
+from ..utility import DocHelper
+from ..utility.log import logging
 
 doc_helper = DocHelper(
     c=('float or 1-D list-like', 'Concentration of substrates, return input pool if negative'),
@@ -13,149 +19,125 @@ doc_helper = DocHelper(
     t=('float', 'Reaction time in the experiments'),
     b=('float or 1-D list-like', 'Bias for each sequences, with length as number of sequences'),
     p0=('1-D list-like', 'Amount or composition of sequences in the input pool'),
-
+    broadcast=('bool', 'if True, apply broadcast for k and A, outer product between A and k are calculated;'
+                       'if False, k and A have to be same length and apply elementwise production')
 )
 
 
-def check_scaler(value):
+def check_scalar(value):
     """Check if value is a scalar or is the single value in a vector/matrix/tensor"""
     return len(np.reshape(value, newshape=(-1))) == 1
 
 
-def to_scaler(value):
-    """Try to convert a value to scaler, if possible"""
+def to_scalar(value):
+    """Try to convert a value to scalar, if possible"""
     if len(np.reshape(value, newshape=(-1))) == 1:
         return np.reshape(value, newshape=(-1))[0]
     else:
         return np.array(value)
 
 
-def first_order(c, k, A, alpha, t):
-    """Base first-order kinetic model, returns reacted fraction of input seqs given parameters
+def first_order(c, k, A, alpha, t, broadcast=True):
+    f"""Base first-order kinetic model, returns reacted fraction of input seqs given parameters
     broadcast are available on A, k, c and a full return tensor will have shape (A, k, c)
     if any of these 3 parameters is scalar, the dimension is automatically squeezed while maintaining the order
     Note: for c_i < 0, returns ones as it is input pool
      
     Args:
-    {}
-    """.format(doc_helper.get(first_order), indent=4)
+    {doc_helper.get(first_order, indent=4)} 
+    """
 
-    # dim  param
-    #  0     A
-    #  1     k
-    #  2     c
-
-    if check_scaler(c):
-        c = np.array([to_scaler(c)])
+    if check_scalar(c):
+        c = np.array([to_scalar(c)])
     else:
         c = np.array(c)
-    if check_scaler(k):
-        k = np.array([to_scaler(k)])
+    if check_scalar(k):
+        k = np.array([to_scalar(k)])
     else:
         k = np.array(k)
-    if check_scaler(A):
-        A = np.array([to_scaler(A)])
+    if check_scalar(A):
+        A = np.array([to_scalar(A)])
     else:
         A = np.array(A)
 
-    y = np.outer(A, (1 - np.exp(- alpha * t * np.outer(k, c))))
-    y = y.reshape((len(A), len(k), len(c)))
-    y[:, :, c < 0] = 1
+    if broadcast:
+        # dim  param
+        #  0     A
+        #  1     k
+        #  2     c
+        y = np.outer(A, (1 - np.exp(- alpha * t * np.outer(k, c))))
+        y = y.reshape((len(A), len(k), len(c)))
+        y[:, :, c < 0] = 1
 
-    dim_to_squeeze = []
-    for dim in (0, 1, 2):
-        if y.shape[dim] == 1:
-            dim_to_squeeze.append(dim)
+        dim_to_squeeze = []
+        for dim in (0, 1, 2):
+            if y.shape[dim] == 1:
+                dim_to_squeeze.append(dim)
+    else:
+        # dim param
+        #  0   k, A
+        #  1    c
+
+        if len(k) != len(A):
+            logging.error('k and A should have same length when broadcasting is disabled', error_type=ValueError)
+
+        y = np.expand_dims(A, -1) * (1 - np.exp(- alpha * t * np.outer(k, c)))
+        y[:, c < 0] = 1
+
+        dim_to_squeeze = []
+        for dim in (0, 1):
+            if y.shape[dim] == 1:
+                dim_to_squeeze.append(dim)
 
     y = np.squeeze(y, axis=tuple(dim_to_squeeze))
     return y
 
 
-def first_order_w_bias(c, k, A, alpha, t, b):
-    """Base first order kinetic model with bias
-    Args:
-    {}
-    """.format(doc_helper.get(first_order_w_bias))
-
-    if check_scaler(k) or check_scaler(c):
-        # Two 1-D array, compute outer product
-        return to_scaler(A) * (1 - np.exp(- alpha * t * to_scaler(k) * to_scaler(c))) + to_scaler(b)
-    else:
-        if len(np.shape(A)) == 1:
-            A = np.expand_dims(A, axis=-1)
-        if len(np.shape(b)) == 1:
-            b = np.expand_dims(b, axis=-1)
-        return A * (1 - np.exp(- alpha * t * np.outer(k, c))) + b
-
-
 class BYOModel:
-    """A collection of BYO kinetic models (static functions)
-
+    r"""A collection of BYO kinetic models (static functions)
     where some values are fixed:
         exp time (t): 90 min
         BYO degradation factor ($\alpha$): 0.479
 
     functions:
+        - reacted_frac
+        - amount_first_order
         - composition_first_order
-        -
+        
     parameters:
-        p0: initial pool composition, needed if using actual composition
-        c: controlled variable, in our case, BYO concentration
-        k: kinetic coefficient
-        A: fraction of reactive molecules
-        bias: if include slope in the model for baseline passing rate
+    {params}
 
     return:
-        concentration/composition at the target (time, concentration) point
-    """
-
-    # def __init__(self, p0=None, c=None, k=None, A=None, bias=False, use_reacted_frac=True,):
-    #     super().__init__()
-    #     self.alpha = 0.479
-    #     self.t = 90
-    #     self.p0 = p0
-    #     self.c = c
-    #     self.k = k
-    #     self.A = A
-    #     self.bias = bias
-    #     if use_reacted_frac:
-    #         if bias:
-    #             raise NotImplementedError('reacted fraction with bias is not implemented yet')
-    #         else:
-    #             self.func = self.react_frac
-    #     else:
-    #         if bias:
-    #             self.func = self.composition_first_order_w_bias
-    #         else:
-    #             self.func = self.composition_first_order
+        concentration/composition at the name (time, concentration) point
+    """.format(params=doc_helper.get(['p0', 'c', 'k', 'A']))
 
     @staticmethod
-    def reacted_frac(c, k, A):
-        """Reacted fraction for each seq in a pool
+    def reacted_frac(c, k, A, broadcast=True):
+        f"""Reacted fraction for each seq in a pool
         Args:
-        {}
+        {doc_helper.get(BYOModel.reacted_frac)}
         
         Return:
             Reacted fraction for each sequence in each sample
             float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
-        """.format(doc_helper.get(BYOModel.reacted_frac))
+        """
 
-        return first_order(c=c, k=k, A=A, alpha=0.479, t=90)
+        return first_order(c=c, k=k, A=A, broadcast=broadcast, alpha=0.479, t=90)
 
     @staticmethod
-    def amount_first_order(c, p0, k, A):
-        """Absolute amount of reacted pool, if c is negative, return x0
+    def amount_first_order(c, p0, k, A, broadcast=False):
+        f"""Absolute amount of reacted pool, if c is negative, return 0
+        Notice: broadcast should be False if multiple p0 is used.
 
         Args:
-        {}
+        {doc_helper.get(BYOModel.amount_first_order)}
         
         Return:
-            Absolute abount of each sequence in each sample
+            Absolute amount of each sequence in each sample
             float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
+        """
 
-        """.format(doc_helper.get(BYOModel.amount_first_order))
-        reacted_frac = BYOModel.reacted_frac(c=c, k=k, A=A)
-
+        reacted_frac = BYOModel.reacted_frac(c=c, k=k, A=A, broadcast=broadcast)
         if len(np.shape(reacted_frac)) == 1:
             return np.array(p0) * reacted_frac
         else:
@@ -163,45 +145,21 @@ class BYOModel:
 
     @staticmethod
     def composition_first_order(c, p0, k, A):
-        """Function of pool composition w.r.t. BYO concentration (x)
+        f"""Function of pool composition w.r.t. BYO concentration (c)
         if x < 0, output is p0
+        broadcast is not supported that is k and A should have sem length
 
         Args:
-        {}
+        {BYOModel.composition_first_order}
 
         Return:
             Pool composition for sequences in each sample
-            float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
-        """.format(BYOModel.composition_first_order)
-
-        amounts = BYOModel.amount_first_order(c=c, p0=p0, k=k, A=A)
-
-        return amounts / np.sum(amounts, axis=0)
-
-    @staticmethod
-    def composition_first_order_w_bias(c, p0, k, A, b):
-        """Function of pool composition w.r.t. BYO concentration (x)
-        TODO: kinetics with bias is not updated yet
-        if x < 0, output is p0
-
-        Parameters:
-            c: concentration
-            p0: initial pool composition
-            k: kinetic coefficient
-            A: maximal conversion ratio
-            b: slope
+            float, 1-D or 2-D np.ndarray with shape (len(k), sample_num)
         """
 
-        import numpy as np
+        amounts = BYOModel.amount_first_order(c=c, p0=p0, k=k, A=A, broadcast=False)
 
-        p0 = np.array(p0)
-        k = np.array(k)
-        A = np.array(A)
-        b = np.array(b)
-
-        if c < 0:
-            return p0
+        if check_scalar(p0):
+            return amounts
         else:
-            p = p0 * first_order_w_bias(c=c, k=k, A=A, b=b, alpha=0.479, t=90)
-            return p / np.sum(p)
-
+            return amounts / np.sum(amounts, axis=0)
