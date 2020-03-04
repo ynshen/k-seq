@@ -1,7 +1,7 @@
 """Grouper slice table into pre-defined groups. E.g. input samples, reacted samples, different concentrations
 """
 
-from .seq_table import slice_table
+from .seq_data import slice_table
 from ..utility.func_tools import AttrScope
 from yutility import logging
 
@@ -80,11 +80,11 @@ class Grouper(object):
             axis = self.axis
         if self.type == 0:
             # ignore group argument
-            return slice_table(table=target, keys=self.group, axis=axis, remove_zero=remove_zero)
+            return slice_table(table=target, keys=self.group, axis=axis, remove_empty=remove_zero)
         else:
             if group is None:
                 logging.error('Please indicate the group')
-            return slice_table(table=target, keys=self.group[group], axis=axis, remove_zero=remove_zero)
+            return slice_table(table=target, keys=self.group[group], axis=axis, remove_empty=remove_zero)
 
     def split(self, target=None, remove_zero=False):
         if target is None:

@@ -271,11 +271,11 @@ def check_dir(path):
 
 
 def table_object_to_dataframe(obj, table_name=None):
-    """Convert object (`file path`, `SeqTable`) to `pd.DataFrame`
+    """Convert object (`file path`, `SeqData`) to `pd.DataFrame`
     """
     from pathlib import Path, PosixPath
     import pandas as pd
-    from ..data.seq_table import SeqTable
+    from ..data.seq_data import SeqData
 
     if isinstance(obj, (str, Path, PosixPath)):
         if Path(obj).is_file():
@@ -287,7 +287,7 @@ def table_object_to_dataframe(obj, table_name=None):
             raise FileNotFoundError(f'{obj} is not a valid file')
     if isinstance(obj, pd.DataFrame):
         return obj
-    elif isinstance(obj, SeqTable):
+    elif isinstance(obj, SeqData):
         if table_name is None:
             try:
                 return obj.table
@@ -297,6 +297,6 @@ def table_object_to_dataframe(obj, table_name=None):
             try:
                 return getattr(obj, table_name)
             except AttributeError:
-                raise AttributeError(f'{table_name} is not found in the SeqTable object')
+                raise AttributeError(f'{table_name} is not found in the SeqData object')
     else:
-        raise TypeError('Table should be a `pd.DataFrame` or `SeqTable`')
+        raise TypeError('SeqTable should be a `pd.DataFrame` or `SeqData`')

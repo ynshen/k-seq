@@ -1358,7 +1358,7 @@ def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_cs
     As
 
     Args:
-        seq_table (str): path to pickled `SeqTable` or `pd.DataFrame` object,
+        seq_table (str): path to pickled `SeqData` or `pd.DataFrame` object,
             will import 'input_counts'/, 'mean_counts'
         point_est_csv (str): optional, path to reported csv file from point estimation
         seqtable_path (str): optional. path to original seqTable object for count info

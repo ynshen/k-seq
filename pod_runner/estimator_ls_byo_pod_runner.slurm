@@ -11,12 +11,12 @@ cd $SLURM_SUBMIT_DIR
 #  Sample options:
 #    - byo-doped.pkl
 #    - byo-selected.pkl
-#  Table name options for BYO-doped
+#  SeqTable name options for BYO-doped
 #      - table_filtered_reacted_frac_total_dna
 #      - table_filtered_reacted_frac_spike_in
 #      - table_filtered_seq_in_all_smpl_reacted_frac_spike_in
 #      - table_filtered_seq_in_all_smpl_reacted_frac_total_dna
-#  Table name options for BYO-selected
+#  SeqTable name options for BYO-selected
 #      - table_nf_filtered_reacted_frac_curated
 #      - table_nf_filtered_seq_in_all_smpl_reacted_frac_curated
 #      - table_nf_filtered_reacted_frac

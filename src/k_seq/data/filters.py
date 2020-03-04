@@ -1,8 +1,8 @@
-"""This module contains filters to apply on SeqTable
+"""This module contains filters to apply on SeqData
 TODO: write test cases for filters
 """
 
-from .seq_table import slice_table
+from .seq_data import slice_table
 import pandas as pd
 from abc import ABC, abstractmethod
 from yutility import logging
@@ -58,7 +58,7 @@ class Filter(ABC):
         return self._get_mask(target, axis, **kwargs)
 
     @classmethod
-    def filter(cls, target, axis=None, remove_zero=False, reverse=False, **kwargs):
+    def filter(cls, target, axis=None, remove_empty=False, reverse=False, **kwargs):
         """Classmethod to directly apply filters"""
 
         mask = cls._get_mask(target=target, axis=axis, **kwargs)
@@ -70,12 +70,12 @@ class Filter(ABC):
             return slice_table(table=target,
                                keys=target.index[mask],
                                axis=0,
-                               remove_zero=remove_zero)
+                               remove_empty=remove_empty)
         else:
             return slice_table(table=target,
                                keys=target.columns[mask],
                                axis=1,
-                               remove_zero=remove_zero)
+                               remove_empty=remove_empty)
 
     @property
     def target(self):
@@ -111,16 +111,16 @@ class Filter(ABC):
         else:
             return list(target.index[mask])
 
-    def __call__(self, target=None, remove_zero=False, reverse=False, axis=None):
+    def __call__(self, target=None, remove_empty=False, reverse=False, axis=None):
         """Directly call on the filter returns a filtered table"""
-        return self.get_filtered_table(target=target, remove_zero=remove_zero, reverse=reverse, axis=axis)
+        return self.get_filtered_table(target=target, remove_empty=remove_empty, reverse=reverse, axis=axis)
 
-    def get_filtered_table(self, target=None, remove_zero=False, reverse=False, axis=None):
+    def get_filtered_table(self, target=None, remove_empty=False, reverse=False, axis=None):
         """Return a filtered table
 
         Args:
             target (pd.DataFrame): table to filter
-            remove_zero (bool): if remove all-zero items from another axis after filtering. Default False.
+            remove_empty (bool): if remove all-zero items from another axis after filtering. Default False.
             reverse (bool): if return filtered items instead of items passed the filter. Default False.
             axis (0 or 1): if apply filter on index/row (0) or columns (1)
         """
@@ -131,10 +131,11 @@ class Filter(ABC):
         else:
             keys = self.get_passed_item(target, reverse=reverse)
         axis = update_none(axis, self.axis)
-        return slice_table(table=target,
-                           keys=keys,
-                           axis=axis,
-                           remove_zero=remove_zero)
+        from .seq_data import SeqTable
+        return SeqTable(slice_table(table=target,
+                                    keys=keys,
+                                    axis=axis,
+                                    remove_empty=remove_empty))
 
     def summary(self, target=None, axis=None, **kwargs):
         """Returns a pd.DataFrame as the summary"""
@@ -245,18 +246,18 @@ class SpikeInFilter(Filter):
     def __init__(self, target, center_seq=None, radius=None, dist_type=None, reverse=False, axis=0):
         """
         Args:
-            target (pd.DataFrame or table.SeqTable): needed to calculate distance of sequences to center seq
+            target (pd.DataFrame or table.SeqData): needed to calculate distance of sequences to center seq
                 If target is pd.DataFrame, center, radius, and dist_type must
-                provide. If target is SeqTable, it must infer from ``SeqTable.spike_in`` accessor if applicable for
+                provide. If target is SeqData, it must infer from ``SeqData.spike_in`` accessor if applicable for
                 consistency
             center_seq (str): center sequence of added spike-in sequence
             radius (int): radius of spike-in peak. Seqs with distance ≤ radius will be filtered
         """
-        from ..data.seq_table import SeqTable
+        from ..data.seq_data import SeqData
 
         super().__init__(target, axis)
 
-        if isinstance(target, pd.DataFrame) or (isinstance(target, SeqTable) and not hasattr(target, 'spike_in')):
+        if isinstance(target, pd.DataFrame) or (isinstance(target, SeqData) and not hasattr(target, 'spike_in')):
             # if not spike-in info could infer
             if center_seq is None:
                 logging.error('center_seq is None', error_type=ValueError)
@@ -273,7 +274,7 @@ class SpikeInFilter(Filter):
             from landscape import Peak
             self.peak = Peak(center_seqs=center_seq, seqs=target, radius=radius, dist_type=dist_type, name='spike-in')
             self.target = target if isinstance(target, pd.DataFrame) else target.table.original
-        elif isinstance(target, SeqTable):
+        elif isinstance(target, SeqData):
             if ((center_seq is not None) and (center_seq != target.spike_in.peak.center_seq)) or \
                     ((radius is not None) and (radius != target.spike_in.peak.radius)) or \
                     ((dist_type is not None) and (dist_type != target.spike_in.peak.dist_type)):

@@ -1,5 +1,5 @@
 """
-Module contains the classes to transform table (`pd.DataFrame` or `SeqTable`) instance as well as related calculation
+Module contains the classes to transform table (`pd.DataFrame` or `SeqData`) instance as well as related calculation
     and visualizations
 
 Current available transformers:
@@ -11,7 +11,6 @@ Current available transformers:
 
 import numpy as np
 import pandas as pd
-from .seq_table import SeqTable
 from abc import ABC, abstractmethod
 from doc_helper import DocHelper
 from ..utility.func_tools import update_none
@@ -21,7 +20,7 @@ from ..utility.log import logging
 class Transformer(ABC):
     """Abstract class type for transformer
 
-    Transformers are classes transform a table instance (`pd.DataFrame` or `SeqTable`) to another table
+    Transformers are classes transform a table instance (`pd.DataFrame` or `SeqData`) to another table
 
     To write your transformer, components are:
         - Attributes to store parameters
@@ -54,7 +53,11 @@ _spike_in_doc = DocHelper(
     radius=('int', 'Radius of spike-in peak, seqs less or equal to radius away from center are spike-in seqs'),
     base_table=('pd.DataFrame', 'base_table includes spike-in sequences to calculate normalization factor'),
     unit=('str', 'unit of spike-in amount'),
-    dist_type=('str', "'edit' or 'hamming' as distance measure. Default 'edit' to include insertion / deletion")
+    dist_type=('str', "'edit' or 'hamming' as distance measure. Default 'edit' to include insertion / deletion"),
+    spike_in_seq=('str', 'center sequence for spike-in'),
+    spike_in_amount=('list-like, dict, or pd.Series', 'added spike_in amount, dict and pd.Series should have key of '
+                                                      'samples in base_table list-like should have same length as '
+                                                      'number of samples (cols) in base_table')
 )
 
 
@@ -79,11 +82,8 @@ class SpikeInNormalizer(Transformer):
     @_spike_in_doc.compose("""Initialize a SpikeInNormalizer
     
     Args:
-        spike_in_seq (str): center sequence for spike-in
-        spike_in_amount (list-like, dict, or pd.Series): added spike_in amount,
-          dict and pd.Series should have key of samples in base_table
-          list-like should have same length as number of samples (cols) in base_table
-        <<base_table, radius, unit, dist_type>>
+        
+    <<spike_in_seq, spike_in_amount, base_table, radius, unit, dist_type>>
     """)
     def __init__(self, spike_in_seq, spike_in_amount, base_table, radius, unit, dist_type='edit'):
         from landscape import Peak
@@ -162,7 +162,8 @@ class SpikeInNormalizer(Transformer):
         for sample in sample_not_in:
             logging.warning(f'Sample {sample} is not found in the normalizer, normalization is not performed')
 
-        return target.loc[:, sample_list] * norm_factor
+        from .seq_data import SeqTable
+        return SeqTable(target.loc[:, sample_list] * norm_factor)
 
     def apply(self, target):
         """Apply normalization to target"""
@@ -260,7 +261,8 @@ class TotalAmountNormalizer(Transformer):
             else:
                 logging.warning(f'Sample {sample} is not in norm_factor, skip this sample')
 
-        return target[sample_list].apply(sample_normalize, axis=0)
+        from .seq_data import SeqTable
+        return SeqTable(target[sample_list].apply(sample_normalize, axis=0))
 
     @_total_dna_doc.compose("""Transform counts to absolute amount on columns in name that are in norm_factor 
 
@@ -277,15 +279,15 @@ class TotalAmountNormalizer(Transformer):
 class ReactedFractionNormalizer(Transformer):
     """Get reacted fraction of each sequence from an absolute amount table"""
 
-    def __init__(self, input_samples, target=None, reduce_method='median', remove_zero=True):
+    def __init__(self, input_samples, target=None, reduce_method='median', remove_empty=True):
         super().__init__()
         self.target = target
         self.input_samples = input_samples
         self.reduce_method = reduce_method
-        self.remove_zero = remove_zero
+        self.remove_empty = remove_empty
 
     @staticmethod
-    def func(target, input_samples, reduce_method='median', remove_zero=True):
+    def func(target, input_samples, reduce_method='median', remove_empty=True):
 
         method_mapper = {
             'med': np.nanmedian,
@@ -303,18 +305,19 @@ class ReactedFractionNormalizer(Transformer):
 
         mask = base > 0  # if any does not exist in input samples
         reacted_frac = target.loc[mask, ~target.columns.isin(input_samples)].divide(base[mask], axis=0)
-        if remove_zero:
-            return reacted_frac[reacted_frac.sum(axis=1) > 0]
+        from .seq_data import SeqTable
+        if remove_empty:
+            return SeqTable(reacted_frac[reacted_frac.sum(axis=1) > 0])
         else:
-            return reacted_frac
+            return SeqTable(reacted_frac)
 
-    def apply(self, target=None, input_samples=None, reduce_method=None, remove_zero=None):
+    def apply(self, target=None, input_samples=None, reduce_method=None, remove_empty=None):
         """Convert absolute amount to reacted fraction
             Args:
                 target (pd.DataFrame): the table with absolute amount to normalize on inputs, including input pools
                 input_samples (list of str): list of indices of input pools
                 reduce_method (str or callable): 'mean' or 'median' or a callable apply on a pd.DataFrame to list-like
-                remove_zero (bool): if will remove all-zero seqs from output table
+                remove_empty (bool): if will remove all-zero seqs from output table
 
             Returns:
                 pd.DataFrame
@@ -331,11 +334,11 @@ class ReactedFractionNormalizer(Transformer):
             reduce_method = self.reduce_method
         if not isinstance(target, pd.DataFrame):
             target = getattr(target, 'table')
-        if remove_zero is None:
-            remove_zero = self.remove_zero
+        if remove_empty is None:
+            remove_empty = self.remove_empty
 
         return self.func(target=target, input_samples=input_samples,
-                          reduce_method=reduce_method, remove_zero=remove_zero)
+                         reduce_method=reduce_method, remove_empty=remove_empty)
 
 
 class BYOSelectedCuratedNormalizerByAbe(Transformer):
@@ -361,7 +364,8 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
         if isinstance(q_factor, pd.DataFrame):
             q_factor = q_factor.iloc[:, 0]
         q_factor = q_factor.reindex(total_counts.index)
-        return target / total_counts / q_factor
+        from .seq_data import SeqTable
+        return SeqTable(target / total_counts / q_factor)
 
     def apply(self, target=None, q_factor=None):
         """Normalize counts using Abe's curated quantification factor

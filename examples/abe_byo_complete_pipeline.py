@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #todo: not implemented yet: write this CLI to convert the folder of count files from Abe's original kseq data
-#todo: to a pickled SeqTable object, fitted results with .csv files
+#todo: to a pickled SeqData object, fitted results with .csv files
 
 # import argparse
 #

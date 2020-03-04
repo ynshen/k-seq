@@ -270,7 +270,7 @@ def sample_count_cut_off_plot_all(sample_set, black_list=None, thresholds=None, 
     plt.show()
 
 
-# ---------------------- Belows are SeqTable Visualizers --------------------
+# ---------------------- Belows are SeqData Visualizers --------------------
 
 def seq_occurrence_plot(seq_table, sample_range='reacted', fig_save_to=None):
     import numpy as np

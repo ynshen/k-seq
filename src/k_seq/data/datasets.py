@@ -5,7 +5,7 @@ Available datasets:
 """
 
 from ..utility.log import logging
-from .seq_table import SeqTable, Table
+from .seq_data import SeqData, SeqTable
 
 
 def load_dataset(dataset, from_count_file=False, **kwargs):
@@ -64,7 +64,7 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         import numpy as np
         import pandas as pd
 
-        logging.info('Generate SeqTable instance for BYO-doped pool...')
+        logging.info('Generate SeqData instance for BYO-doped pool...')
         logging.info(f'Importing from {BYO_DOPED_COUNT_FILE}...this could take a couple of minutes...')
 
         # parse dna amount file, original data is 1/total_dna
@@ -76,7 +76,7 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                 indices.append(f'{sample}{rep + 1}')
         dna_amount = {name: dna_amount['total_amounts'][ix] for ix, name in enumerate(indices)}
 
-        byo_doped = SeqTable.from_count_files(
+        byo_doped = SeqData.from_count_files(
             count_files=BYO_DOPED_COUNT_FILE,
             pattern_filter=pattern_filter,
             name_template=name_pattern,
@@ -140,7 +140,7 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         from .transform import ReactedFractionNormalizer
         reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
                                                  reduce_method='median',
-                                                 remove_zero=True)
+                                                 remove_empty=True)
         # normalized using spike-in
         byo_doped.table.reacted_frac_spike_in = reacted_frac(byo_doped.spike_in(target=byo_doped.table.filtered))
 
@@ -151,10 +151,10 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         min_detected_times_filter = filters.DetectedTimesFilter(
             min_detected_times=byo_doped.table.reacted_frac_spike_in.shape[1]
         )
-        byo_doped.table.seq_in_all_smpl_reacted_frac_spike_in = min_detected_times_filter(
+        byo_doped.table.reacted_frac_spike_in_seq_in_all_smpl = min_detected_times_filter(
             byo_doped.table.reacted_frac_spike_in
         )
-        byo_doped.table_filtered_seq_in_all_smpl_reacted_frac_total_dna = min_detected_times_filter(
+        byo_doped.table.reacted_frac_qpcr_seq_in_all_smpl = min_detected_times_filter(
             byo_doped.table.reacted_frac_qpcr
         )
         logging.info('Finished!')
@@ -202,13 +202,13 @@ def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=Non
         import numpy as np
         import pandas as pd
 
-        logging.info('Generate SeqTable instance for BYO-selected pool...')
+        logging.info('Generate SeqData instance for BYO-selected pool...')
         logging.info(f'Importing from {COUNT_FILE}...this could take a couple of minutes...')
 
         import numpy as np
         import pandas as pd
 
-        byo_selected = SeqTable.from_count_files(
+        byo_selected = SeqData.from_count_files(
             file_root=COUNT_FILE,
             pattern_filter='counts-',
             name_pattern='counts-[{byo}{exp_rep}].txt',
@@ -239,7 +239,7 @@ def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=Non
         from .transform import ReactedFractionNormalizer, BYOSelectedCuratedNormalizerByAbe
         reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
                                                  reduce_method='median',
-                                                 remove_zero=True)
+                                                 remove_empty=True)
         # Add replicates grouper
         byo_selected.grouper.add({'byo': {
             250: ['1A', '1B', '1C', '1D', '1E', '1F'],

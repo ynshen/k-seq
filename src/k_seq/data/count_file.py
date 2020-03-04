@@ -4,13 +4,13 @@ TODO: add Sam and Celia's code reference here
 """
 
 from ..utility.log import logging
-from .seq_table import _table_doc
+from .seq_data import _doc
 from ..utility.file_tools import _name_template_example
 import numpy as np
 import pandas as pd
 
 
-@_table_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
+@_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
 
 Args:
     count_files (str): root directory to search for count files
@@ -74,10 +74,10 @@ def load_Seqtable_from_count_files(
     else:
         grouper = None
 
-    from .seq_table import SeqTable
+    from .seq_data import SeqData
 
-    seq_table = SeqTable(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
-                         x_values=x_values, x_unit=x_unit, note=note)
+    seq_table = SeqData(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
+                        x_values=x_values, x_unit=x_unit, note=note)
 
     return seq_table
 

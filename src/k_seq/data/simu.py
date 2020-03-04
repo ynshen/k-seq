@@ -114,11 +114,11 @@ simu_doc = DocHelper(
     replace=('bool', 'if sample with replacement when sampling from a dataframe'),
     reps=('int', 'number of replicates for each condition in x_values'),
     save_to=('str', 'optional, path to save the simulation results with x, Y, truth csv file '
-                    'and a pickled SeqTable object'),
+                    'and a pickled SeqData object'),
     x=('pd.DataFrame', 'controlled variable (c, n) for samples'),
     Y=('pd.DataFrame', 'simulated sequence counts for given samples'),
     param_table=('pd.DataFrame', 'table list the parameters for simulated sequences, including p0, k, A, kA'),
-    seq_table=('data.SeqTable', 'a SeqTable object to stores all the data'),
+    seq_table=('data.SeqData', 'a SeqData object to stores all the data'),
     truth=('pd.DataFrame', 'true values of parameters (e.g. p0, k, A) for simulated sequences')
 )
 
@@ -245,7 +245,7 @@ Returns:
     x (pd.DataFrame): c, n value for samples
     Y (pd.DataFrame): simulated sequence counts for given samples
     param_table (pd.DataFrame): table list the parameters for simulated sequences
-    seq_table (data.SeqTable): a SeqTable object to stores all the data
+    seq_table (data.SeqData): a SeqData object to stores all the data
 """)
 def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                     kinetic_model=None, count_model=None, total_amount_error=None,
@@ -329,12 +329,12 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     Y.index.name = 'seq'
     dna_amount.index.name = 'amount'
 
-    from .seq_table import SeqTable
+    from .seq_data import SeqData
 
     input_samples = x.loc['c']
     input_samples = list(input_samples[input_samples < 0].index)
-    seq_table = SeqTable(data=Y, x_values=x.loc['c'].to_dict(), note=note,
-                         grouper={'input': input_samples,
+    seq_table = SeqData(data=Y, x_values=x.loc['c'].to_dict(), note=note,
+                        grouper={'input': input_samples,
                                   'reacted': [sample for sample in x.columns if sample not in input_samples]})
     seq_table.add_sample_total(total_amounts=dna_amount.to_dict(),
                                        full_table=seq_table.table.original)
@@ -343,7 +343,7 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     from .transform import ReactedFractionNormalizer
     reacted_frac = ReactedFractionNormalizer(input_samples=input_samples,
                                              reduce_method='median',
-                                             remove_zero=True)
+                                             remove_empty=True)
     seq_table.table.reacted_frac = reacted_frac.apply(seq_table.table.abs_amnt)
     from .filters import DetectedTimesFilter
     seq_table.table.seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
@@ -462,7 +462,7 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
 
 Parameter for each sequences were sampled from previous point estimate results:
     - point_est_csv: load point estimates results to extract estimated k and A
-    - seqtable_path: path to load input sample SeqTable object to get p0 information
+    - seqtable_path: path to load input sample SeqData object to get p0 information
 
 Returns:
 <<x, Y, param_table, truth, seq_table>>
