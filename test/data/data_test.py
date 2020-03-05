@@ -25,7 +25,7 @@ def test_count_file_can_load():
     assert hasattr(seq_table.grouper, 'input')
 
 
-def test_can_lost_byo_doped():
+def test_can_load_byo_doped():
     from k_seq.data import datasets
     byo_doped = datasets.load_dataset(
         'byo-doped', from_count_file=True,

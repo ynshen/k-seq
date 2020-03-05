@@ -26,6 +26,8 @@ class Filter(ABC):
         it should only need to take a ``target`` argument, or without argument, returns ``self.mask`` corresponding to
         ``self.target``
 
+    Note: please assign ``target`` at the end of __init__ as assigning ``target`` will do filtering and update
+        ``self.mask``
     """
 
     def __init__(self, target=None, axis=0):
@@ -93,6 +95,8 @@ class Filter(ABC):
             # otherwise do the filtering the update the mask
             self._target = value
             self.mask = self.get_mask(target=value)
+        else:
+            logging.error("target can only be pd.DataFrame or SeqTable", error_type=TypeError)
 
     def get_passed_item(self, target=None, axis=None, reverse=False):
         """Return the items that pass the filter, pre-saved mask could be provided
@@ -169,8 +173,10 @@ class CustomizedFilter(Filter):
         """Create a Filter object from a given filter function
         filter function should take a pd.DataFrame and return a boolean mask (True for pass, False to non pass)
         """
-        super().__init__(target=target, axis=axis)
+        super().__init__()
         self._get_mask = mask_func
+        self.axis = axis
+        self.target = target
 
     @staticmethod
     def _get_mask(**kwargs):
@@ -187,8 +193,10 @@ class FilterPipe(Filter):
     def __init__(self, filters, target=None, axis=0):
         if not isinstance(filters, (list, tuple)):
             logging.error("`filters` should be a list of Filter instance")
+        super().__init__()
         self.filters = filters
-        super().__init__(target=target, axis=axis)
+        self.axis = axis
+        self.target = target
 
     def _get_mask_piped(self, target, axis=None):
         import numpy as np
@@ -216,9 +224,11 @@ class SampleFilter(Filter):
     """Filter samples based on index name"""
 
     def __init__(self, target=None, samples_to_keep=None, samples_to_remove=None, axis=1):
-        super().__init__(target, axis)
+        super().__init__()
         self.samples_to_keep = samples_to_keep
         self.samples_to_remove = samples_to_remove
+        self.axis = axis
+        self.target = self.target
 
     @staticmethod
     def _get_mask(target, samples_to_keep=None, samples_to_remove=None, axis=1):
@@ -259,10 +269,10 @@ class SpikeInFilter(Filter):
         """
         from ..data.seq_data import SeqData
 
-        super().__init__(target, axis)
-
         if isinstance(target, pd.DataFrame) or (isinstance(target, SeqData) and not hasattr(target, 'spike_in')):
             # if not spike-in info could infer
+            super().__init__()
+
             if center_seq is None:
                 logging.error('center_seq is None', error_type=ValueError)
             else:
@@ -275,16 +285,23 @@ class SpikeInFilter(Filter):
                 logging.error('dist_type is None', error_type=ValueError)
             else:
                 self.dist_type = dist_type
+
             from landscape import Peak
-            self.peak = Peak(center_seqs=center_seq, seqs=target, radius=radius, dist_type=dist_type, name='spike-in')
+            self.peak = Peak(center_seqs=center_seq,
+                             seqs=target if isinstance(target, pd.DataFrame) else target.table.original,
+                             radius=radius, dist_type=dist_type, name='spike-in')
+            self.axis = axis
             self.target = target if isinstance(target, pd.DataFrame) else target.table.original
         elif isinstance(target, SeqData):
+            super().__init__()
+
             if ((center_seq is not None) and (center_seq != target.spike_in.peak.center_seq)) or \
                     ((radius is not None) and (radius != target.spike_in.peak.radius)) or \
                     ((dist_type is not None) and (dist_type != target.spike_in.peak.dist_type)):
                 logging.error("spike-in info found in target and does not match argument", error_type=ValueError)
             else:
                 self.peak = target.spike_in.peak
+                self.axis = axis
                 self.target = target.table.original
         else:
             logging.error("Unknown target type", error_type=TypeError)
@@ -311,14 +328,11 @@ class SeqLengthFilter(Filter):
 
     def __init__(self, target=None, min_len=None, max_len=None, axis=0):
 
-        super().__init__(target)
+        super().__init__()
         self.min_len = min_len
         self.max_len = max_len
         self.axis = axis
-        if isinstance(target, pd.DataFrame):
-            self.target = target
-        else:
-            self.target = target.table.original
+        self.target = None
 
     @staticmethod
     def _get_mask(target, min_len=None, max_len=None, axis=0):
@@ -347,12 +361,7 @@ class SingletonFilter(Filter):
 
     def __init__(self, target, axis=0):
 
-        super().__init__(target)
-        self.axis = axis
-        if isinstance(target, pd.DataFrame):
-            self.target = target
-        else:
-            self.target = target.table.original
+        super().__init__(target, axis)
 
     @staticmethod
     def _get_mask(target, axis=0):
@@ -374,11 +383,6 @@ class DetectedTimesFilter(Filter):
         super().__init__(target)
         self.min_detected_times = min_detected_times
         self.axis = axis
-        if target is not None:
-            if isinstance(target, pd.DataFrame):
-                self.target = target
-            else:
-                self.target = target.table.original
 
     @staticmethod
     def _get_mask(target, min_detected_times, axis=0):
