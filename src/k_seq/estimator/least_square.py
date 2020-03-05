@@ -1,6 +1,4 @@
-"""
-This sub-module contains the classic least-squares fitting for each sequence individually to given kinetic model,
-
+"""Least-squares fitting for sequence individually with given kinetic model,
 
 Several functions are included:
   - point estimation using `scipy.optimize.curve_fit`
@@ -11,7 +9,7 @@ Several functions are included:
 """
 
 from ..estimator import EstimatorType
-from ..utility.func_tools import DocHelper
+from doc_helper import DocHelper
 from ..utility.file_tools import read_json, to_json, check_dir
 import logging
 import pandas as pd
@@ -43,25 +41,18 @@ doc_helper = DocHelper(
 )
 
 
-class SingleFitter(EstimatorType):
-    """`scipy.optimize.curve_fit` to fit a model for a single dataset
-    Can do point estimation or bootstrap for empirical CI estimation
+@doc_helper.compose("""Use `scipy.optimize.curve_fit` to fit a model for a single dataset
+Can do point estimation or bootstrap for empirical CI estimation
 
-    Attributes:
-        {attr}
-        bootstrap (Bootstrap): proxy to the bootstrap object
-        results (FitResult): proxy to the FitResult object
-        config (AttrScope): name space for fitting, contains
-        {config}
-        bootstrap_config (AttrScope): name space for bootstrap, contains
-        {bs_config}
-            
-    """.format(
-        attr=doc_helper.get(['x_data', 'y_data', 'model', 'parameter', 'silent', 'name']),
-        config=doc_helper.get(['opt_method', 'exclude_zero', 'init_guess', 'rnd_seed', 'sigma',
-                               'bounds', 'metric', 'curve_fit_kwargs'], indent=8),
-        bs_config=doc_helper.get(['bootstrap_num', 'bs_record_num', 'bs_method'], indent=8)
-    )
+Attributes:
+    <<x_data, y_data, model, parameter, silent, name>>
+    bootstrap (Bootstrap): proxy to the bootstrap object
+    results (FitResult): proxy to the FitResult object
+    config (AttrScope): name space for fitting, contains
+    <<opt_method, exclude_zero, init_guess, rnd_seed, sigma, bounds, metric, curve_fit_kwargs>>
+    bootstrap_config (AttrScope): name space for bootstrap, contains
+    <<bootstrap_num, bs_record_num, bs_method>>""")
+class SingleFitter(EstimatorType):
 
     def __repr__(self):
         return f"Single fitter for {self.name}"\
