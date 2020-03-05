@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from ..utility.func_tools import AttrScope, FuncToMethod
 from ..utility.file_tools import _name_template_example
-from ..utility.log import logging, Logger
+from yutility import logging
 from .transform import _spike_in_doc, _total_dna_doc
 from doc_helper import DocHelper
 
@@ -76,8 +76,8 @@ class SeqTable(pd.DataFrame):
         self.unit = unit
         self.note = note
         self.is_sparse = use_sparse
-        self.vis = FuncToMethod([seq_overview, sample_overview],
-                                obj=self)
+        self.analysis = FuncToMethod([seq_overview, sample_overview],
+                                     obj=self)
 
     @property
     def _constructor_expanddim(self):
@@ -230,7 +230,7 @@ Attributes:
         note (str): note for the dataset
         other dataset metadata objects could be added
     
-    vis (AttrScope): accessor to some pre-built visualizations
+    analysis (AttrScope): accessor to some pre-built analyses
 
 Plugins:
     grouper (GrouperCollection): collection of ``Grouper`` to slice subtables
@@ -239,7 +239,6 @@ Plugins:
 
 Methods:
     TODO: add methods
-
 
 
 """)

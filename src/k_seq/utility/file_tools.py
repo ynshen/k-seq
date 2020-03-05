@@ -1,4 +1,4 @@
-from .log import logging
+from yutility import logging
 from pathlib import Path
 
 

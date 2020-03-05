@@ -3,38 +3,17 @@
 TODO: add Sam and Celia's code reference here
 """
 
-from ..utility.log import logging
+from yutility import logging
 from .seq_data import _doc
 from ..utility.file_tools import _name_template_example
 import numpy as np
 import pandas as pd
 
 
-@_doc.compose(f"""Create a ``SeqTable`` instance from a folder of count files
-
-Args:
-    count_files (str): root directory to search for count files
-    file_list (list of str): optional, only includes the count files with names in the file_list
-    pattern_filter (str): optional, filter file names based on this pattern, wildcards ``*/?`` are allowed
-    black_list (list of str): optional, file names included in black_list will be excluded
-    name_template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
-        use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
-        ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
-    sort_by (str): sort the order of samples based on given domain
-    dry_run (bool): only return the parsed count file names and metadata without actual reading in data
-<<x_values, x_unit, input_sample_name, sample_metadata, note>>
-
-{_name_template_example}
-
-""")
-def load_Seqtable_from_count_files(
-    count_files, file_list=None, pattern_filter=None, black_list=None, name_template=None, sort_by=None,
-    x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
-    dry_run=False
-):
+def _load_single_source(count_files, file_list=None, pattern_filter=None, name_template=None, black_list=None):
+    """Load count files from single source (directory), return a dictionary contains file info"""
 
     from ..utility.file_tools import get_file_list, extract_metadata
-
     # parse file metadata
     file_list = get_file_list(file_root=count_files, file_list=file_list,
                               pattern=pattern_filter, black_list=black_list, full_path=True)
@@ -45,6 +24,47 @@ def load_Seqtable_from_count_files(
         for file in file_list:
             f_meta = extract_metadata(name=file.name, template=name_template)
             samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
+
+    return samples
+
+
+@_doc.compose(f"""Create a ``SeqData`` instance from count files.
+
+Multiple sources of count files are supported, indicate in count_files
+
+Args:
+    count_files (str, or list of dict): root directory to search for count files. To load multiple sources, provide a 
+        list of dict as keyword arguments in the format of
+        [{{'count_files': path/to/count/files (required), 'name_template': string for name template, 'pattern_filter': string
+        for pattern filter, 'file_list': list of file to load, 'black_list': list of files to exclude}}]
+    file_list (list of str): optional, only includes the count files with names in the file_list
+    pattern_filter (str): optional, filter file names based on this pattern, wildcards ``*/?`` are allowed
+    black_list (list of str): optional, file names included in black_list will be excluded
+    name_template (str): naming convention to extract metadata. Use ``[...]`` to include the region of sample_name,
+        use ``{{domain_name[, int/float]}}`` to indicate region of domain to extract as metadata, including
+        ``int`` or ``float`` will convert the domain value to int/float in applicable, otherwise, string
+    sort_by (str): sort the order of samples based on given domain
+    dry_run (bool): only return the parsed count file names and metadata without actual reading in data
+    <<x_values, x_unit, input_sample_name, sample_metadata, note>>
+
+{_name_template_example}
+
+""")
+def load_Seqtable_from_count_files(
+    count_files, file_list=None, pattern_filter=None, black_list=None, name_template=None, sort_by=None,
+    x_values=None, x_unit=None, input_sample_name=None, sample_metadata=None, note=None,
+    dry_run=False
+):
+
+    if isinstance(count_files, list):
+        samples = {}
+        for cf in count_files:
+            samples = {**samples, **_load_single_source(**cf)}
+    else:
+        samples = _load_single_source(count_files=count_files, file_list=file_list, pattern_filter=pattern_filter,
+                                      black_list=black_list, name_template=name_template)
+
+    # add extra metadata
     if sample_metadata is not None:
         for file_name, f_meta in sample_metadata.items():
             samples[file_name].udpate(f_meta)
@@ -76,10 +96,8 @@ def load_Seqtable_from_count_files(
 
     from .seq_data import SeqData
 
-    seq_table = SeqData(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
-                        x_values=x_values, x_unit=x_unit, note=note)
-
-    return seq_table
+    return SeqData(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
+                   x_values=x_values, x_unit=x_unit, note=note)
 
 
 _count_file_format = """Count file format:

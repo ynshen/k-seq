@@ -7,7 +7,7 @@ Notes:
 
 import numpy as np
 from ..utility import DocHelper
-from ..utility.log import logging
+from yutility import logging
 
 doc_helper = DocHelper(
     c=('float or 1-D list-like', 'Concentration of substrates, return input pool if negative'),

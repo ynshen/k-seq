@@ -1,7 +1,7 @@
 """Model a kinetic reaction pool"""
 
 from . import ModelBase
-from ..utility.log import logging
+from yutility import logging
 from ..utility.func_tools import get_func_params
 from inspect import isclass
 import numpy as np

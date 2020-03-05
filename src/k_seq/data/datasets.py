@@ -4,7 +4,7 @@ Available datasets:
   - BYO selection pool: byo-selected
 """
 
-from ..utility.log import logging
+from yutility import logging
 from .seq_data import SeqData, SeqTable
 
 

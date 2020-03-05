@@ -7,7 +7,5 @@
     * ``simu``: module contains codes to generate simulated data used in analysis in paper (TODO: add paper citation)
 """
 
-
 from . import visualization, simu
 import landscape
-

@@ -25,6 +25,27 @@ def test_count_file_can_load():
     assert hasattr(seq_table.grouper, 'input')
 
 
+def test_count_file_can_load_from_multiple_source():
+    seq_data = SeqData.from_count_files(
+        count_files=[
+            {
+                'count_files': os.getenv('BYODOPED_COUNT_FILE_DIR'),
+                'pattern_filter': '_counts.',
+                'name_template': 'd-[{byo}{exp_rep}]_S{smpl}_counts.txt'
+            },
+            {
+                'count_files': os.getenv('BFODOPED_COUNT_FILE_DIR'),
+                'pattern_filter': '_top50.',
+                'name_template': '[input_{input_id}]_counts_top50.txt'
+            }
+        ],
+        dry_run=True,
+        sort_by=None,
+        input_sample_name=['R0']
+    )
+    assert seq_data.shape[0] == 22
+
+
 def test_can_load_byo_doped():
     from k_seq.data import datasets
     byo_doped = datasets.load_dataset(

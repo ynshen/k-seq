@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..utility import DocHelper
 from ..utility.func_tools import is_numeric
-from ..utility.log import logging
+from yutility import logging
 
 
 class DistGenerators:

@@ -14,7 +14,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from doc_helper import DocHelper
 from ..utility.func_tools import update_none
-from ..utility.log import logging
+from yutility import logging
 
 
 class Transformer(ABC):
