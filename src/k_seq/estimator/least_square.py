@@ -1,6 +1,4 @@
-"""
-This sub-module contains the classic least-squares fitting for each sequence individually to given kinetic model,
-
+"""Least-squares fitting for sequence individually with given kinetic model,
 
 Several functions are included:
   - point estimation using `scipy.optimize.curve_fit`
@@ -11,7 +9,7 @@ Several functions are included:
 """
 
 from ..estimator import EstimatorType
-from ..utility.doc_helper import DocHelper
+from doc_helper import DocHelper
 from ..utility.file_tools import read_json, dump_json, check_dir
 from ..utility.log import logging
 import pandas as pd
@@ -23,7 +21,7 @@ doc_helper = DocHelper(
     model=('callable', 'model to fit'),
     parameters=('list', 'Optional. List of parameter names, extracted from model if None'),
     name=('str', "Optional. Fitter's name"),
-    sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same uniq_seq_num as y_data/y_data_batch.'
+    sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same size as y_data/y_data_batch.'
                                                'Sigma (variance) for data points for weighted fitting'),
     bounds=('2 by m `list` ', 'Optional, [[lower bounds], [higher bounds]] for each parameter'),
     opt_method=('`str`', "Optimization methods in `scipy.optimize`. Default 'trf'"),
@@ -43,25 +41,18 @@ doc_helper = DocHelper(
 )
 
 
-class SingleFitter(EstimatorType):
-    """`scipy.optimize.curve_fit` to fit a model for a single dataset
-    Can do point estimation or bootstrap for empirical CI estimation
+@doc_helper.compose("""Use `scipy.optimize.curve_fit` to fit a model for a single dataset
+Can do point estimation or bootstrap for empirical CI estimation
 
-    Attributes:
-        {attr}
-        bootstrap (Bootstrap): proxy to the bootstrap object
-        results (FitResult): proxy to the FitResult object
-        config (AttrScope): name space for fitting, contains
-        {config}
-        bootstrap_config (AttrScope): name space for bootstrap, contains
-        {bs_config}
-            
-    """.format(
-        attr=doc_helper.get(['x_data', 'y_data', 'model', 'parameter', 'silent', 'name']),
-        config=doc_helper.get(['opt_method', 'exclude_zero', 'init_guess', 'rnd_seed', 'sigma',
-                               'bounds', 'metric', 'curve_fit_kwargs'], indent=8),
-        bs_config=doc_helper.get(['bootstrap_num', 'bs_record_num', 'bs_method'], indent=8)
-    )
+Attributes:
+    <<x_data, y_data, model, parameter, silent, name>>
+    bootstrap (Bootstrap): proxy to the bootstrap object
+    results (FitResult): proxy to the FitResult object
+    config (AttrScope): name space for fitting, contains
+    <<opt_method, exclude_zero, init_guess, rnd_seed, sigma, bounds, metric, curve_fit_kwargs>>
+    bootstrap_config (AttrScope): name space for bootstrap, contains
+    <<bootstrap_num, bs_record_num, bs_method>>""")
+class SingleFitter(EstimatorType):
 
     def __repr__(self):
         return f"Single fitter for {self.name}"\
@@ -478,12 +469,14 @@ class FitResults:
                                   pcov: jsonfy(pd.DataFrame) }
               uncertainty: { summary: jsonfy(pd.DataFrame)
                              records: jsonfy(pd.DataFrame) }
+              convergence: { summary: jsonfy(pd.DataFrame)
+                             records: jsonfy(pd.DataFrame) }
             }
         """
 
         def jsonfy(target):
             try:
-                return target.dump_json()
+                return target.to_json()
             except:
                 return None
 
@@ -495,6 +488,10 @@ class FitResults:
             'uncertainty': {
                 'summary': jsonfy(self.uncertainty.summary),
                 'records': jsonfy(self.uncertainty.records)
+            },
+            'convergence': {
+                'summary': jsonfy(self.convergence.summary),
+                'records': jsonfy(self.convergence.records)
             }
         }
         if path is None:
@@ -525,6 +522,15 @@ class FitResults:
                 label = 'records'
             if json_data['uncertainty'][label] is not None:
                 results.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
+        if 'convergence' in json_data.keys():
+            if json_data['convergence']['summary'] is not None:
+                results.uncertainty.summary = pd.read_json(json_data['convergence']['summary'])
+            if 'record' in json_data['convergence'].keys():
+                label = 'record'
+            else:
+                label = 'records'
+            if json_data['convergence'][label] is not None:
+                results.uncertainty.records = pd.read_json(json_data['convergence'][label])
         return results
 
 
@@ -546,7 +552,7 @@ class ConvergenceTester:
         """Apply convergence test to given fitter
 
         Args:
-            fitter (SingleFitter): the name single fitter
+            fitter (SingleFitter): the target single fitter
             reps (int): number of repeated fitting, default 10
             init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters.
               All parameters are initialized from (0, 1) with random uniform draw
@@ -571,6 +577,7 @@ class ConvergenceTester:
             stats.append('range')
 
         def add_prefix(name):
+            """Prefix 'conv_' is added to convergence test results"""
             return 'conv_' + name
 
         return pd.Series(dict_flatten(report_data.loc[stats].to_dict()), name=self.fitter.name).rename(add_prefix)
@@ -763,7 +770,7 @@ class BatchFitResults:
 
     Methods:
         summary_to_csv: export summary dataframe as csv file
-        dump_json: preferred format to save results
+        to_json: preferred format to save results
         to_pickle: save results as pickled dictionary
         from_pickle: load bootstrapping results from picked dictionary
         from_folder: link results to a saved folder
@@ -900,9 +907,9 @@ class BatchFitResults:
         self.summary.to_csv(path)
 
     def to_pickle(self, output_dir, bs_record=True, sep_files=True):
-        """Save fitting results as a pickled dict, notice: `dump_json` is preferred
+        """Save fitting results as a pickled dict, notice: `to_json` is preferred
         Args:
-             output_dir (str): path to saved results, should be the parent of name location
+             output_dir (str): path to saved results, should be the parent of target location
              bs_record (bool): if output bs_record as well
              sep_files (bool): if save bs_records as separate files
                  If True:
@@ -949,7 +956,7 @@ class BatchFitResults:
     def to_json(self, output_dir, bs_record=True, sep_files=True):
         """Serialize results as json format
         Args:
-             output_dir (str): path to save results, should be the parent of name location
+             output_dir (str): path to save results, should be the parent of target location
              bs_record (bool): if output bs_record as well
              sep_files (bool): if save bs_records as separate files
                  If True:
@@ -979,9 +986,9 @@ class BatchFitResults:
                 for seq, record in self.bs_record.items():
                     dump_json(obj=record.dump_json(), path=f"{output_dir}/results/seqs/{seq}.json")
         else:
-            data_to_json = {'summary': self.summary.dump_json()}
+            data_to_json = {'summary': self.summary.to_json()}
             if bs_record and self.bs_record is not None:
-                data_to_json['bs_record'] = {seq: record.dump_json() for seq, record in self.bs_record}
+                data_to_json['bs_record'] = {seq: record.to_json() for seq, record in self.bs_record}
             dump_json(obj=data_to_json, path=f"{output_dir}/results.json")
 
     @classmethod
@@ -1146,6 +1153,9 @@ class BatchFitter(EstimatorType):
         # from ..utility.file_tools import get_file_list
         # if Path(result_folder_path).append('seqs').exists():
 
+
+
+
     def worker_generator(self, stream_to_disk=None, overwrite=False):
         """Return a generator of worker for each sequence"""
 
@@ -1288,7 +1298,7 @@ class BatchFitter(EstimatorType):
             bs_results (bool): if save bootstrap results
             sep_files (bool): if save the record of bootstrap as separate files in a subfolder `results/seqs/`
                 Default True
-            tables (bool): if save table (y_data_batch, sigma) in the folder. Default True
+            tables (bool): if save tables (y_data_batch, sigma) in the folder. Default True
         """
         from ..utility.file_tools import dump_pickle
 
@@ -1349,10 +1359,16 @@ class BatchFitter(EstimatorType):
         return cls(y_data_batch=y_data_batch, sigma=sigma, result_path=result_path, **model_config)
 
 
-def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_csv=None,
+def load_estimation_results(point_est_csv=None, seqtable=None, bootstrap_csv=None,
                             **kwargs):
-    """Collect estimation results (summary.csv files)and compose a table
-    As
+    """Collect estimation results from multiple resources (e.g. summary.csv files) and compose a summary table
+    Sequences will be the union of indices in point estimate, bootstrap, and convergence test if avaiable
+
+    Resources:
+      - count_table/seq_table: input counts, mean counts
+      - point estimates: point estimation for parameters and metrics
+      - bootstrap: uncertainty estimation from bootstrap
+      - convergence test: convergence tests results
 
     Args:
         seq_table (str): path to pickled `SeqData` or `pd.DataFrame` object,
@@ -1392,6 +1408,9 @@ def load_estimation_results(point_est_csv=None, seqtable_path=None, bootstrap_cs
         est_res[['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']] = bootstrap_res[
             ['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']]
         est_res['A_range'] = bootstrap_res['A_97.5%'] - bootstrap_res['A_2.5%']
+
+    if convergence_csv:
+        pass
 
     if kwargs:
         for key, func in kwargs.items():
