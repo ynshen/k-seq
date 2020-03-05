@@ -60,10 +60,10 @@ def kA(params):
 
 def convergence_test(seq, c, reps=20):
     """seq: a row of reacted frac table"""
-    from k_seq.estimator import least_square
+    from k_seq.estimator import least_squares
     from k_seq.model.kinetic import BYOModel
 
-    fitter = least_square.SingleFitter(
+    fitter = least_squares.SingleFitter(
         x_data=c, y_data=seq,
         model=BYOModel.reacted_frac, name=seq.name,
         sigma=None, bounds=[[0, 0], [np.inf, 1]], init_guess=None,

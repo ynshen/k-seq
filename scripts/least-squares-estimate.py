@@ -51,7 +51,7 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
     """Main function
     """
 
-    from k_seq.estimator.least_square import BatchFitter
+    from k_seq.estimator.least_squares import BatchFitter
     from k_seq.model.kinetic import BYOModel
     import numpy as np
 

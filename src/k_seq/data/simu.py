@@ -471,7 +471,7 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
                                                     total_dna_error_rate=0.1, seed=23,
                                                     plot_dist=False, save_to=None):
 
-    from ..estimator.least_square import load_estimation_results
+    from ..estimator.least_squares import load_estimation_results
     result_table = load_estimation_results(point_est_csv=point_est_csv, seqtable_path=seqtable_path)
     if 'ka' in result_table.columns:
         result_table = result_table.rename(columns={'ka': 'kA'})
