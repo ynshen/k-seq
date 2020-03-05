@@ -323,6 +323,20 @@ class SeqData(object):
         logging.error("seqs is inferred from original table and should not be changed",
                       error_type=PermissionError)
 
+    def add_grouper(self, **kwargs):
+        """Add an accessor of GrouperCollection of SeqData if not yet. Add Groupers to the accessor
+        Initialize a Grouper instance with keyword arguments with a dictionary of:
+            group (list or dict): list creates a Type 0 Grouper (single group) and dict creates a Type 1 Grouper
+                (multiple groups)
+            target (pd.DataFrame): optional, target table
+            axis (0 or 1): axis to apply the grouper
+        """
+        if hasattr(self, 'grouper'):
+            self.grouper.add(**kwargs)
+        else:
+            from .grouper import GrouperCollection
+            setattr(self, 'grouper', GrouperCollection(**kwargs))
+
     @_spike_in_doc.compose("""Add SpikeInNormalizer to quantify seq amount using spike-in sequence as accessor 
     ``spike_in`` to the instance
     

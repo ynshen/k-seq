@@ -25,36 +25,34 @@ def load_dataset(dataset, from_count_file=False, **kwargs):
 
 def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
                    pandaseq_joined=True, radius=2):
-    """BYO doped pool k-seq datatable contains k-seq results for seqs from BYO doped-pool,
+    """BYO doped pool k-seq datatable contains k-seq results for seqs from doped-pool for BYO aminoacylation,
 
-    this dataset contains following pre-computed table (under ``.tables`` accessor) to use
+    this dataset contains following pre-computed table (``.table`` accessor) to use
 
-        - original: count table contains all sequences detected in any samples and all the samples
-        - filtered: count table with non 21 nt sequences and spike-in sequences filtered
-        - filtered_abs_amnt_spike_in: absolute amount in ng for seqs quantified by spike-in
-        - table_filtered_abs_amnt_total_dna: absolute amount in ng for seqs quantified by total DNA amount
-        - table_filtered_reacted_frac_spike_in: reacted fraction for valid seqs quantified by spike-in
-        - table_filtered_reacted_frac_total_dna: reacted fraction for valid seqs quantified by total DNA amount
-        - table_filtered_seq_in_all_smpl_reacted_frac_spike_in: only contains seqs with counts >= 1 in all samples
-        - table_filtered_seq_in_all_smpl_reacted_frac_total_dna: only contains seqs with counts >= 1 in all samples
+        - original (4313709, 16): count table contains all sequences detected in any samples and all the samples
+        - filtered (3290337, 16): count table with non 21 nt sequences and spike-in sequences filtered
+        - reacted_frac_spike_in (764756, 15): reacted fraction for valid seqs quantified by spike-in
+        - reacted_frac_qpcr (764756, 15): reacted fraction for valid seqs quantified by qPCR
+        - reacted_frac_spike_in_seq_in_all_smpl (22525, 15): only contains seqs with counts >= 1 in all samples
+        - reacted_frac_qpcr_seq_in_all_smpl (22525, 15): only contains seqs with counts >= 1 in all samples
 
     Note:
        By default, sequences within 2 edit distance (including insertion and deletion) of spike-in sequences were
            considered as spike-in seq
     """
+    import os
 
     if pickled_path:
         BYO_DOPED_PKL = pickled_path
     else:
-        BYO_DOPED_PKL = '/mnt/storage/projects/k-seq/datasets/byo-doped-pandaSeq.pkl' if pandaseq_joined else \
-            '/mnt/storage/projects/k-seq/datasets/byo-doped-fastq-join.pkl'
+        BYO_DOPED_PKL = os.getenv('BYO_DOPED_PKL_PANDASEQ', None) if pandaseq_joined else \
+            os.getenv('BYO_DOPED_PKL_FASTQJOIN', None)
     if count_file_path:
         BYO_DOPED_COUNT_FILE = count_file_path
     else:
-        BYO_DOPED_COUNT_FILE = '/mnt/storage/projects/k-seq/working/byo_doped/read_join/' \
-                               'no-mismatch-assembly-first/counts' if pandaseq_joined else \
-            '/mnt/storage/projects/k-seq/input/byo_doped/counts'
-    BYO_DOPED_NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_doped/doped-norms.txt' if doped_norm_path is None \
+        BYO_DOPED_COUNT_FILE = os.getenv('BYO_DOPED_COUNT_FILE_PANDASEQ', None) if pandaseq_joined else \
+            os.getenv('BYO_DOPED_COUNT_FILE_FASTQJOIN', None)
+    BYO_DOPED_NORM_FILE = os.getenv('BYO_DOPED_NORM_FILE', None) if doped_norm_path is None \
         else doped_norm_path
 
     pattern_filter = '_counts.' if pandaseq_joined else 'counts-'
@@ -87,7 +85,9 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                 np.array([np.nan])), axis=0
             ),
             x_unit='mol',
-            input_sample_name=['R0']
+            input_sample_name=['R0'],
+            note='k-seq results of doped-pool BYO aminoacylation. Total DNA amount in each reacted sample were '
+                 'quantified with spike-in sequence with 2 edit distance as radius or qPCR + Qubit'
         )
 
         # temp note: spike-in norm factor were calculated on original table when a SpikeInNormalizer is created,
@@ -189,14 +189,16 @@ _byo_selected_description = """
     """
 
 
+# TODO: update byo_selected dataset pipeline
 def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=None, pickled_path=None):
     """Load k-seq results for BYO selected pool
     {description}
     """.format(description=_byo_selected_description)
+    import os
 
-    PKL_FILE = '/mnt/storage/projects/k-seq/datasets/byo-selected.pkl' if pickled_path is None else pickled_path
-    COUNT_FILE = '/mnt/storage/projects/k-seq/input/byo_counts/' if count_file_path is None else count_file_path
-    NORM_FILE = '/mnt/storage/projects/k-seq/input/byo_counts/curated-norm.csv' if norm_path is None else norm_path
+    PKL_FILE = os.getenv('BYO_SELECTED_PKL', None) if pickled_path is None else pickled_path
+    COUNT_FILE = os.getenv('BYO_SELECTED_COUNT_FILE', None) if count_file_path is None else count_file_path
+    NORM_FILE = os.getenv('BYO_SELECTED_NORM_FILE', None) if norm_path is None else norm_path
 
     if from_count_file:
         import numpy as np
