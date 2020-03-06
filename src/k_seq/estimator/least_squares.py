@@ -549,12 +549,25 @@ class FitResults:
             dump_json(data_to_dump, path=path)
 
     @classmethod
-    def from_json(cls, json_path, estimator=None):
-        """load fitting results from json records
+    def from_json(cls, json_path, tarfile=None, gzip=True, estimator=None):
+        """load fitting results from json records, option to load from tar.gz files
         Note: no estimator info if estimator is None
-        """
 
-        json_data = read_json(json_path)
+        Args:
+            json_path (str): path to json file, or file name under tarball file if tar_file_name is true
+            tarfile (str): if not None, the json file is in a tarfile (.tar/.tar.gz)
+            gzip (bool): if True, the tarfile is compressed with gzip (`.tar.gz`); if False, the tarfile is not
+                compressed (`.tar`)
+            estimator (Estimator): optional. Recover the estimator instance.
+        """
+        if tarfile is None:
+            json_data = read_json(json_path)
+        else:
+            import tarfile as tf
+            import json
+            with tf.open(tarfile, mode='r:gz' if gzip else 'r') as tf_file:
+                json_data = json.load(tf_file.extractfile(json_path))
+
         results = cls(estimator=estimator)
 
         if 'point_estimation' in json_data.keys():
