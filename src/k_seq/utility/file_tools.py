@@ -279,24 +279,20 @@ def table_object_to_dataframe(obj, table_name=None):
 
     if isinstance(obj, (str, Path, PosixPath)):
         if Path(obj).is_file():
-            try:
+            if Path(obj).suffix == '.csv':
+                return pd.read_csv(Path(obj), index_col=0)
+            elif Path(obj).suffix in ['.pkl', '.pickle']:
                 obj = read_pickle(obj)
-            except:
-                raise TypeError(f'{obj} is not pickled object')
+            else:
+                logging.error(f'{obj} is not a valid file', error_type=FileNotFoundError)
         else:
-            raise FileNotFoundError(f'{obj} is not a valid file')
+            logging.error(f'{obj} is not a valid file', error_type=FileNotFoundError)
     if isinstance(obj, pd.DataFrame):
         return obj
     elif isinstance(obj, SeqData):
         if table_name is None:
-            try:
-                return obj.table
-            except AttributeError:
-                raise AttributeError('Please indicate the table name')
+            return obj.table.original
         else:
-            try:
-                return getattr(obj, table_name)
-            except AttributeError:
-                raise AttributeError(f'{table_name} is not found in the SeqData object')
+            return getattr(obj.table, table_name)
     else:
-        raise TypeError('SeqTable should be a `pd.DataFrame` or `SeqData`')
+        logging.error('SeqTable should be a `pd.DataFrame` or `SeqData`', error_type=TypeError)

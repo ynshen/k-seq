@@ -25,7 +25,7 @@ _doc = DocHelper(
     data=('pd.DataFrame or np.ndarray', '2-D data with indices as sequences and columns as samples. '
                                         'If data is pd.DataFrame, values in index and column will be used as '
                                         'sequences and samples; if data is a 2-D np.ndarray, `sample_list` and '
-                                        '`seq_list` are needed with same length and order as data'),
+                                        '`seq_to_fit` are needed with same length and order as data'),
     sample_list=('list-like', 'list of samples in the sample, should match the columns in the table data'),
     seq_list=('list-like', 'list of seqs in the sample, should match the rows in the table data'),
     data_unit=('str', 'The unit of table values, e.g. counts, ng, M. Default counts.'),
@@ -53,7 +53,7 @@ class SeqTable(pd.DataFrame):
 
     @_doc.compose("""Initialize SeqTable instance
     Args:
-    <<data, sample_list, seq_list, unit, note, use_sparse>>
+    <<data, sample_list, seq_to_fit, unit, note, use_sparse>>
     """)
     def __init__(self, data, sample_list=None, seq_list=None, unit='count', note=None, use_sparse=True, **kwargs):
 
@@ -69,7 +69,7 @@ class SeqTable(pd.DataFrame):
             super().__init__(data.values, index=data.index, columns=data.columns, dtype=dtype, **kwargs)
         elif isinstance(data, (np.ndarray, list)):
             if (sample_list is None) or (seq_list is None):
-                logging.error("Please provide sample_list and seq_list if data is np.ndarray", error_type=ValueError)
+                logging.error("Please provide sample_list and seq_to_fit if data is np.ndarray", error_type=ValueError)
             super().__init__(data, index=seq_list, columns=sample_list, dtype=dtype, **kwargs)
         else:
             super().__init__(data, **kwargs)
@@ -255,7 +255,7 @@ class SeqData(object):
     @_doc.compose("""Initialize a `SeqData` object
 
     Args:
-    <<data, data_unit, sample_list, seq_list, data_note, use_sparse, seq_metadata, grouper, x_values, x_unit, note, dataset_metadata>>
+    <<data, data_unit, sample_list, seq_to_fit, data_note, use_sparse, seq_metadata, grouper, x_values, x_unit, note, dataset_metadata>>
     grouper (dict of list, or dict of dict of list): optional. dict of list (Type 1) of dict of list (Type 2) to 
         create grouper plugin
     """)

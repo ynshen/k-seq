@@ -23,7 +23,6 @@ def test_SingleFitter_can_run_all():
 
     single_fitter.fit(point_estimate=True, bootstrap=True, convergence_test=True)
 
-    assert single_fitter.parameters == ['k', 'b']
     assert isinstance(single_fitter.results.convergence.records, pd.DataFrame)
     assert isinstance(single_fitter.results.uncertainty.summary, pd.Series)
     assert isinstance(single_fitter.summary(), pd.Series)

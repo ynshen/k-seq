@@ -19,9 +19,8 @@ doc_helper = DocHelper(
     x_data=('list', 'list of x values in fitting'),
     y_data=('list, pd.Series', 'y values in fitting'),
     model=('callable', 'model to fit'),
-    parameters=('list', 'Optional. List of parameter names, extracted from model if None'),
     name=('str', "Optional. Estimator's name"),
-    sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same size as y_data/y_data_batch.'
+    sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same size as y_data/y_dataframe.'
                                                'Sigma (variance) for data points for weighted fitting'),
     bounds=('2 by m `list` ', 'Optional, [[lower bounds], [higher bounds]] for each parameter'),
     opt_method=('str', "Optimization methods in `scipy.optimize`. Default 'trf'"),
@@ -92,7 +91,7 @@ class SingleFitter(Estimator):
             if False, read results and skip estimation. Default False
         verbose (0, 1, 2): set different verbose level. 0: WARNING, 1: INFO, 2: DEBUG
     """)
-    def __init__(self, x_data, y_data, model, name=None, parameters=None, sigma=None, bounds=None, init_guess=None,
+    def __init__(self, x_data, y_data, model, name=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, curve_fit_kwargs=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', bs_stats=None, grouper=None, record_full=False,
                  conv_reps=0, conv_init_range=None, conv_stats=None,
@@ -116,8 +115,8 @@ class SingleFitter(Estimator):
             logging.error('Shapes of x and y do not match', error_type=ValueError)
 
         self.model = model
+        self.parameters = get_func_params(model, exclude_x=True)
         self.name = name
-        self.parameters = list(get_func_params(model, exclude_x=True)) if parameters is None else list(parameters)
         self.config = AttrScope(
             opt_method=opt_method,
             exclude_zero=exclude_zero,
@@ -396,7 +395,6 @@ class SingleFitter(Estimator):
                 'y_data': self.y_data,
                 'model': self.model,
                 'name': self.name,
-                'parameters': self.parameters,
                 'silent': self.silent,
             },
             **self.config.__dict__,
