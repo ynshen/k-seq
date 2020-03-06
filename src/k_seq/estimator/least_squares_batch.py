@@ -19,7 +19,7 @@ def _read_work_fn(seq):
 
 class BatchFitResults:
     """Parse, store, and visualize BatchFitter results
-    Only save results (detached from each fitter), corresponding fitter should be found by sequence
+    Only save results (detached from each estimator), corresponding estimator should be found by sequence
 
     Attributes:
         fitter: proxy to the `BatchFitter`
@@ -39,7 +39,7 @@ class BatchFitResults:
     def __init__(self, fitter=None, result_path=None):
         """Init a BatchFitResults instance
         Args:
-            fitter (`BatchFitter`): corresponding fitter
+            fitter (`BatchFitter`): corresponding estimator
             result_path (str): optional, path to saved results
         """
         self.fitter = fitter
@@ -311,7 +311,7 @@ class BatchFitter(EstimatorType):
             y_data_batch (pd.DataFrame or str): a set of y_data to fit form rows of y_data_batch, can be a string
                 indicate the path to a pickled pd.DataFrame record
         {args}
-            note (str): Optional notes for the fitter
+            note (str): Optional notes for the estimator
             results: a proxy to BatchFitResults
         """.format(args=doc_helper.get(['x_data', 'model', 'bounds', 'sigma', 'bootstrap_num', 'bs_record_num',
                                         'bs_method', 'grouper', 'opt_method', 'exclude_zero', 'init_guess',
@@ -359,7 +359,7 @@ class BatchFitter(EstimatorType):
             bootstrap_num = 0
         self.bootstrap = bootstrap_num > 0
 
-        # contains parameters should pass to the single fitter
+        # contains parameters should pass to the single estimator
         self.fit_params = AttrScope(
             x_data=self.x_data,
             model=self.model,

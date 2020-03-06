@@ -239,7 +239,7 @@ Args:
 <<uniq_seq_num, x_values, total_reads, p0, kinetic_model, count_model>>
     param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
     weights (list or str): weights/col of weight for sampling from table
-<<total_amount_error, reps, seed, save_to, param_generator>>
+<<total_amount_error, conv_reps, seed, save_to, param_generator>>
 
 Returns:
     x (pd.DataFrame): c, n value for samples
@@ -525,7 +525,7 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 
 # def reacted_frac_simulator(x_values, kinetic_model=None, percent_noise=0.2, uniq_seq_num=None,
 #                            param_sample_from_df=None, weights=None, replace=True,
-#                            reps=1, allow_zero=False, seed=None, save_to=None, **param_generator):
+#                            conv_reps=1, allow_zero=False, seed=None, save_to=None, **param_generator):
 #     """Simulate reacted fraction of a pool of molecules (ribozymes), given substrate concentration, kinetic model
 #
 #     Args:
@@ -536,7 +536,7 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 #         param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
 #         weights (list or str): weights/col of weight for sampling from table
 #         replace (bool): if sample with replacement
-#         reps (int): number of replicates for each c, N
+#         conv_reps (int): number of replicates for each c, N
 #         allow_zero (bool): if allow reacted fraction to be zero after noise. If False, repeated sampling until a
 #             positive reacted fraction is achieved, else bottomed by zero
 #         seed (int): global random seed to use

@@ -488,7 +488,7 @@ class SeqData(object):
 #     #         random_init=random_init,
 #     #         metrics=metrics
 #     #     )
-#     #     self.logger.info('BatchFitting fitter added')
+#     #     self.logger.info('BatchFitting estimator added')
 #     #
 
 

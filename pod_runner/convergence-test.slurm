@@ -14,7 +14,7 @@ cd $SLURM_SUBMIT_DIR
 # --pkg_path
 # --output_dir
 # --uniq_seq_num
-# --reps
+# --conv_reps
 # --cores
 ###############################################################################################################
 python /home/yshen/k-seq/scripts/estimate-least-squares-convergence-test.py \

@@ -35,7 +35,7 @@ def read_seqtable(path):
 
 
 def single_fitter(seq_table):
-    """Test single fitter functions"""
+    """Test single estimator functions"""
     table = getattr(seq_table, 'table')
     print('-' * 30 + 'Single Fitter Test' + '-' * 30)
     xvalues = getattr(seq_table, 'x_values')
