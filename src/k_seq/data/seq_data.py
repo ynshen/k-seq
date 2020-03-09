@@ -6,7 +6,7 @@ TODO:
 """
 import numpy as np
 import pandas as pd
-from ..utility.func_tools import AttrScope, FuncToMethod
+from ..utility.func_tools import AttrScope
 from ..utility.file_tools import _name_template_example
 from yutility import logging
 from .transform import _spike_in_doc, _total_dna_doc
@@ -47,8 +47,7 @@ class SeqTable(pd.DataFrame):
 
     Additional Methods:
       about: print a summary of the table
-      TODO: add Table-wise visualization here
-
+      analysis: accessor to SeqTableAnalyzer
     """
 
     @_doc.compose("""Initialize SeqTable instance
@@ -76,8 +75,12 @@ class SeqTable(pd.DataFrame):
         self.unit = unit
         self.note = note
         self.is_sparse = use_sparse
-        self.analysis = FuncToMethod([seq_overview, sample_overview],
-                                     obj=self)
+        self.analysis = "No added, run add_analysis"
+
+    def add_analysis(self):
+        """Add accessor to SeqTableAnalyzer"""
+        from .seq_data_analyzer import SeqTableAnalyzer
+        self.analysis = SeqTableAnalyzer(self)
 
     @property
     def _constructor_expanddim(self):
@@ -177,44 +180,6 @@ def slice_table(table, axis, keys, remove_empty=False):
             return sub_table
 
 
-def seq_overview(table, axis=0):
-    """Summarize sample for a given table, with info of seq length, sample detected, mean, sd
-    Returns:
-        A `pd.DataFrame` show the summary for sequences
-    """
-    if axis == 1:
-        table = table.transpose()
-
-    return pd.DataFrame.from_dict(
-        {'length': table.index.to_series().apply(len),
-         'samples detected': (table > 0).sum(axis=1),
-         'mean': table.mean(axis=1),
-         'sd': table.std(axis=1)},
-        orient='columns'
-    )
-
-
-def sample_overview(table, axis=1):
-    """Summarize sequences for a given table, with info of unique seqs, total amount
-
-    Returns:
-        A `pd.DataFrame` show the summary for sequences
-    """
-    if axis == 0:
-        table = table.transpose()
-
-    if isinstance(table, SeqTable):
-        col_name = f'total amount ({table.unit})'
-    else:
-        col_name = 'total amount'
-
-    return pd.DataFrame.from_dict(
-        {'unique seqs': (table > 0).sum(axis=0),
-         col_name: table.sum(axis=0)},
-        orient='columns'
-    )
-
-
 @_doc.compose("""Data instance to store k-seq result
 
 Attributes:
@@ -236,11 +201,7 @@ Plugins:
     grouper (GrouperCollection): collection of ``Grouper`` to slice subtables
     spike_in (SpikeInNormalizer): optional. Accessor to the normalizer using spike-in
     sample_total (TotalAmountNormalizer): optional. Accessor to the normalizer using total sample amount of seqs  
-
-Methods:
-    TODO: add methods
-
-
+    analysis (SeqDataAnalyzer): built-in analysis tools to analyze SeqData object
 """)
 class SeqData(object):
 
@@ -297,13 +258,7 @@ class SeqData(object):
             self.grouper = GrouperCollection()
             self.grouper.add(**grouper)
 
-        # from .visualizer import seq_occurrence_plot, rep_variability_plot
-        # from ..utility.func_tools import FuncToMethod
-        # self.visualizer = FuncToMethod(obj=self,
-        #                                functions=[
-        #                                    seq_occurrence_plot,
-        #                                    rep_variability_plot
-        #                                ])
+        self.analysis = "No added, run add_analysis"
 
     @property
     def samples(self):
@@ -322,6 +277,11 @@ class SeqData(object):
     def seqs(self, seqs):
         logging.error("seqs is inferred from original table and should not be changed",
                       error_type=PermissionError)
+
+    def add_analysis(self):
+        """add accessor to SeqDataAnalyzer"""
+        from .seq_data_analyzer import SeqDataAnalyzer
+        self.analysis = SeqDataAnalyzer(self)
 
     def add_grouper(self, **kwargs):
         """Add an accessor of GrouperCollection of SeqData if not yet. Add Groupers to the accessor
@@ -430,7 +390,7 @@ class SeqData(object):
         if self.x_values is not None:
             info['x values'] = self.x_values
 
-        info = pd.concat([info, self.table.original.vis.sample_overview()], axis=1)
+        info = pd.concat([info, self.table.original.analysis.sample_overview()], axis=1)
 
         if hasattr(self, 'spike_in'):
             info['total amount (spike-in)'] = self.spike_in.norm_factor * self.spike_in.base_table.sum(axis=0)

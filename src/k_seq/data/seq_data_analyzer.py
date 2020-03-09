@@ -11,6 +11,60 @@ import matplotlib as mpl
 import numpy as np
 
 
+class SeqTableAnalyzer:
+
+    def __init__(self, seq_table):
+        self.seq_table = seq_table
+
+
+class SeqDataAnalyzer:
+
+    def __init__(self, seq_data):
+        self.seq_data = seq_data
+
+
+
+
+def seq_overview(table, axis=0):
+    """Summarize sample for a given table, with info of seq length, sample detected, mean, sd
+    Returns:
+        A `pd.DataFrame` show the summary for sequences
+    """
+    if axis == 1:
+        table = table.transpose()
+
+    return pd.DataFrame.from_dict(
+        {'length': table.index.to_series().apply(len),
+         'samples detected': (table > 0).sum(axis=1),
+         'mean': table.mean(axis=1),
+         'sd': table.std(axis=1)},
+        orient='columns'
+    )
+
+
+def sample_overview(table, axis=1):
+    """Summarize sequences for a given table, with info of unique seqs, total amount
+
+    Returns:
+        A `pd.DataFrame` show the summary for sequences
+    """
+    if axis == 0:
+        table = table.transpose()
+
+    if isinstance(table, SeqTable):
+        col_name = f'total amount ({table.unit})'
+    else:
+        col_name = 'total amount'
+
+    return pd.DataFrame.from_dict(
+        {'unique seqs': (table > 0).sum(axis=0),
+         col_name: table.sum(axis=0)},
+        orient='columns'
+    )
+
+
+
+
 def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
                                figsize=None, label_mapper=None, barplot_kwargs=None):
     """Barplot of unique seqs in each sample"""

@@ -146,10 +146,10 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         reacted_frac = ReactedFractionNormalizer(input_samples=['R0'],
                                                  reduce_method='median',
                                                  remove_empty=True)
-        # normalized using spike-in
+        # normalized using spike-in, 10 % were taken for qPCR, in each sample it shouldn't effect reacted fraction
         byo_doped.table.reacted_frac_spike_in = reacted_frac(byo_doped.spike_in(target=byo_doped.table.filtered))
 
-        # normalized using total dna amount
+        # normalized using qPCR
         byo_doped.table.reacted_frac_qpcr = reacted_frac(byo_doped.sample_total(target=byo_doped.table.filtered))
 
         # further filter out sequences that are not detected in all samples
