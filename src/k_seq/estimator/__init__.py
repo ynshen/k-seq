@@ -1,9 +1,5 @@
 """This module contains the submodule needed for estimator
 """
 
-
-class EstimatorType:
-    """Base estimator type"""
-
-    def __init__(self):
-        pass
+from .least_squares import FitResults, SingleFitter
+from .least_squares_batch import BatchFitResults, BatchFitter

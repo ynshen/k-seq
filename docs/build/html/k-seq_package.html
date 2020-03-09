@@ -1,0 +1,2910 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>k_seq package &mdash; k-seq 0.4.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/my_theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Getting Started" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> k-seq
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">k_seq</span></code> package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#k-seq-data"><code class="docutils literal notranslate"><span class="pre">k_seq.data</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.count_data">k_seq.data.count_data module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.count_file">k_seq.data.count_file module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.datasets">k_seq.data.datasets module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.filters">k_seq.data.filters module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.grouper">k_seq.data.grouper module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.io">k_seq.data.io module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.landscape">k_seq.data.landscape module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.seq_table">k_seq.data.seq_table module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.seq_table_vis">k_seq.data.seq_table_vis module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.simu">k_seq.data.simu module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.transform">k_seq.data.transform module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.data.visualizer">k_seq.data.visualizer module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#k-seq-model"><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.model.count">k_seq.model.count module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.model.kinetic">k_seq.model.kinetic module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.model.pool">k_seq.model.pool module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#k-seq-estimator"><code class="docutils literal notranslate"><span class="pre">k_seq.estimator</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#k-seq-estimator-count-model-mle-cvxpy-module">k_seq.estimator.count_model_mle_cvxpy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#k-seq-estimator-count-model-mle-tf-module">k_seq.estimator.count_model_mle_tf module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimator.least_square">k_seq.estimator.least_square module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimator.models">k_seq.estimator.models module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimator.visualizer">k_seq.estimator.visualizer module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">k-seq</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li><code class="docutils literal notranslate"><span class="pre">k_seq</span></code> package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/k-seq_package.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="k-seq-package">
+<h1><code class="docutils literal notranslate"><span class="pre">k_seq</span></code> package<a class="headerlink" href="#k-seq-package" title="Permalink to this headline">¶</a></h1>
+<p>Modules</p>
+<div class="section" id="k-seq-data">
+<h2><code class="docutils literal notranslate"><span class="pre">k_seq.data</span></code><a class="headerlink" href="#k-seq-data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-k_seq.data.count_data">
+<span id="k-seq-data-count-data-module"></span><h3>k_seq.data.count_data module<a class="headerlink" href="#module-k_seq.data.count_data" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="k_seq.data.count_data.CountData">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.count_data.</code><code class="sig-name descname">CountData</code><span class="sig-paren">(</span><em class="sig-param">count</em>, <em class="sig-param">ctrl_vars</em>, <em class="sig-param">input_pools</em>, <em class="sig-param">truth=None</em>, <em class="sig-param">note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_data.CountData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class to store count data info for estimators</p>
+<dl class="attribute">
+<dt id="k_seq.data.count_data.CountData.count">
+<code class="sig-name descname">count</code><a class="headerlink" href="#k_seq.data.count_data.CountData.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>dataframe contains the count info</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_data.CountData.ctrl_vars">
+<code class="sig-name descname">ctrl_vars</code><a class="headerlink" href="#k_seq.data.count_data.CountData.ctrl_vars" title="Permalink to this definition">¶</a></dt>
+<dd><p>dataframe stores controlled variable, e.g. BYO concentration</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_data.CountData.input_pools">
+<code class="sig-name descname">input_pools</code><a class="headerlink" href="#k_seq.data.count_data.CountData.input_pools" title="Permalink to this definition">¶</a></dt>
+<dd><p>a list of sample name of input pools</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_data.CountData.truth">
+<code class="sig-name descname">truth</code><a class="headerlink" href="#k_seq.data.count_data.CountData.truth" title="Permalink to this definition">¶</a></dt>
+<dd><p>optional, store the true values of parameters for sequences in count table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_data.CountData.note">
+<code class="sig-name descname">note</code><a class="headerlink" href="#k_seq.data.count_data.CountData.note" title="Permalink to this definition">¶</a></dt>
+<dd><p>optional, any note about the dataset</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.count_input">
+<em class="property">property </em><code class="sig-name descname">count_input</code><a class="headerlink" href="#k_seq.data.count_data.CountData.count_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.count_reacted">
+<em class="property">property </em><code class="sig-name descname">count_reacted</code><a class="headerlink" href="#k_seq.data.count_data.CountData.count_reacted" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.ctrl_vars_input">
+<em class="property">property </em><code class="sig-name descname">ctrl_vars_input</code><a class="headerlink" href="#k_seq.data.count_data.CountData.ctrl_vars_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.ctrl_vars_reacted">
+<em class="property">property </em><code class="sig-name descname">ctrl_vars_reacted</code><a class="headerlink" href="#k_seq.data.count_data.CountData.ctrl_vars_reacted" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.from_SeqTable">
+<em class="property">classmethod </em><code class="sig-name descname">from_SeqTable</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">table_name=None</em>, <em class="sig-param">input_pools=None</em>, <em class="sig-param">note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_data.CountData.from_SeqTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data from a SeqTable object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.from_simu_path">
+<em class="property">classmethod </em><code class="sig-name descname">from_simu_path</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">input_pools=None</em>, <em class="sig-param">note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_data.CountData.from_simu_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data from a path of simulated data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_data.CountData.select">
+<code class="sig-name descname">select</code><span class="sig-paren">(</span><em class="sig-param">n</em>, <em class="sig-param">shuffle=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_data.CountData.select" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.count_file">
+<span id="k-seq-data-count-file-module"></span><h3>k_seq.data.count_file module<a class="headerlink" href="#module-k_seq.data.count_file" title="Permalink to this headline">¶</a></h3>
+<p>Module to parse, convert, characterize count files.</p>
+<p>Read directly from count file function was added to <cite>data.SeqTable</cite> thus this module is no long required in processing
+count files
+.. todo:: - clean up this module (after done with other data modules)</p>
+<dl class="class">
+<dt id="k_seq.data.count_file.CountFile">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.count_file.</code><code class="sig-name descname">CountFile</code><span class="sig-paren">(</span><em class="sig-param">file_path</em>, <em class="sig-param">x_value=None</em>, <em class="sig-param">name_pattern=None</em>, <em class="sig-param">input_sample=None</em>, <em class="sig-param">spike_in_seq=None</em>, <em class="sig-param">spike_in_amount=None</em>, <em class="sig-param">spike_in_dia=2</em>, <em class="sig-param">dna_amount=None</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">dna_unit=None</em>, <em class="sig-param">load_data=False</em>, <em class="sig-param">silent=True</em>, <em class="sig-param">metadata=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This class stores and handles count files get from upstream analysis in k-seq exp.</p>
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>sample name, extracted from the file name</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.unique_seqs">
+<code class="sig-name descname">unique_seqs</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.unique_seqs" title="Permalink to this definition">¶</a></dt>
+<dd><p>number of unique sequences in the sample</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.total_counts">
+<code class="sig-name descname">total_counts</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.total_counts" title="Permalink to this definition">¶</a></dt>
+<dd><p>number of total reads in the sample</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.dna_amount">
+<code class="sig-name descname">dna_amount</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.dna_amount" title="Permalink to this definition">¶</a></dt>
+<dd><p>absolute amount of DNA in the sample, for quantification</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.sequences">
+<code class="sig-name descname">sequences</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.sequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Table for each unique sequences</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.sample_type">
+<code class="sig-name descname">sample_type</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.sample_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>‘input’ if sample is from initial pool;
+‘reacted’ if sample is reacted pool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>str</cite>, ‘input’ or ‘reacted’</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.x_value">
+<code class="sig-name descname">x_value</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.x_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>the value of time or concentration point for the sample</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>float</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.CountFile.metadata">
+<code class="sig-name descname">metadata</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>a dictionary contains metadata of the sample:</p>
+<ul class="simple">
+<li><p>file_path (<cite>str</cite>): path to the count file</p></li>
+<li><p>Other metadata extracted from the file name, or added later</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>dict</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>Candidates:</p>
+<blockquote>
+<div><p>self.metadata = {}</p>
+<p>self.logger = Logger(silent=silent)</p>
+<p>file_path = Path(file_path)</p>
+<dl class="simple">
+<dt>if not file_path.is_file():</dt><dd><p>raise ValueError(‘file_path is not a valid file’)</p>
+</dd>
+</dl>
+<p>self.metadata[‘file_path’] = str(file_path)
+self.logger.add(“Initialize a sample from {}”.format(self.metadata[‘file_path’]))
+self.unique_seqs = None
+self.total_counts = None
+self.unit = unit
+self.silent = silent
+self.sequences = None
+self.dna_amount = None
+self.norm_factor = None</p>
+</div></blockquote>
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">file_path</em>, <em class="sig-param">x_value=None</em>, <em class="sig-param">name_pattern=None</em>, <em class="sig-param">input_sample=None</em>, <em class="sig-param">spike_in_seq=None</em>, <em class="sig-param">spike_in_amount=None</em>, <em class="sig-param">spike_in_dia=2</em>, <em class="sig-param">dna_amount=None</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">dna_unit=None</em>, <em class="sig-param">load_data=False</em>, <em class="sig-param">silent=True</em>, <em class="sig-param">metadata=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a <cite>CountFile</cite> instance by linking it to a read file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<cite>str</cite>) – full path to the read file of sample</p></li>
+<li><p><strong>x_value</strong> (<cite>float</cite> or <cite>str</cite>) – Controlled variable in the k-seq experiments,
+e.g. time/concentration/etc. Will be used as independent variable in parameter estimation
+If <cite>str</cite>, it is the name of domain indicated by <cite>name_pattern</cite> for automatic extraction value
+Note that only single variable is implemented</p></li>
+<li><p><strong>name_pattern</strong> (<cite>str</cite>) – <p>optional. Pattern to automatically extract metadata using
+<a class="reference internal" href="k_seq.utility.html#k_seq.utility.file_tools.extract_metadata" title="k_seq.utility.file_tools.extract_metadata"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_metadata()</span></code></a> (click to see details).
+Briefly,</p>
+<ul>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">[...]</span></code> to include the region of sample name (required),</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">{domain_name[,</span> <span class="pre">int/float]}</span></code> to indicate region of domain to extract as metadata,</p></li>
+</ul>
+<p>including <code class="docutils literal notranslate"><span class="pre">[,int/float]</span></code> will convert the domain value to int/float if applicable, otherwise, string.</p>
+</p></li>
+<li><p><strong>load_data</strong> (<cite>bool</cite>) – if load data from file during initializing. Recommend to set False for large files.
+Default False</p></li>
+<li><p><strong>silent</strong> (<cite>bool</cite>) – Print progress to std out if False. Default False</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span> <span class="o">=</span> <span class="n">CountFile</span><span class="p">{</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="s2">&quot;path/to/count/file/R4B-1250A_S16_counts.txt&quot;</span><span class="p">,</span>
+    <span class="n">x_value</span> <span class="o">=</span> <span class="s1">&#39;byo&#39;</span><span class="p">,</span>
+    <span class="n">name_pattern</span> <span class="o">=</span> <span class="s2">&quot;R4[</span><span class="si">{exp_rep}</span><span class="s2">-{byo, float}</span><span class="si">{seq_rep}</span><span class="s2">]_S{id, int}_counts.txt&quot;</span>
+    <span class="n">load_data</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">silent</span> <span class="o">=</span> <span class="kc">False</span>
+ <span class="p">}</span>
+</pre></div>
+</div>
+<p>will return a <cite>CountFile</cite> instance <cite>sample</cite> that</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">sample</span><span class="o">.</span><span class="n">name</span>
+<span class="s1">&#39;B-1250A&#39;</span>
+<span class="o">&gt;</span> <span class="n">sample</span><span class="o">.</span><span class="n">x_value</span>
+<span class="mf">1250.0</span>
+<span class="o">&gt;</span> <span class="n">sample</span><span class="o">.</span><span class="n">metadata</span>
+<span class="p">{</span>
+    <span class="s1">&#39;exp_rep&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;byo&#39;</span><span class="p">:</span> <span class="mf">1250.0</span><span class="p">,</span>
+    <span class="s1">&#39;seq_rep&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">16</span>
+<span class="p">}</span>
+<span class="o">&gt;</span> <span class="n">sample</span><span class="o">.</span><span class="n">sequences</span>
+<span class="n">Error</span> <span class="c1"># as data is not load yet</span>
+</pre></div>
+</div>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.add_spike_in">
+<code class="sig-name descname">add_spike_in</code><span class="sig-paren">(</span><em class="sig-param">spike_in_seq</em>, <em class="sig-param">spike_in_amount</em>, <em class="sig-param">spike_in_dia=2</em>, <em class="sig-param">unit=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.add_spike_in" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">dna_amount</code></dt>
+<dd><p>Total DNA amount, inferred from spike-in if not assigned</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.load_data">
+<code class="sig-name descname">load_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.load_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data from file with path in <code class="docutils literal notranslate"><span class="pre">self.matadata['file_path']</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.load_test_sample">
+<em class="property">classmethod </em><code class="sig-name descname">load_test_sample</code><span class="sig-paren">(</span><em class="sig-param">dataset='byo'</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.load_test_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load test single files from BYO k-seq or BFO k-seq</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.norm_factor">
+<em class="property">property </em><code class="sig-name descname">norm_factor</code><a class="headerlink" href="#k_seq.data.count_file.CountFile.norm_factor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalization factor for sequences, seqs DNA amount should be norm_factor * seq_counts,
+invariant for seq filtering</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.seq_amount">
+<code class="sig-name descname">seq_amount</code><span class="sig-paren">(</span><em class="sig-param">remove_spike_in=True</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">sparse=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.seq_amount" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return absolute amount of sequences, usually not used</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>remove_spike_in</strong> (<cite>bool</cite>) – if remove spike-in before return data</p></li>
+<li><p><strong>seq_list</strong> (list of <cite>str</cite>) – if only return data for given sequences</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a <cite>pd.Series</cite> with amount as value and seq as index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.seq_counts">
+<code class="sig-name descname">seq_counts</code><span class="sig-paren">(</span><em class="sig-param">remove_spike_in=True</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">sparse=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.seq_counts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return raw sequence counts</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>remove_spike_in</strong> (<cite>bool</cite>) – if remove spike-in before return data</p></li>
+<li><p><strong>seq_list</strong> (list of <cite>str</cite>) – if only return data for given sequences</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a <cite>pd.Series</cite> with counts as value and seq as index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.to_dict">
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary as metadata of the sample, including:
+- name
+- file_path
+- unique_seqs
+- unique_seqs_no_spike_in (if remove_spike_in is True)
+- total_counts
+- total_counts_no_spike_in (if remove_spike_in is True)
+- sample_type
+- x_value
+- dna_amount
+- dna_amount_no_spike_in (if remove_spike_in is True)
+- norm_factor
+- spike in (dict, if applicable, return members if verbose)
+- other metadata</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFile.to_series">
+<code class="sig-name descname">to_series</code><span class="sig-paren">(</span><em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFile.to_series" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Return a series as summary of the sample, including:</dt><dd><ul class="simple">
+<li><p>sample type</p></li>
+<li><p>name</p></li>
+<li><p>x value</p></li>
+<li><p>unique seqs</p></li>
+<li><p>total counts</p></li>
+<li><p>dna amount (if applicable)</p></li>
+<li><p><a href="#id1"><span class="problematic" id="id2">*</span></a>information from spike-in (if applicable, verbose choice)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>verbose</strong> (<cite>bool</cite>) – if return extra information in spike-in</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.count_file.CountFileSet">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.count_file.</code><code class="sig-name descname">CountFileSet</code><span class="sig-paren">(</span><em class="sig-param">file_root</em>, <em class="sig-param">x_values=None</em>, <em class="sig-param">input_samples=None</em>, <em class="sig-param">file_list=None</em>, <em class="sig-param">file_pattern=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">name_pattern=None</em>, <em class="sig-param">spike_in_seq=None</em>, <em class="sig-param">spike_in_amount=None</em>, <em class="sig-param">spike_in_dia=2</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">dna_unit=None</em>, <em class="sig-param">dna_amount=None</em>, <em class="sig-param">sort_by=None</em>, <em class="sig-param">load_data=False</em>, <em class="sig-param">silent=True</em>, <em class="sig-param">metadata=None</em>, <em class="sig-param">note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Object to load and store a set of samples
+.. todo:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">add</span> <span class="n">to</span> <span class="n">seq</span> <span class="n">table</span>
+<span class="o">-</span> <span class="n">update</span> <span class="n">docstring</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">file_root</em>, <em class="sig-param">x_values=None</em>, <em class="sig-param">input_samples=None</em>, <em class="sig-param">file_list=None</em>, <em class="sig-param">file_pattern=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">name_pattern=None</em>, <em class="sig-param">spike_in_seq=None</em>, <em class="sig-param">spike_in_amount=None</em>, <em class="sig-param">spike_in_dia=2</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">dna_unit=None</em>, <em class="sig-param">dna_amount=None</em>, <em class="sig-param">sort_by=None</em>, <em class="sig-param">load_data=False</em>, <em class="sig-param">silent=True</em>, <em class="sig-param">metadata=None</em>, <em class="sig-param">note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize by linking count files under a root folder into <a class="reference internal" href="#k_seq.data.count_file.CountFile" title="k_seq.data.count_file.CountFile"><code class="xref py py-func docutils literal notranslate"><span class="pre">CountFile()</span></code></a> objects</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_root</strong> (<cite>str</cite>) – directory to the root folder for count files</p></li>
+<li><p><strong>x_values</strong> (<cite>str</cite> or list of <cite>float</cite>) – Time points or concentration points values for samples. If <cite>str</cite>, the
+function will use it as the domain name to extract value from file name; if a list
+of <cite>float</cite>, it should have same length and order as sample file under <cite>file_root</cite>
+(Use :func:<a href="#id3"><span class="problematic" id="id4">`</span></a>~k_seq.utility.get_file_list’ to examine the files automatically extracted)</p></li>
+<li><p><strong>file_pattern</strong> (<cite>str</cite>) – optional, name pattern to identify count files. Only file name contains
+the pattern will be included</p></li>
+<li><p><strong>name_pattern</strong> (<cite>str</cite>) – optional. Pattern to extract metadata, see :func:<a href="#id5"><span class="problematic" id="id6">`</span></a>~k_seq.utility.extract_metadata’
+for details</p></li>
+<li><p><strong>sort_by</strong> (<cite>str</cite> or <cite>callable</cite>) – optional. If <cite>str</cite>, it should be the domain name to order the sample in the
+ascending order. If <cite>callable</cite>, the input is <cite>SeqSample</cite> instance and the sample will ordered by the
+return value</p></li>
+<li><p><strong>file_list</strong> (list of <cite>str</cite>) – optional, only import the file in sample_list if not <cite>None</cite></p></li>
+<li><p><strong>black_list</strong> (list of <cite>str</cite>) – optional, name of sample files that are excluded</p></li>
+<li><p><strong>load_sample</strong> (<cite>bool</cite>) – if read and load count file during initialization. Recommand to be False for large
+count files, default False.</p></li>
+<li><p><strong>silent</strong> (<em>boolean</em>) – don’t print process if True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.add_dna_amount">
+<code class="sig-name descname">add_dna_amount</code><span class="sig-paren">(</span><em class="sig-param">dna_amounts</em>, <em class="sig-param">unit=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.add_dna_amount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.add_spike_in">
+<code class="sig-name descname">add_spike_in</code><span class="sig-paren">(</span><em class="sig-param">spike_in_seq=None</em>, <em class="sig-param">spike_in_amount=None</em>, <em class="sig-param">spike_in_dia=2</em>, <em class="sig-param">unit=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.add_spike_in" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add spike-in sequences for all samples, for each parameter, single value or dictionary could be passed,
+if a dictionary is passed, the key should be sample name and explicitly list parameters for all samples</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.check_file_list">
+<em class="property">static </em><code class="sig-name descname">check_file_list</code><span class="sig-paren">(</span><em class="sig-param">file_root</em>, <em class="sig-param">file_list=None</em>, <em class="sig-param">file_pattern=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">full_path=True</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.check_file_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to list the files will be imported</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.from_pickle">
+<em class="property">static </em><code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><em class="sig-param">file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.from_pickle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.load_data">
+<code class="sig-name descname">load_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.load_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data after creating the object, suitable for large files</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.load_default">
+<em class="property">classmethod </em><code class="sig-name descname">load_default</code><span class="sig-paren">(</span><em class="sig-param">dataset='byo'</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.load_default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load dataset from BYO k-seq or BFO k-seq</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.sample_into_to_dict">
+<code class="sig-name descname">sample_into_to_dict</code><span class="sig-paren">(</span><em class="sig-param">sample_list=None</em>, <em class="sig-param">exclude_spike_in=False</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.sample_into_to_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.sample_names">
+<em class="property">property </em><code class="sig-name descname">sample_names</code><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.sample_names" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.sort_sample">
+<code class="sig-name descname">sort_sample</code><span class="sig-paren">(</span><em class="sig-param">sort_by</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.sort_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sort sample order by attribute name, metadata name, or a callable on <cite>CountFile</cite> object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.summary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.to_SeqTable">
+<code class="sig-name descname">to_SeqTable</code><span class="sig-paren">(</span><em class="sig-param">sample_list=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">remove_spike_in=True</em>, <em class="sig-param">return_counts=True</em>, <em class="sig-param">note=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.to_SeqTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert to a <cite>SeqTable</cite> object
+todo: finish this
+:param remove_spike_in: remove spike in if True. Default True.
+:type remove_spike_in: <cite>bool</cite>
+:param note: optional. Note about the sample set
+:type note: <cite>str</cite></p>
+<p>Returns: <cite>SeqTable</cite> instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.to_csv">
+<code class="sig-name descname">to_csv</code><span class="sig-paren">(</span><em class="sig-param">file_path</em>, <em class="sig-param">samples=None</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">remove_spike_in=False</em>, <em class="sig-param">return_counts=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.to_csv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.to_dataframe">
+<code class="sig-name descname">to_dataframe</code><span class="sig-paren">(</span><em class="sig-param">samples=None</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">remove_spike_in=True</em>, <em class="sig-param">return_counts=True</em>, <em class="sig-param">sparse=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dataframe within index as sequences, columns as samples</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.CountFileSet.to_pickle">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><em class="sig-param">file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.CountFileSet.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.count_file.SpikeIn">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.count_file.</code><code class="sig-name descname">SpikeIn</code><span class="sig-paren">(</span><em class="sig-param">spike_in_seq</em>, <em class="sig-param">sample</em>, <em class="sig-param">spike_in_amount=None</em>, <em class="sig-param">unit=None</em>, <em class="sig-param">spike_in_dia=2</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.SpikeIn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class to handle the spike in sequence for sample normalization</p>
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.center">
+<code class="sig-name descname">center</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.center" title="Permalink to this definition">¶</a></dt>
+<dd><p>spike-in sequence as peak center</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.sample">
+<code class="sig-name descname">sample</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>link to corresponding sample object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>SeqSample</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.radius">
+<code class="sig-name descname">radius</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.radius" title="Permalink to this definition">¶</a></dt>
+<dd><p>radius of spike-in peak, accounting for synthesis/sequencing error</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.spike_in_amount">
+<code class="sig-name descname">spike_in_amount</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.spike_in_amount" title="Permalink to this definition">¶</a></dt>
+<dd><p>DNA amount of spike-in sequences added</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>float</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.dna_amount">
+<code class="sig-name descname">dna_amount</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.dna_amount" title="Permalink to this definition">¶</a></dt>
+<dd><p>Total DNA amount in the sample, based on current sequences</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>float</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.unit">
+<code class="sig-name descname">unit</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.unit" title="Permalink to this definition">¶</a></dt>
+<dd><p>unit of amount, e.g. ng</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.norm_factor">
+<code class="sig-name descname">norm_factor</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.norm_factor" title="Permalink to this definition">¶</a></dt>
+<dd><p>DNA amount for a single read, amount for given read will be norm_factor * read num</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>float</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.dist_to_center">
+<code class="sig-name descname">dist_to_center</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.dist_to_center" title="Permalink to this definition">¶</a></dt>
+<dd><p>edit distances for sequence to spike-in peak center</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>pd.Series</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.count_file.SpikeIn.members">
+<code class="sig-name descname">members</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.members" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of spike-in peak members</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of <cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">dist_to_center</code></dt>
+<dd><p>edit distances for sequence to spike-in peak center, only calculate once</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">dna_amount</code></dt>
+<dd><p>Total DNA amount in the sample, calculated on current sequences in the sample</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">members</code></dt>
+<dd><p>A list of sequences considered as in the peak, change as radius change</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">norm_factor</code></dt>
+<dd><p>defined as
+<span class="math notranslate nohighlight">\(\frac{\text{spike-in amount}}{\text{spike-in counts}\)</span></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>norm_factor (<cite>float</cite>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">radius</code></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.SpikeIn.spike_in_counts">
+<em class="property">property </em><code class="sig-name descname">spike_in_counts</code><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.spike_in_counts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Total counts of sequences in <cite>self.members</cite>, updated as radius change</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.SpikeIn.survey_peak">
+<code class="sig-name descname">survey_peak</code><span class="sig-paren">(</span><em class="sig-param">radius=2</em>, <em class="sig-param">accumulate=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.survey_peak" title="Permalink to this definition">¶</a></dt>
+<dd><p>Survey count of sequences around spike up to a given radius (edit distance).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>radius</strong> (<cite>int</cite>) – the maximum distance to survey</p></li>
+<li><p><strong>accumulate</strong> (<cite>bool</cite>) – if return the accumulated count to distance i</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A <cite>pd.Series</cite> of [accumulated] seq counts at different edit distance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.SpikeIn.to_dict">
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Return necessary info of spike-in as a dictionary, including:</dt><dd><ul class="simple">
+<li><p>seq: spike-in seq</p></li>
+<li><p>radius:</p></li>
+<li><p>dna_amount: DNA amount of sample pool calculated by spike-in</p></li>
+<li><p>norm_factor</p></li>
+<li><p>unit</p></li>
+<li><p>members (verbose): list</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>verbose</strong> (<cite>bool</cite>) – if return extra info (members)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.count_file.SpikeIn.to_series">
+<code class="sig-name descname">to_series</code><span class="sig-paren">(</span><em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.SpikeIn.to_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>return a series of spike in info, including:
+- dna amount (from spike-in, [unit])
+- spike-in rad: radius
+- spike-in pct: percent
+- spike-in seq (verbose)
+- spike-in amount (verbose)
+- spike-in counts (verbose)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>verbose</strong> (<cite>bool</cite>) – if include extra information</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.count_file.read_count_file">
+<code class="sig-prename descclassname">k_seq.data.count_file.</code><code class="sig-name descname">read_count_file</code><span class="sig-paren">(</span><em class="sig-param">file_path</em>, <em class="sig-param">as_dict=False</em>, <em class="sig-param">number_only=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.count_file.read_count_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read a single count file generated from Chen lab’s customized scripts</p>
+<p>Count file format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">number</span> <span class="n">of</span> <span class="n">unique</span> <span class="n">sequences</span> <span class="o">=</span> <span class="mi">2825</span>
+<span class="n">total</span> <span class="n">number</span> <span class="n">of</span> <span class="n">molecules</span> <span class="o">=</span> <span class="mi">29348173</span>
+
+<span class="n">AAAAAAAACACCACACA</span>               <span class="mi">2636463</span>
+<span class="n">AATATTACATCATCTATC</span>              <span class="mi">86763</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<em>str</em>) – full directory to the count file</p></li>
+<li><p><strong>as_dict</strong> (<em>bool</em>) – return a dictionary instead of a <cite>pd.DataFrame</cite></p></li>
+<li><p><strong>number_only</strong> (<em>bool</em>) – only return number of unique seqs and total counts if True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>number of unique sequences in the count file
+total_counts (<cite>int</cite>): number of total reads in the count file
+sequence_counts (<cite>pd.DataFrame</cite>): with <cite>sequence</cite> as index and <cite>counts</cite> as the first column</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>unique_seqs (<cite>int</cite>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.datasets">
+<span id="k-seq-data-datasets-module"></span><h3>k_seq.data.datasets module<a class="headerlink" href="#module-k_seq.data.datasets" title="Permalink to this headline">¶</a></h3>
+<p>Default datasets used in k-seq project for chen labs
+Currently have:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>BYO Doped pool: byo-doped</p></li>
+<li><p>BYO selected pool: byo-selected</p></li>
+</ul>
+</div></blockquote>
+<dl class="function">
+<dt id="k_seq.data.datasets.load_byo_doped">
+<code class="sig-prename descclassname">k_seq.data.datasets.</code><code class="sig-name descname">load_byo_doped</code><span class="sig-paren">(</span><em class="sig-param">from_count_file=False</em>, <em class="sig-param">count_file_path=None</em>, <em class="sig-param">doped_norm_path=None</em>, <em class="sig-param">pickled_path=None</em>, <em class="sig-param">pandaseq_joined=True</em>, <em class="sig-param">radius=2</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.datasets.load_byo_doped" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.datasets.load_byo_selected">
+<code class="sig-prename descclassname">k_seq.data.datasets.</code><code class="sig-name descname">load_byo_selected</code><span class="sig-paren">(</span><em class="sig-param">from_count_file=False</em>, <em class="sig-param">count_file_path=None</em>, <em class="sig-param">norm_path=None</em>, <em class="sig-param">pickled_path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.datasets.load_byo_selected" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.filters">
+<span id="k-seq-data-filters-module"></span><h3>k_seq.data.filters module<a class="headerlink" href="#module-k_seq.data.filters" title="Permalink to this headline">¶</a></h3>
+<p>This module contains filters to apply on SeqTable</p>
+<dl class="class">
+<dt id="k_seq.data.filters.DetectedTimesFilter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">DetectedTimesFilter</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">min_detected_times=6</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.DetectedTimesFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.filters.FilterBase" title="k_seq.data.filters.FilterBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.filters.FilterBase</span></code></a></p>
+<dl class="method">
+<dt id="k_seq.data.filters.DetectedTimesFilter.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">min_detected_times</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.DetectedTimesFilter.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core method for filtering
+Returns a boolean pd.Series with same shape and order of the given axis in the target
+True for passed item, False for filtered item
+<a href="#id7"><span class="problematic" id="id8">*</span></a>reverse should apply outside this method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.DetectedTimesFilter.mask">
+<code class="sig-name descname">mask</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">min_detected_times=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.DetectedTimesFilter.mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the the boolean mask for given target table
+Wrapper over func to for formatting and preprocessing over <cite>func</cite></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.filters.FilterBase">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">FilterBase</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">axis=0</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract template for constructing filters</p>
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">axis=0</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A filter should contains at least target, axis, and reverse info for conducting filtering
+They could be assigned during instantiation or later</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.from_func">
+<em class="property">classmethod </em><code class="sig-name descname">from_func</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">target=None</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.from_func" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core method for filtering
+Returns a boolean pd.Series with same shape and order of the given axis in the target
+True for passed item, False for filtered item
+<a href="#id9"><span class="problematic" id="id10">*</span></a>reverse should apply outside this method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.get_filtered_table">
+<code class="sig-name descname">get_filtered_table</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">remove_zero=True</em>, <em class="sig-param">reverse=False</em>, <em class="sig-param">axis=None</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.get_filtered_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a filtered table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> (<em>pd.DataFrame</em>) – target table to filter</p></li>
+<li><p><strong>remove_zero</strong> (<em>bool</em>) – if remove all-zero items from another axis after filtering. Default True.</p></li>
+<li><p><strong>reverse</strong> (<em>bool</em>) – if return filtered items instead of items passed the filter. Default False.</p></li>
+<li><p><strong>axis</strong> (<em>0</em><em> or </em><em>1</em>) – if apply filter on index (0) or columns (1)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.get_passed_item">
+<code class="sig-name descname">get_passed_item</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">reverse=None</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.get_passed_item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the items that pass the filter when reverse is False</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.mask">
+<code class="sig-name descname">mask</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the the boolean mask for given target table
+Wrapper over func to for formatting and preprocessing over <cite>func</cite></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.FilterBase.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.FilterBase.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a pd.DataFrame as the summary</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.filters.FilterCollection">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">FilterCollection</code><a class="headerlink" href="#k_seq.data.filters.FilterCollection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Applies a collection of filters to the object in sequence, Not implemented yet
+todo: add a pipeline for filters</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.filters.SampleFilter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">SampleFilter</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">samples_to_keep=None</em>, <em class="sig-param">samples_to_remove=None</em>, <em class="sig-param">axis=1</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SampleFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.filters.FilterBase" title="k_seq.data.filters.FilterBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.filters.FilterBase</span></code></a></p>
+<dl class="method">
+<dt id="k_seq.data.filters.SampleFilter.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">samples_to_keep</em>, <em class="sig-param">axis=1</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SampleFilter.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core method for filtering
+Returns a boolean pd.Series with same shape and order of the given axis in the target
+True for passed item, False for filtered item
+<a href="#id11"><span class="problematic" id="id12">*</span></a>reverse should apply outside this method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.SampleFilter.mask">
+<code class="sig-name descname">mask</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">samples_to_keep=None</em>, <em class="sig-param">samples_to_remove=None</em>, <em class="sig-param">axis=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SampleFilter.mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the the boolean mask for given target table
+Wrapper over func to for formatting and preprocessing over <cite>func</cite></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.filters.SeqLengthFilter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">SeqLengthFilter</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">min_len=None</em>, <em class="sig-param">max_len=None</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SeqLengthFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.filters.FilterBase" title="k_seq.data.filters.FilterBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.filters.FilterBase</span></code></a></p>
+<dl class="method">
+<dt id="k_seq.data.filters.SeqLengthFilter.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">min_len=None</em>, <em class="sig-param">max_len=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SeqLengthFilter.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core method for filtering
+Returns a boolean pd.Series with same shape and order of the given axis in the target
+True for passed item, False for filtered item
+<a href="#id13"><span class="problematic" id="id14">*</span></a>reverse should apply outside this method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.SeqLengthFilter.mask">
+<code class="sig-name descname">mask</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">min_len=None</em>, <em class="sig-param">max_len=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SeqLengthFilter.mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the the boolean mask for given target table
+Wrapper over func to for formatting and preprocessing over <cite>func</cite></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.filters.SingletonFilter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">SingletonFilter</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SingletonFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.filters.FilterBase" title="k_seq.data.filters.FilterBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.filters.FilterBase</span></code></a></p>
+<dl class="method">
+<dt id="k_seq.data.filters.SingletonFilter.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">axis=1</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SingletonFilter.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core method for filtering
+Returns a boolean pd.Series with same shape and order of the given axis in the target
+True for passed item, False for filtered item
+<a href="#id15"><span class="problematic" id="id16">*</span></a>reverse should apply outside this method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.SingletonFilter.mask">
+<code class="sig-name descname">mask</code><span class="sig-paren">(</span><em class="sig-param">target=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SingletonFilter.mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the the boolean mask for given target table
+Wrapper over func to for formatting and preprocessing over <cite>func</cite></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.filters.SpikeInFilter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.filters.</code><code class="sig-name descname">SpikeInFilter</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">center_seq=None</em>, <em class="sig-param">radius=None</em>, <em class="sig-param">reverse=False</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SpikeInFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.filters.FilterBase" title="k_seq.data.filters.FilterBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.filters.FilterBase</span></code></a></p>
+<p>Filter out seqs that are spike-in</p>
+<dl class="method">
+<dt id="k_seq.data.filters.SpikeInFilter.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">center_seq</em>, <em class="sig-param">radius</em>, <em class="sig-param">dist_to_center=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SpikeInFilter.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core method for filtering
+Returns a boolean pd.Series with same shape and order of the given axis in the target
+True for passed item, False for filtered item
+<a href="#id17"><span class="problematic" id="id18">*</span></a>reverse should apply outside this method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.filters.SpikeInFilter.mask">
+<code class="sig-name descname">mask</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">center_seq=None</em>, <em class="sig-param">radius=None</em>, <em class="sig-param">dist_to_center=None</em>, <em class="sig-param">reverse=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.filters.SpikeInFilter.mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the the boolean mask for given target table
+Wrapper over func to for formatting and preprocessing over <cite>func</cite></p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.grouper">
+<span id="k-seq-data-grouper-module"></span><h3>k_seq.data.grouper module<a class="headerlink" href="#module-k_seq.data.grouper" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="k_seq.data.grouper.Group">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.grouper.</code><code class="sig-name descname">Group</code><span class="sig-paren">(</span><em class="sig-param">group</em>, <em class="sig-param">target=None</em>, <em class="sig-param">axis=1</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.grouper.Group" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="k_seq.data.grouper.Group.get_table">
+<code class="sig-name descname">get_table</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">remove_zero=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.grouper.Group.get_table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.grouper.Grouper">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.grouper.</code><code class="sig-name descname">Grouper</code><span class="sig-paren">(</span><em class="sig-param">groupers</em>, <em class="sig-param">target</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.grouper.Grouper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="k_seq.data.grouper.Grouper.add">
+<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param">groupers</em>, <em class="sig-param">target=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.grouper.Grouper.add" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.io">
+<span id="k-seq-data-io-module"></span><h3>k_seq.data.io module<a class="headerlink" href="#module-k_seq.data.io" title="Permalink to this headline">¶</a></h3>
+<p>This module contains the methods for input and output</p>
+<dl class="function">
+<dt id="k_seq.data.io.read_table_files">
+<code class="sig-prename descclassname">k_seq.data.io.</code><code class="sig-name descname">read_table_files</code><span class="sig-paren">(</span><em class="sig-param">file_path</em>, <em class="sig-param">col_name</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.io.read_table_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.landscape">
+<span id="k-seq-data-landscape-module"></span><h3>k_seq.data.landscape module<a class="headerlink" href="#module-k_seq.data.landscape" title="Permalink to this headline">¶</a></h3>
+<p>A simple landscape module to define sequence peaks on edit distance</p>
+<dl class="class">
+<dt id="k_seq.data.landscape.Peak">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.landscape.</code><code class="sig-name descname">Peak</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">center_seq</em>, <em class="sig-param">name=None</em>, <em class="sig-param">radius=None</em>, <em class="sig-param">use_hamming_dist=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.landscape.Peak" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Object to store a peak in a sequence space
+Peak is defined by Edit (Levenshtein) distance, including insertions and deletions</p>
+<dl class="method">
+<dt id="k_seq.data.landscape.Peak.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">center_seq</em>, <em class="sig-param">name=None</em>, <em class="sig-param">radius=None</em>, <em class="sig-param">use_hamming_dist=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.landscape.Peak.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a Peak object
+:param target: target table of sequences to compute peak
+:type target: pd.DataFrame or SeqTable
+:param center_seq: center sequence for the peak
+:type center_seq: str
+:param name: name of the peak, optional
+:type name: str
+:param radius: the radius of the peak, optional
+:type radius: int
+:param use_hamming_dist: use hamming distance instead of edit distance
+:type use_hamming_dist: bool</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.landscape.Peak.from_peak_list">
+<em class="property">static </em><code class="sig-name descname">from_peak_list</code><span class="sig-paren">(</span><em class="sig-param">peak_list</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.landscape.Peak.from_peak_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a mega peak of a list of peaks, distance to peak center will be the minimal distance to either
+of the center</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.landscape.Peak.peak_abun">
+<code class="sig-name descname">peak_abun</code><span class="sig-paren">(</span><em class="sig-param">max_radius</em>, <em class="sig-param">rel_abun_table=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.landscape.Peak.peak_abun" title="Permalink to this definition">¶</a></dt>
+<dd><p>report the relative abundance and number of unique sequences of peaks in total reads
+:returns: pd.DataFrame contains rel_abun</p>
+<blockquote>
+<div><p>pd.DataFrame contains uniq_seq</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.landscape.Peak.peak_coverage">
+<code class="sig-name descname">peak_coverage</code><span class="sig-paren">(</span><em class="sig-param">max_radius</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.landscape.Peak.peak_coverage" title="Permalink to this definition">¶</a></dt>
+<dd><p>survey the coverage of peak: detected seqs vs all possible seqs
+NOTICE:</p>
+<blockquote>
+<div><p>all possible sequences in k edit distance is an hard question,</p>
+</div></blockquote>
+<p>NOTE: For now only calculate on hamming distance, with only substitution as possible edits</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.seq_table">
+<span id="k-seq-data-seq-table-module"></span><h3>k_seq.data.seq_table module<a class="headerlink" href="#module-k_seq.data.seq_table" title="Permalink to this headline">¶</a></h3>
+<p>This module contains methods for data pre-processing from count files to <code class="docutils literal notranslate"><span class="pre">CountFile</span></code> for estimator
+For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
+.. todo:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">add</span> <span class="n">directly</span> <span class="kn">from</span> <span class="nn">count</span> <span class="n">file</span>
+<span class="o">-</span> <span class="n">write</span> <span class="n">output</span> <span class="n">function</span> <span class="k">for</span> <span class="n">each</span> <span class="k">class</span> <span class="nc">as</span> <span class="n">JSON</span> <span class="n">file</span>
+<span class="o">-</span> <span class="n">Formalized</span> <span class="nb">filter</span> <span class="ow">and</span> <span class="n">normalizer</span>
+<span class="o">-</span> <span class="n">integrate</span> <span class="n">logging</span> <span class="n">to</span> <span class="n">the</span> <span class="n">Logger</span> <span class="n">function</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt id="k_seq.data.seq_table.Metadata">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.seq_table.</code><code class="sig-name descname">Metadata</code><span class="sig-paren">(</span><em class="sig-param">attr_dict</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.Metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.utility.func_tools.AttrScope</span></code></a></p>
+<p>Scope to store metadata for SeqTable
+.. attribute:: dataset</p>
+<dl class="attribute">
+<dt id="k_seq.data.seq_table.Metadata.samples">
+<code class="sig-name descname">samples</code><a class="headerlink" href="#k_seq.data.seq_table.Metadata.samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.seq_table.Metadata.sequences">
+<code class="sig-name descname">sequences</code><a class="headerlink" href="#k_seq.data.seq_table.Metadata.sequences" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.data.seq_table.Metadata.logger">
+<code class="sig-name descname">logger</code><a class="headerlink" href="#k_seq.data.seq_table.Metadata.logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>record actions conducted on the seq table</p>
+</dd></dl>
+
+<p>todo: check logger functionality</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.seq_table.SeqTable">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.seq_table.</code><code class="sig-name descname">SeqTable</code><span class="sig-paren">(</span><em class="sig-param">data_mtx</em>, <em class="sig-param">data_unit='count'</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">sample_list=None</em>, <em class="sig-param">grouper=None</em>, <em class="sig-param">seq_metadata=None</em>, <em class="sig-param">sample_metadata=None</em>, <em class="sig-param">x_values=None</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">dataset_metadata=None</em>, <em class="sig-param">silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This class contains the dataset of valid sequences extracted and aligned from a list of <cite>SeqSampleSet</cite>
+todo: fill up docstring
+Methods:</p>
+<p>Attributes:</p>
+<p>Plugins:</p>
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">data_mtx</em>, <em class="sig-param">data_unit='count'</em>, <em class="sig-param">seq_list=None</em>, <em class="sig-param">sample_list=None</em>, <em class="sig-param">grouper=None</em>, <em class="sig-param">seq_metadata=None</em>, <em class="sig-param">sample_metadata=None</em>, <em class="sig-param">x_values=None</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">dataset_metadata=None</em>, <em class="sig-param">silent=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find all valid sequences that occur at least once in any ‘input’ sample and once in any ‘reacted’ sample</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.add_spike_in">
+<code class="sig-name descname">add_spike_in</code><span class="sig-paren">(</span><em class="sig-param">spike_in_seq</em>, <em class="sig-param">spike_in_amount</em>, <em class="sig-param">radius=2</em>, <em class="sig-param">dna_unit=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.add_spike_in" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add spike in</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.add_total_dna_amount">
+<code class="sig-name descname">add_total_dna_amount</code><span class="sig-paren">(</span><em class="sig-param">dna_amount</em>, <em class="sig-param">dna_unit=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.add_total_dna_amount" title="Permalink to this definition">¶</a></dt>
+<dd><p>todo: add total DNA normalizer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.from_count_files">
+<em class="property">classmethod </em><code class="sig-name descname">from_count_files</code><span class="sig-paren">(</span><em class="sig-param">file_root</em>, <em class="sig-param">file_list=None</em>, <em class="sig-param">pattern_filter=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">name_pattern=None</em>, <em class="sig-param">sort_by=None</em>, <em class="sig-param">x_values=None</em>, <em class="sig-param">x_unit=None</em>, <em class="sig-param">input_sample_name=None</em>, <em class="sig-param">sample_metadata=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">silent=True</em>, <em class="sig-param">dry_run=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.from_count_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>todo: implement the method to generate directly from count files</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.from_pickle">
+<em class="property">static </em><code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.from_pickle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.load_dataset">
+<em class="property">classmethod </em><code class="sig-name descname">load_dataset</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">from_count_file=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.load_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load default dataset
+Available dataset:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>BYO-doped: ‘byo-doped’</p></li>
+<li><p>BYO-selected: ‘byo-selected’</p></li>
+<li><p>BFO: not implemented</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.sample_list">
+<em class="property">property </em><code class="sig-name descname">sample_list</code><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.sample_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.sample_overview">
+<code class="sig-name descname">sample_overview</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.sample_overview" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.seq_list">
+<em class="property">property </em><code class="sig-name descname">seq_list</code><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.seq_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.seq_overview">
+<code class="sig-name descname">seq_overview</code><span class="sig-paren">(</span><em class="sig-param">target=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.seq_overview" title="Permalink to this definition">¶</a></dt>
+<dd><p>todo: finish seq_table
+columns to include:
+- length
+- occurrence / occurrence in input/reacted
+- rel abun / mean rel in input/reacted</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A <cite>pd.DataFrame</cite> show the summary for sequences</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.seq_table.SeqTable.to_pickle">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.SeqTable.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table.slice_table">
+<code class="sig-prename descclassname">k_seq.data.seq_table.</code><code class="sig-name descname">slice_table</code><span class="sig-paren">(</span><em class="sig-param">table</em>, <em class="sig-param">axis</em>, <em class="sig-param">keys=None</em>, <em class="sig-param">filter_fn=None</em>, <em class="sig-param">remove_zero=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table.slice_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to slice pd.DataFrame table with a list of key values or filter functions along given axis
+Optional to remove all zero entries
+:param table: target table to slice
+:type table: pd.DataFrame
+:param keys: list of keys to preserve
+:type keys: list-like
+:param axis:
+:type axis: 0 or 1
+:param remove_zero: if remove all zero items in the other axis
+:type remove_zero: bool</p>
+<p>TODO: refactor slice function, collect other similar functions and move here</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.seq_table_vis">
+<span id="k-seq-data-seq-table-vis-module"></span><h3>k_seq.data.seq_table_vis module<a class="headerlink" href="#module-k_seq.data.seq_table_vis" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.cross_table_compare">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">cross_table_compare</code><span class="sig-paren">(</span><em class="sig-param">base_table</em>, <em class="sig-param">compare_table</em>, <em class="sig-param">samples=None</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">color_map=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.cross_table_compare" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.rep_variance_scatter">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">rep_variance_scatter</code><span class="sig-paren">(</span><em class="sig-param">table</em>, <em class="sig-param">grouper</em>, <em class="sig-param">xaxis=None</em>, <em class="sig-param">subsample=None</em>, <em class="sig-param">xlog=True</em>, <em class="sig-param">ylog=True</em>, <em class="sig-param">xlim=None</em>, <em class="sig-param">ylim=None</em>, <em class="sig-param">group_title_pos=None</em>, <em class="sig-param">xlabel=None</em>, <em class="sig-param">ylabel=None</em>, <em class="sig-param">label_map=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.rep_variance_scatter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.sample_entropy_scatterplot">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">sample_entropy_scatterplot</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">normalize=False</em>, <em class="sig-param">base=2</em>, <em class="sig-param">color_map=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">scatter_kwargs=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.sample_entropy_scatterplot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.sample_overview_plots">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">sample_overview_plots</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">plot_unique_seq=True</em>, <em class="sig-param">plot_total_counts=True</em>, <em class="sig-param">plot_spike_in_frac=True</em>, <em class="sig-param">color_map=None</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">label_mapper=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.sample_overview_plots" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overview plot(s) of unique seqs, total counts and spike-in fractions in the samples</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq_table</strong> (<cite>SeqTable</cite>) – sample set to survey</p></li>
+<li><p><strong>plot_unique_seq</strong> (<cite>bool</cite>) – plot bar plot for unique sequences if True</p></li>
+<li><p><strong>plot_total_counts</strong> (<cite>bool</cite>) – plot bar plot for total counts if True</p></li>
+<li><p><strong>plot_spike_in_frac</strong> (<cite>bool</cite>) – plot scatter plot for spike in fraction if True</p></li>
+<li><p><strong>color_map</strong> (<em>dict</em>) – {sample_name: color} for all plots</p></li>
+<li><p><strong>black_list</strong> (list of <cite>str</cite>) – list of sample name to exlude from the plots</p></li>
+<li><p><strong>sep_plot</strong> (<cite>bool</cite>) – plot separate plots for unique sequences, total counts and spike_in fractions if True</p></li>
+<li><p><strong>label_mapper</strong> (<em>dict</em><em> or </em><em>callable</em>) – alternative labels for samples</p></li>
+<li><p><strong>fig_save_to</strong> (<cite>str</cite>) – save figure to the directory if not None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.sample_rel_abun_hist">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">sample_rel_abun_hist</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">bins=None</em>, <em class="sig-param">x_log=True</em>, <em class="sig-param">y_log=False</em>, <em class="sig-param">ncol=None</em>, <em class="sig-param">nrow=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">hist_kwargs=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.sample_rel_abun_hist" title="Permalink to this definition">¶</a></dt>
+<dd><p>todo: add pool counts composition curve for straight forward visualization</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.sample_spike_in_ratio_scatterplot">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">sample_spike_in_ratio_scatterplot</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">save_fig_to=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">label_mapper=None</em>, <em class="sig-param">scatter_kwargs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.sample_spike_in_ratio_scatterplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scatter plot of spike in ratio in the pool</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.sample_total_counts_barplot">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">sample_total_counts_barplot</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">save_fig_to=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">label_mapper=None</em>, <em class="sig-param">barplot_kwargs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.sample_total_counts_barplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Barplot of total counts in each sample</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.seq_table_vis.sample_unique_seqs_barplot">
+<code class="sig-prename descclassname">k_seq.data.seq_table_vis.</code><code class="sig-name descname">sample_unique_seqs_barplot</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">save_fig_to=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">label_mapper=None</em>, <em class="sig-param">barplot_kwargs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.seq_table_vis.sample_unique_seqs_barplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Barplot of unique seqs in each sample</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.simu">
+<span id="k-seq-data-simu-module"></span><h3>k_seq.data.simu module<a class="headerlink" href="#module-k_seq.data.simu" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="k_seq.data.simu.DistGenerators">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">DistGenerators</code><a class="headerlink" href="#k_seq.data.simu.DistGenerators" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A collection of random value generators from preset distributions</p>
+<dl class="simple">
+<dt>Behavior:</dt><dd><dl class="simple">
+<dt>each distribution will return a generator if <cite>return_gen</cite> argument is True,</dt><dd><p>else return a function take size value and return a generator</p>
+</dd>
+</dl>
+</dd>
+<dt>Available distributions:</dt><dd><p>lognormal
+uniform
+compo_lognormal</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="k_seq.data.simu.DistGenerators.compo_lognormal">
+<em class="property">static </em><code class="sig-name descname">compo_lognormal</code><span class="sig-paren">(</span><em class="sig-param">size</em>, <em class="sig-param">loc=None</em>, <em class="sig-param">scale=None</em>, <em class="sig-param">c95=None</em>, <em class="sig-param">seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.DistGenerators.compo_lognormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample a pool composition from a log-normal distribution
+indicate with <cite>loc</cite> and <cite>scale</cite>, or <cite>c95</cite></p>
+<p class="rubric">Example</p>
+<p>scale = 0 means an evenly distributed pool with all components have relative abundance 1/size</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<cite>int</cite>) – size of the pool</p></li>
+<li><p><strong>loc</strong> (<cite>float</cite>) – center of log-normal distribution</p></li>
+<li><p><strong>scale</strong> (<cite>float</cite>) – log variance of the distribution</p></li>
+<li><p><strong>c95</strong> ([<cite>float</cite>, <cite>float</cite>]) – 95% percentile of log-normal distribution</p></li>
+<li><p><strong>seed</strong> – random seed</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.simu.DistGenerators.lognormal">
+<em class="property">static </em><code class="sig-name descname">lognormal</code><span class="sig-paren">(</span><em class="sig-param">size=None</em>, <em class="sig-param">loc=None</em>, <em class="sig-param">scale=None</em>, <em class="sig-param">c95=None</em>, <em class="sig-param">seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.DistGenerators.lognormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample from a log-normal distribution
+indicate with <cite>loc</cite> and <cite>scale</cite>, or <cite>c95</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<cite>int</cite>) – number of values to draw</p></li>
+<li><p><strong>loc</strong> (<cite>float</cite>) – center of log-normal distribution, default 0</p></li>
+<li><p><strong>scale</strong> (<cite>float</cite>) – log variance of the distribution, default 0</p></li>
+<li><p><strong>c95</strong> ([<cite>float</cite>, <cite>float</cite>]) – 95% percentile of log-normal distribution</p></li>
+<li><p><strong>seed</strong> – random seed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a draw from distribution with given size</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.simu.DistGenerators.uniform">
+<em class="property">static </em><code class="sig-name descname">uniform</code><span class="sig-paren">(</span><em class="sig-param">low=None</em>, <em class="sig-param">high=None</em>, <em class="sig-param">size=None</em>, <em class="sig-param">seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.DistGenerators.uniform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample from a uniform distribution</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.simu.PoolParamSimulator">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">PoolParamSimulator</code><a class="headerlink" href="#k_seq.data.simu.PoolParamSimulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Collection of functions to simulate a set of parameters for a sequence pool</p>
+<dl class="method">
+<dt>
+<code class="sig-name descname">- sample_from_ind_dist</code></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">- sample_from_dataframe</code></dt>
+<dd></dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pd.DataFrame with columns of parameters and rows of simulated parameter for each sequence</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="k_seq.data.simu.PoolParamSimulator.sample_from_dataframe">
+<em class="property">classmethod </em><code class="sig-name descname">sample_from_dataframe</code><span class="sig-paren">(</span><em class="sig-param">df</em>, <em class="sig-param">size</em>, <em class="sig-param">replace=True</em>, <em class="sig-param">weights=None</em>, <em class="sig-param">seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.PoolParamSimulator.sample_from_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate parameter by resampling rows of a given data frame</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.simu.PoolParamSimulator.sample_from_ind_dist">
+<em class="property">static </em><code class="sig-name descname">sample_from_ind_dist</code><span class="sig-paren">(</span><em class="sig-param">p0</em>, <em class="sig-param">size=None</em>, <em class="sig-param">seed=None</em>, <em class="sig-param">**param_generators</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.PoolParamSimulator.sample_from_ind_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate the pool parameter from individual draws of distribution</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p0</strong> (<em>list-like</em><em>, </em><em>generator</em><em>, or </em><em>callable</em>) – at least need to indicate the initial pool composition</p></li>
+<li><p><strong>size</strong> (<em>int</em>) – number of unique sequences</p></li>
+<li><p><strong>seed</strong> (<em>int</em>) – global random seed to use in generation</p></li>
+<li><p><strong>param_generators</strong> (<em>kwargs</em>) – keyword generator to generate parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.simu.dna_amount_error">
+<code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">dna_amount_error</code><span class="sig-paren">(</span><em class="sig-param">amount</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.dna_amount_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>For DNA amount, assign a 10% normal error</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.simu.get_sample_table">
+<code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">get_sample_table</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">estimation</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.get_sample_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compose table for simulation by sampling from seq_table (for p0) and estimated results (for k, A)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.simu.simulate_counts">
+<code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">simulate_counts</code><span class="sig-paren">(</span><em class="sig-param">pool_size</em>, <em class="sig-param">c_list</em>, <em class="sig-param">N_list</em>, <em class="sig-param">p0=None</em>, <em class="sig-param">kinetic_model=None</em>, <em class="sig-param">count_model=None</em>, <em class="sig-param">dna_amount_error=None</em>, <em class="sig-param">sample_from_table=None</em>, <em class="sig-param">weights=None</em>, <em class="sig-param">replace=True</em>, <em class="sig-param">reps=1</em>, <em class="sig-param">seed=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">save_to=None</em>, <em class="sig-param">**param_generator</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.simulate_counts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate a k-seq count data given kinetic and count model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pool_size</strong> (<em>int</em>) – number of unique sequences</p></li>
+<li><p><strong>c_list</strong> (<em>list</em>) – a list of substrate concentrations for each sample, negative number means initial pool</p></li>
+<li><p><strong>N_list</strong> (<em>list</em>) – a list of total reads in for each sample</p></li>
+<li><p><strong>p0</strong> (<em>list</em><em>, </em><em>generator</em><em>, or </em><em>callable returns generator</em>) – composition of initial pool</p></li>
+<li><p><strong>kinetic_model</strong> (<em>callable</em><em> or </em><a class="reference internal" href="k_seq.model.html#k_seq.model.ModelBase" title="k_seq.model.ModelBase"><em>ModelBase</em></a>) – </p></li>
+<li><p><strong>count_model</strong> (<em>callable</em><em> or </em><a class="reference internal" href="k_seq.model.html#k_seq.model.ModelBase" title="k_seq.model.ModelBase"><em>ModelBase</em></a>) – Default, MultiNomial model. Should return (total_dna, counts)</p></li>
+<li><p><strong>dna_amount_error</strong> (<em>float</em><em> or </em><em>callable</em>) – a fixed Gaussian error with std. dev. as the float
+or any error function on the DNA amount</p></li>
+<li><p><strong>sample_from_table</strong> (<em>pd.DataFrame</em>) – optional to sample sequences from given table</p></li>
+<li><p><strong>weights</strong> (<em>list</em><em> or </em><em>str</em>) – weights/col of weight for sampling from table</p></li>
+<li><p><strong>replace</strong> (<em>bool</em>) – if sample with replacement</p></li>
+<li><p><strong>reps</strong> (<em>int</em>) – number of replicates for each c, N</p></li>
+<li><p><strong>seed</strong> (<em>int</em>) – global random seed to use</p></li>
+<li><p><strong>save_to</strong> (<em>path</em>) – path to the folder to save simulated results</p></li>
+<li><p><strong>**param_generator</strong> – keyword arguments of list, generator or callable returns generator to draw parameters</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>c, n value for samples
+y (pd.DataFrame): sequence counts for sequence samples
+param_table (pd.DataFrame): table list the parameters of simulated pool
+seq_table (data.SeqTable): a SeqTable object stores all the data</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>X (pd.DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.simu.simulate_from_distribution">
+<code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">simulate_from_distribution</code><span class="sig-paren">(</span><em class="sig-param">seq_num</em>, <em class="sig-param">depth</em>, <em class="sig-param">p0_loc</em>, <em class="sig-param">p0_scale</em>, <em class="sig-param">k_95</em>, <em class="sig-param">dna_amount_error</em>, <em class="sig-param">save_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.simulate_from_distribution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preset simulation of pool dataset from random variables
+TODO: add description</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.simu.simulate_from_sample">
+<code class="sig-prename descclassname">k_seq.data.simu.</code><code class="sig-name descname">simulate_from_sample</code><span class="sig-paren">(</span><em class="sig-param">sample_table</em>, <em class="sig-param">seq_num</em>, <em class="sig-param">depth=40</em>, <em class="sig-param">dna_amount_error=None</em>, <em class="sig-param">save_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.simu.simulate_from_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.transform">
+<span id="k-seq-data-transform-module"></span><h3>k_seq.data.transform module<a class="headerlink" href="#module-k_seq.data.transform" title="Permalink to this headline">¶</a></h3>
+<dl class="simple">
+<dt>Module contains the classes to transform tables (<cite>pd.DataFrame</cite> or <cite>SeqTable</cite>) instance as well as related calculation</dt><dd><p>and visualizations</p>
+</dd>
+<dt>Current available transformers:</dt><dd><ul class="simple">
+<li><p>SpikeInNormalizer: normalize by spike-in</p></li>
+<li><p>DnaAmountNormalizer: normalize by total dna amount</p></li>
+<li><p>ReactedFractionNormalizer: transform to relative abundance</p></li>
+<li><p>BYOSelectedPoolNormalizerByAbe: curated quantification factor used by Abe</p></li>
+</ul>
+</dd>
+</dl>
+<p>todo: method signature overriding - not a problem here but any better way to code it</p>
+<dl class="class">
+<dt id="k_seq.data.transform.BYOSelectedCuratedNormalizerByAbe">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.transform.</code><code class="sig-name descname">BYOSelectedCuratedNormalizerByAbe</code><span class="sig-paren">(</span><em class="sig-param">q_factor=None</em>, <em class="sig-param">target=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.BYOSelectedCuratedNormalizerByAbe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.transform.Transformer" title="k_seq.data.transform.Transformer"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.transform.Transformer</span></code></a></p>
+<p>This normalizer contains the quantification factor used by Abe</p>
+<dl class="method">
+<dt id="k_seq.data.transform.BYOSelectedCuratedNormalizerByAbe.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">q_factor=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.BYOSelectedCuratedNormalizerByAbe.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalize counts using Abe’s curated quantification factor
+:param target: this should be the original count table from BYO-selected k-seq exp.
+:type target: pd.DataFrame
+:param q_factor: table contains first col as q-factor with sample as index</p>
+<blockquote>
+<div><p>or path to stored csv file</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A normalized table of absolute amount of sequences in each sample</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.transform.DnaAmountNormalizer">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.transform.</code><code class="sig-name descname">DnaAmountNormalizer</code><span class="sig-paren">(</span><em class="sig-param">dna_amount</em>, <em class="sig-param">target=None</em>, <em class="sig-param">unit=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.DnaAmountNormalizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.transform.Transformer" title="k_seq.data.transform.Transformer"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.transform.Transformer</span></code></a></p>
+<p>Normalize the DNA amount by total DNA amount in each sample</p>
+<dl class="method">
+<dt id="k_seq.data.transform.DnaAmountNormalizer.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">dna_amount=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.DnaAmountNormalizer.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform counts to absolute amount based on given total DNA amount</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> (<em>pd.DataFrame</em>) – contains counts of sequences in samples</p></li>
+<li><p><strong>dna_amount</strong> (<em>dict</em>) – <p>a dictionary {sample_name: total_dna_amount}</p>
+<p>exclude_spike_in (bool): if exclude spike-in sequences in total amount
+spike_in_members (list of str): list of spike_in sequences</p>
+</p></li>
+<li><p><strong>Returns</strong> – a dict: {sample_name: norm_factor}
+where sequence amount = sequence counts * norm_factor</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.transform.ReactedFractionNormalizer">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.transform.</code><code class="sig-name descname">ReactedFractionNormalizer</code><span class="sig-paren">(</span><em class="sig-param">input_samples</em>, <em class="sig-param">target=None</em>, <em class="sig-param">reduce_method='median'</em>, <em class="sig-param">remove_zero=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.ReactedFractionNormalizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.transform.Transformer" title="k_seq.data.transform.Transformer"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.transform.Transformer</span></code></a></p>
+<p>Get reacted fraction of each sequence from an absolute amount table</p>
+<dl class="method">
+<dt id="k_seq.data.transform.ReactedFractionNormalizer.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">input_samples=None</em>, <em class="sig-param">reduce_method=None</em>, <em class="sig-param">remove_zero=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.ReactedFractionNormalizer.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert absolute amount to reacted fraction
+:param target: the table with absolute amount to normalize on inputs, including input pools
+:type target: pd.DataFrame
+:param input_samples: list of indices of input pools
+:type input_samples: list of str
+:param reduce_method: ‘mean’ or ‘median’ or a callable apply on a pd.DataFrame to list-like
+:type reduce_method: str or callable
+:param remove_zero: if will remove all-zero seqs from output table
+:type remove_zero: bool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.transform.SpikeInNormalizer">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.transform.</code><code class="sig-name descname">SpikeInNormalizer</code><span class="sig-paren">(</span><em class="sig-param">spike_in_seq</em>, <em class="sig-param">spike_in_amount</em>, <em class="sig-param">base_table</em>, <em class="sig-param">radius=None</em>, <em class="sig-param">unit='ng'</em>, <em class="sig-param">blacklist=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.SpikeInNormalizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#k_seq.data.transform.Transformer" title="k_seq.data.transform.Transformer"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.data.transform.Transformer</span></code></a></p>
+<p>Normalizer using spike-in information
+todo: add attributes of spike-in</p>
+<dl class="method">
+<dt id="k_seq.data.transform.SpikeInNormalizer.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">norm_factor=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.SpikeInNormalizer.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the transformation, with class attributes or arguments
+Logic and preprocessing of data and arguments should be done here</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.transform.SpikeInNormalizer.radius">
+<em class="property">property </em><code class="sig-name descname">radius</code><a class="headerlink" href="#k_seq.data.transform.SpikeInNormalizer.radius" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.data.transform.SpikeInNormalizer.spike_in_amount">
+<em class="property">property </em><code class="sig-name descname">spike_in_amount</code><a class="headerlink" href="#k_seq.data.transform.SpikeInNormalizer.spike_in_amount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.data.transform.Transformer">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.data.transform.</code><code class="sig-name descname">Transformer</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.Transformer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class type for transformer</p>
+<dl class="simple">
+<dt>Necessary components for a Transformer</dt><dd><ul class="simple">
+<li><p>Attributes to store parameters</p></li>
+<li><p>A target table to apply transformation</p></li>
+<li><p>A static <cite>func</cite> function to calculate transformation</p></li>
+<li><p>A <cite>apply</cite> function to wrap func</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="k_seq.data.transform.Transformer.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">target=None</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.Transformer.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the transformation, with class attributes or arguments
+Logic and preprocessing of data and arguments should be done here</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.transform.spike_in_peak_plot">
+<code class="sig-prename descclassname">k_seq.data.transform.</code><code class="sig-name descname">spike_in_peak_plot</code><span class="sig-paren">(</span><em class="sig-param">spike_in</em>, <em class="sig-param">seq_table=None</em>, <em class="sig-param">sample_list=None</em>, <em class="sig-param">max_dist=15</em>, <em class="sig-param">norm_on_center=True</em>, <em class="sig-param">log_y=True</em>, <em class="sig-param">marker_list=None</em>, <em class="sig-param">color_list=None</em>, <em class="sig-param">err_guild_lines=None</em>, <em class="sig-param">label_map=None</em>, <em class="sig-param">legend_off=False</em>, <em class="sig-param">legend_col=2</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">figsize=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.transform.spike_in_peak_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the distribution of spike_in peak
+Plot a scatter-line plot of [adjusted] number of sequences with i edit distance from center sequence (spike-in seq)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> (<cite>SeqTable</cite> or <cite>pd.DataFrame</cite>) – dataset to plot</p></li>
+<li><p><strong>sample_list</strong> (list of <cite>str</cite>) – samples to show. All samples will show if None</p></li>
+<li><p><strong>max_dist</strong> (<cite>int</cite>) – maximal edit distance to survey. Default 15</p></li>
+<li><p><strong>norm_on_center</strong> (<cite>bool</cite>) – if the counts/abundance are normalized to then center (exact spike in)</p></li>
+<li><p><strong>log_y</strong> (<cite>bool</cite>) – if set the y scale as log</p></li>
+<li><p><strong>marker_list</strong> (list of <cite>str</cite>) – overwrite default marker scheme if not <cite>None</cite>, same length and order as valid samples</p></li>
+<li><p><strong>color_list</strong> (list of <cite>str</cite>) – overwrite default color scheme if not <cite>None</cite>, same length and order as valid samples</p></li>
+<li><p><strong>label_map</strong> (<em>dict</em><em> or </em><em>callable</em>) – alternative label for samples</p></li>
+<li><p><strong>err_guild_lines</strong> (list of <cite>float</cite>) – add a series of guild lines indicate the distribution only from given error rate,
+if not <cite>None</cite></p></li>
+<li><p><strong>legend_off</strong> (<cite>bool</cite>) – do not show the legend if True</p></li>
+<li><p><strong>ax</strong> (<cite>matplotlib.Axis</cite>) – if use external ax object to plot. Create a new figure if <cite>None</cite></p></li>
+<li><p><strong>save_fig_to</strong> (<cite>str</cite>) – save the figure to file if not None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.data.visualizer">
+<span id="k-seq-data-visualizer-module"></span><h3>k_seq.data.visualizer module<a class="headerlink" href="#module-k_seq.data.visualizer" title="Permalink to this headline">¶</a></h3>
+<p>This module contains the methods used for k-seq dataset analysis</p>
+<dl class="function">
+<dt id="k_seq.data.visualizer.count_file_info_table">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">count_file_info_table</code><span class="sig-paren">(</span><em class="sig-param">sample_set</em>, <em class="sig-param">return_table=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.count_file_info_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate an overview info table for all samples in sample_set
+Print out HTML table for sequencing samples, including spike-in info if applicable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_set</strong> (<cite>SeqSampleSet</cite>) – sample set to survey</p></li>
+<li><p><strong>return_table</strong> (<cite>bool</cite>) – return a <cite>pd.DataFrame</cite> if True</p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns: a <cite>pd.DataFrame</cite> equivalence if <cite>return_table</cite> is True</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.visualizer.length_dist_plot_all">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">length_dist_plot_all</code><span class="sig-paren">(</span><em class="sig-param">sample_set</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">fig_layout=None</em>, <em class="sig-param">y_log=True</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.length_dist_plot_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper of <cite>length_dist_plot_single</cite> to plot histogram for all given samples
+:param sample_set: sample set to use
+:type sample_set: <cite>SeqSampleSet</cite>
+:param black_list: optional, exclude samples with given names if not None
+:type black_list: list of <cite>str</cite>
+:param fig_layout: optional, indicate layout of a figure. 4 figs in a row if None.
+:type fig_layout: <code class="docutils literal notranslate"><span class="pre">(nrow,</span> <span class="pre">ncol)</span></code>
+:param y_log: set y scale as log if True
+:type y_log: <cite>bool</cite>
+:param save_fig_to: optional, directory to save the figure
+:type save_fig_to: <cite>str</cite></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.visualizer.length_dist_plot_single">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">length_dist_plot_single</code><span class="sig-paren">(</span><em class="sig-param">sample</em>, <em class="sig-param">y_log=True</em>, <em class="sig-param">legend_off=False</em>, <em class="sig-param">title_off=False</em>, <em class="sig-param">labels_off=False</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.length_dist_plot_single" title="Permalink to this definition">¶</a></dt>
+<dd><p>To plot a histogram of sequence length for a single sample</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample</strong> (<cite>SeqSample</cite>) – the sample to plot</p></li>
+<li><p><strong>y_log</strong> (<cite>bool</cite>) – set y scale as log if True</p></li>
+<li><p><strong>legend_off</strong> (<cite>bool</cite>) – do not show legend if True</p></li>
+<li><p><strong>title_off</strong> (<cite>bool</cite>) – do not show title if True; use <cite>sample.name</cite> as title if False</p></li>
+<li><p><strong>labels_off</strong> (<cite>bool</cite>) – do not show x label if True</p></li>
+<li><p><strong>ax</strong> (<cite>matplotlib.Axes</cite>) – plot in a given axis if not None</p></li>
+<li><p><strong>save_fig_to</strong> (<cite>str</cite>) – if save file to a given directory</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.visualizer.rep_variability_plot">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">rep_variability_plot</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">group_by</em>, <em class="sig-param">subsample_size=1000</em>, <em class="sig-param">var_method='MAD'</em>, <em class="sig-param">percentage=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.rep_variability_plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.visualizer.sample_count_cut_off_plot_all">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">sample_count_cut_off_plot_all</code><span class="sig-paren">(</span><em class="sig-param">sample_set</em>, <em class="sig-param">black_list=None</em>, <em class="sig-param">thresholds=None</em>, <em class="sig-param">on_counts=False</em>, <em class="sig-param">include_spike_in=False</em>, <em class="sig-param">fig_layout=None</em>, <em class="sig-param">y_log=True</em>, <em class="sig-param">x_log=True</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.sample_count_cut_off_plot_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot cutoff tests on a sample set</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_set</strong> (<cite>SeqSampleSet</cite>) – sample set to work</p></li>
+<li><p><strong>black_list</strong> (list of <cite>str</cite>) – optional. List of sample names to exclude</p></li>
+<li><p><strong>thresholds</strong> (list of <cite>float</cite>) – optional. manual list of thresholds to apply</p></li>
+<li><p><strong>on_counts</strong> (<cite>bool</cite>) – cutoff is calculated on absolute counts if True, on relative abundance if False</p></li>
+<li><p><strong>include_spike_in</strong> (<cite>bool</cite>) – if remove spike in sequences before calculation</p></li>
+<li><p><strong>x_log</strong> (<cite>bool</cite>) – if set x axis as log</p></li>
+<li><p><strong>y_log</strong> (<cite>bool</cite>) – if set y axis as log</p></li>
+<li><p><strong>fig_layout</strong> ((<cite>int</cite>, <cite>int</cite>)) – a tuple of (ncol, nrow) to indicate the layout of plot</p></li>
+<li><p><strong>save_fig_to</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.visualizer.sample_count_cut_off_plot_single">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">sample_count_cut_off_plot_single</code><span class="sig-paren">(</span><em class="sig-param">sample</em>, <em class="sig-param">thresholds=None</em>, <em class="sig-param">on_counts=False</em>, <em class="sig-param">include_spike_in=False</em>, <em class="sig-param">x_log=False</em>, <em class="sig-param">y_log=True</em>, <em class="sig-param">legend_off=False</em>, <em class="sig-param">labels_off=False</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.sample_count_cut_off_plot_single" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot cutoff test on sequences on single file
+:param sample: sample to plot
+:type sample: <cite>SeqSample</cite>
+:param thresholds: optional, manual input of thresholds for cutoff
+:type thresholds: list of <cite>float</cite>
+:param on_counts: cutoff is calculated on absolute counts if True, on relative abundance if False
+:type on_counts: <cite>bool</cite>
+:param include_spike_in: if remove spike in sequences before calculation
+:type include_spike_in: <cite>bool</cite>
+:param x_log: if set x axis as log
+:type x_log: <cite>bool</cite>
+:param y_log: if set y axis as log
+:type y_log: <cite>bool</cite>
+:param legend_off:
+:param labels_off:
+:param ax:
+:param save_fig_to:</p>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.data.visualizer.seq_occurrence_plot">
+<code class="sig-prename descclassname">k_seq.data.visualizer.</code><code class="sig-name descname">seq_occurrence_plot</code><span class="sig-paren">(</span><em class="sig-param">seq_table</em>, <em class="sig-param">sample_range='reacted'</em>, <em class="sig-param">fig_save_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.data.visualizer.seq_occurrence_plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+<div class="section" id="k-seq-model">
+<h2><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code><a class="headerlink" href="#k-seq-model" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-k_seq.model.count">
+<span id="k-seq-model-count-module"></span><h3>k_seq.model.count module<a class="headerlink" href="#module-k_seq.model.count" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="k_seq.model.count.MultiNomial">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">MultiNomial</code><span class="sig-paren">(</span><em class="sig-param">y=None</em>, <em class="sig-param">p=None</em>, <em class="sig-param">N=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="k_seq.model.html#k_seq.model.ModelBase" title="k_seq.model.ModelBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.model.ModelBase</span></code></a></p>
+<p>todo: many redundant function, clean it up, estimator should be removed</p>
+<dl class="method">
+<dt id="k_seq.model.count.MultiNomial.X">
+<em class="property">property </em><code class="sig-name descname">X</code><a class="headerlink" href="#k_seq.model.count.MultiNomial.X" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.count.MultiNomial.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">y=None</em>, <em class="sig-param">p=None</em>, <em class="sig-param">N=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>MultiNomial model of pool counts
+if y is given, it is saved as data
+if p and N are given, they are used for simulation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.count.MultiNomial.func">
+<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">N</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>model function: params –&gt; prediction</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.count.MultiNomial.p">
+<em class="property">property </em><code class="sig-name descname">p</code><a class="headerlink" href="#k_seq.model.count.MultiNomial.p" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.count.MultiNomial.params">
+<em class="property">property </em><code class="sig-name descname">params</code><a class="headerlink" href="#k_seq.model.count.MultiNomial.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.count.MultiNomial.predict">
+<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">N=None</em>, <em class="sig-param">p=None</em>, <em class="sig-param">size=1</em>, <em class="sig-param">seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method as prediction model, single observation</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.count.count_nbin">
+<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">count_nbin</code><span class="sig-paren">(</span><em class="sig-param">mu</em>, <em class="sig-param">s</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.count_nbin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.count.count_pois">
+<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">count_pois</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">N</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.count_pois" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.count.zero_inflated_pois">
+<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">zero_inflated_pois</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">N</em>, <em class="sig-param">alpha</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.zero_inflated_pois" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.model.kinetic">
+<span id="k-seq-model-kinetic-module"></span><h3>k_seq.model.kinetic module<a class="headerlink" href="#module-k_seq.model.kinetic" title="Permalink to this headline">¶</a></h3>
+<p>A collection of commonly used kinetic models used in the project</p>
+<dl class="class">
+<dt id="k_seq.model.kinetic.BYOModel">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">BYOModel</code><a class="headerlink" href="#k_seq.model.kinetic.BYOModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A collection of BYO kinetic models (static functions)</p>
+<dl class="simple">
+<dt>where some values are fixed:</dt><dd><p>exp time (t): 90 min
+BYO degradation factor ($lpha$): 0.479</p>
+</dd>
+<dt>functions:</dt><dd><ul class="simple">
+<li><p>composition_first_order</p></li>
+<li></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p0</strong> – initial pool composition, needed if using actual composition</p></li>
+<li><p><strong>c</strong> – controlled variable, in our case, BYO concentration</p></li>
+<li><p><strong>k</strong> – kinetic coefficient</p></li>
+<li><p><strong>A</strong> – fraction of reactive molecules</p></li>
+<li><p><strong>bias</strong> – if include slope in the model for baseline passing rate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>concentration/composition at the target (time, concentration) point</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="k_seq.model.kinetic.BYOModel.amount_first_order">
+<em class="property">static </em><code class="sig-name descname">amount_first_order</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">p0</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.amount_first_order" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.kinetic.BYOModel.composition_first_order">
+<em class="property">static </em><code class="sig-name descname">composition_first_order</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">p0</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.composition_first_order" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.kinetic.BYOModel.composition_first_order_w_bias">
+<em class="property">static </em><code class="sig-name descname">composition_first_order_w_bias</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">p0</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em>, <em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.composition_first_order_w_bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function of pool composition w.r.t. BYO concentration (x)
+TODO: kinetics with bias is not updated yet
+if x &lt; 0, output is p0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>c</strong> – concentration</p></li>
+<li><p><strong>p0</strong> – initial pool composition</p></li>
+<li><p><strong>k</strong> – kinetic coefficient</p></li>
+<li><p><strong>A</strong> – maximal conversion ratio</p></li>
+<li><p><strong>b</strong> – slope</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.kinetic.BYOModel.reacted_frac">
+<em class="property">static </em><code class="sig-name descname">reacted_frac</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.reacted_frac" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.kinetic.check_scaler">
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">check_scaler</code><span class="sig-paren">(</span><em class="sig-param">value</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.check_scaler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if value is a scalar or is the single value in a vector/matrix/tensor</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.kinetic.first_order">
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">first_order</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em>, <em class="sig-param">alpha</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.first_order" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.kinetic.first_order_w_bias">
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">first_order_w_bias</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em>, <em class="sig-param">alpha</em>, <em class="sig-param">t</em>, <em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.first_order_w_bias" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.model.kinetic.to_scaler">
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">to_scaler</code><span class="sig-paren">(</span><em class="sig-param">value</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.to_scaler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to convert a value to scaler, if possible</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.model.pool">
+<span id="k-seq-model-pool-module"></span><h3>k_seq.model.pool module<a class="headerlink" href="#module-k_seq.model.pool" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="k_seq.model.pool.PoolModel">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.pool.</code><code class="sig-name descname">PoolModel</code><span class="sig-paren">(</span><em class="sig-param">count_model</em>, <em class="sig-param">kinetic_model=None</em>, <em class="sig-param">param_table=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="k_seq.model.html#k_seq.model.ModelBase" title="k_seq.model.ModelBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.model.ModelBase</span></code></a></p>
+<p>Model of a kinetic pool</p>
+<dl class="attribute">
+<dt id="k_seq.model.pool.PoolModel.kinetic_model">
+<code class="sig-name descname">kinetic_model</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.kinetic_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>input initial pool with parameter and return a reacted pool composition</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>callable</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.model.pool.PoolModel.count_model">
+<code class="sig-name descname">count_model</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.count_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>input pool composition and return a list of counts given total counts or params</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>callable</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.model.pool.PoolModel.kinetic_params">
+<code class="sig-name descname">kinetic_params</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.kinetic_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of parameter names for kinetic model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.model.pool.PoolModel.count_params">
+<code class="sig-name descname">count_params</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.count_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of parameter names for count model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.model.pool.PoolModel.note">
+<code class="sig-name descname">note</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.note" title="Permalink to this definition">¶</a></dt>
+<dd><p>note for the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.pool.PoolModel.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">count_model</em>, <em class="sig-param">kinetic_model=None</em>, <em class="sig-param">param_table=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a pool model with given kinetic models and count_model
+:param count_model: model for sequencing counts
+:type count_model: <cite>ModelBase</cite> or <cite>callable</cite>
+:param kinetic_model: model for pool kinetics, no react if not given
+:type kinetic_model: <cite>ModalBase</cite> or <cite>callable</cite>
+:param **params:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.pool.PoolModel.func">
+<code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw counts from given parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>reacted amount if not normalized
+counts</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>output sum from kinetic model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.model.pool.PoolModel.predict">
+<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper over func, can accept parameters to overwrite current ones if exist</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="k-seq-estimator">
+<h2><code class="docutils literal notranslate"><span class="pre">k_seq.estimator</span></code><a class="headerlink" href="#k-seq-estimator" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="k-seq-estimator-count-model-mle-cvxpy-module">
+<h3>k_seq.estimator.count_model_mle_cvxpy module<a class="headerlink" href="#k-seq-estimator-count-model-mle-cvxpy-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="k-seq-estimator-count-model-mle-tf-module">
+<h3>k_seq.estimator.count_model_mle_tf module<a class="headerlink" href="#k-seq-estimator-count-model-mle-tf-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="module-k_seq.estimator.least_square">
+<span id="k-seq-estimator-least-square-module"></span><h3>k_seq.estimator.least_square module<a class="headerlink" href="#module-k_seq.estimator.least_square" title="Permalink to this headline">¶</a></h3>
+<p>This sub-module contains the classic least-squares fitting for each sequence individually to given kinetic model,</p>
+<dl class="simple">
+<dt>Several functions are included:</dt><dd><ul class="simple">
+<li><p>point estimation using <cite>scipy.optimize.curve_fit</cite></p></li>
+<li><p>option to exclude zero in fitting</p></li>
+<li><p>option to initialize values</p></li>
+<li><p>weighted fitting depends on the customized weights</p></li>
+<li><p>confidence interval estimation using bootstrap</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="k_seq.estimator.least_square.BatchFitResults">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">BatchFitResults</code><span class="sig-paren">(</span><em class="sig-param">fitter=None</em>, <em class="sig-param">result_path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parse, store, and visualize BatchFitter results
+Only save results (detached from each fitter), corresponding fitter should be found by sequence</p>
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.BatchFitResults.fitter">
+<code class="sig-name descname">fitter</code><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.fitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the <cite>BatchFitter</cite></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.BatchFitResults.summary">
+<code class="sig-name descname">summary</code><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>summarized results with each sequence as index</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.BatchFitResults.bs_record">
+<code class="sig-name descname">bs_record</code><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.bs_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>{seq: <cite>SingleFitter.results.uncertainty.records</cite>}</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict of pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.BatchFitResults.conv_record">
+<code class="sig-name descname">conv_record</code><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.conv_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>{seq: <a href="#id19"><span class="problematic" id="id20">`</span></a>SingleFitter.results.convergence.records}</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict of pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.summary_to_csv">
+<code class="sig-name descname">summary_to_csv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.summary_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>export summary dataframe as csv file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>preferred format to save results</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.to_pickle">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>save results as pickled dictionary</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.from_pickle">
+<code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.from_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>load bootstrapping results from picked dictionary</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.from_folder">
+<code class="sig-name descname">from_folder</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.from_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>link results to a saved folder</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.from_record">
+<code class="sig-name descname">from_record</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.from_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>overall method to infer either load <cite>BatchFitResults</cite> from pickled or a folder</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">fitter=None</em>, <em class="sig-param">result_path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Init a BatchFitResults instance
+:param fitter: corresponding fitter
+:type fitter: <cite>BatchFitter</cite>
+:param result_path: optional, path to saved results
+:type result_path: str</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">bs_record</code></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">fitter</em>, <em class="sig-param">json_o_path</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load results from JSON
+TODO: parse JSON results</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><em class="sig-param">path_to_pickle</em>, <em class="sig-param">fitter=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Create a <cite>BatchFitResults</cite> instance with results loaded from pickle
+Notice:</p>
+<blockquote>
+<div><p>this will take a very long time if the pickle is large</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.get_bs_record">
+<code class="sig-name descname">get_bs_record</code><span class="sig-paren">(</span><em class="sig-param">seq=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.get_bs_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load bootstrap records for seq from files
+:param seq: a sequence or a list of sequence
+:type seq: str or a list of str</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a pd.DataFrame of bootstraprecordsif seq is str
+a dict of pd.DataFrame contains bootstrap records if seq is a list of str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitResults.parse_saved_results">
+<code class="sig-name descname">parse_saved_results</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitResults.parse_saved_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load/link data from <cite>self.result_path</cite>
+TODO: Need to set internal trigger of how to load results</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">summary_to_csv</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span></dt>
+<dd><p>Save summary table as csv file</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">output_dir</em>, <em class="sig-param">bs_record=True</em>, <em class="sig-param">sep_files=True</em><span class="sig-paren">)</span></dt>
+<dd><p>Serialize results as json format
+:param output_dir: path to save results, should be the parent of target location
+:type output_dir: str
+:param bs_record: if output bs_record as well
+:type bs_record: bool
+:param sep_files:</p>
+<blockquote>
+<div><dl>
+<dt>if save bs_records as separate files</dt><dd><dl>
+<dt>If True:</dt><dd><dl>
+<dt><a href="#id21"><span class="problematic" id="id22">|</span></a>path/results/</dt><dd><p><a href="#id23"><span class="problematic" id="id24">|</span></a>- summary.json
+<a href="#id25"><span class="problematic" id="id26">|</span></a>- seqs</p>
+<blockquote>
+<div><p><a href="#id27"><span class="problematic" id="id28">|</span></a>- seq1.json
+<a href="#id29"><span class="problematic" id="id30">|</span></a>- seq2.json</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>if False:</dt><dd><p>save to path/results.json contains
+{</p>
+<blockquote>
+<div><blockquote>
+<div><p>summary: pd.DataFrame.json
+bs_records: {</p>
+<blockquote>
+<div><p>seq1 (pd.DataFrame.json)
+seq2 (pd.DataFrame.json)
+…</p>
+</div></blockquote>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><em class="sig-param">output_dir</em>, <em class="sig-param">bs_record=True</em>, <em class="sig-param">sep_files=True</em><span class="sig-paren">)</span></dt>
+<dd><p>Save fitting results as a pickled dict, notice: <cite>to_json</cite> is preferred
+:param output_dir: path to saved results, should be the parent of target location
+:type output_dir: str
+:param bs_record: if output bs_record as well
+:type bs_record: bool
+:param sep_files:</p>
+<blockquote>
+<div><dl>
+<dt>if save bs_records as separate files</dt><dd><dl>
+<dt>If True:</dt><dd><dl>
+<dt><a href="#id31"><span class="problematic" id="id32">|</span></a>path/results/</dt><dd><p><a href="#id33"><span class="problematic" id="id34">|</span></a>- summary.pkl
+<a href="#id35"><span class="problematic" id="id36">|</span></a>- seqs</p>
+<blockquote>
+<div><p><a href="#id37"><span class="problematic" id="id38">|</span></a>- seq1.pkl
+<a href="#id39"><span class="problematic" id="id40">|</span></a>- seq2.pkl</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>if False:</dt><dd><p>save to path/results.pkl contains
+{</p>
+<blockquote>
+<div><blockquote>
+<div><p>summary: pd.DataFrame
+bs_records: {</p>
+<blockquote>
+<div><p>seq1 (pd.DataFrame)
+seq2 (pd.DataFrame)
+…</p>
+</div></blockquote>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.estimator.least_square.BatchFitter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">BatchFitter</code><span class="sig-paren">(</span><em class="sig-param">y_data_batch</em>, <em class="sig-param">x_data</em>, <em class="sig-param">model</em>, <em class="sig-param">sigma=None</em>, <em class="sig-param">bounds=None</em>, <em class="sig-param">seq_to_fit=None</em>, <em class="sig-param">bootstrap_num=0</em>, <em class="sig-param">bs_record_num=0</em>, <em class="sig-param">bs_method='pct_res'</em>, <em class="sig-param">grouper=None</em>, <em class="sig-param">conv_reps=0</em>, <em class="sig-param">init_range=None</em>, <em class="sig-param">opt_method='trf'</em>, <em class="sig-param">exclude_zero=False</em>, <em class="sig-param">init_guess=None</em>, <em class="sig-param">metrics=None</em>, <em class="sig-param">rnd_seed=None</em>, <em class="sig-param">curve_fit_kwargs=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">result_path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="k_seq.estimator.html#k_seq.estimator.EstimatorType" title="k_seq.estimator.EstimatorType"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.estimator.EstimatorType</span></code></a></p>
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitter.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param">deduplicate=False</em>, <em class="sig-param">parallel_cores=1</em>, <em class="sig-param">point_estimate=True</em>, <em class="sig-param">bootstrap=False</em>, <em class="sig-param">convergence_test=False</em>, <em class="sig-param">stream_to_disk=None</em>, <em class="sig-param">overwrite=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the estimation
+:param deduplicate: hash the y_data_batch to deduplicate before fitting if True
+:type deduplicate: bool
+:param parallel_cores: number of parallel cores to use. Default 1
+:type parallel_cores: int
+:param point_estimate: if do point estimation, default True
+:type point_estimate: bool
+:param bootstrap: if do bootstrap uncertainty estimation, default False
+:type bootstrap: bool
+:param convergence_test: if do convergence test, default False
+:type convergence_test: bool
+:param stream_to_disk: Directly stream fitting results to disk if output path is given</p>
+<blockquote>
+<div><p>will create a folder with name of seq/hash with pickled dict of fitting results</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>overwrite</strong> (<em>bool</em>) – if overwrite existing results when stream to disk. Default False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitter.load_model">
+<em class="property">classmethod </em><code class="sig-name descname">load_model</code><span class="sig-paren">(</span><em class="sig-param">model_path</em>, <em class="sig-param">y_data_batch=None</em>, <em class="sig-param">sigma=None</em>, <em class="sig-param">result_path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter.load_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a model from pickled config file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_path</strong> (<em>str</em>) – path to picked model configuration file or the saved folder</p></li>
+<li><p><strong>y_data_batch</strong> (<em>pd.DataFrame</em><em> or </em><em>str</em>) – y_data table for fitting</p></li>
+<li><p><strong>sigma</strong> (<em>pd.DataFrame</em><em> or </em><em>str</em>) – optional sigma table for fitting</p></li>
+<li><p><strong>result_path</strong> (<em>str</em>) – path to fitting results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a BatchFitter instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitter.save_model">
+<code class="sig-name descname">save_model</code><span class="sig-paren">(</span><em class="sig-param">output_dir</em>, <em class="sig-param">results=True</em>, <em class="sig-param">bs_results=True</em>, <em class="sig-param">sep_files=True</em>, <em class="sig-param">tables=True</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter.save_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save model to a given directory
+model_config will be saved as a pickled dictionary to recover the model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>except for <cite>y_data_batch</cite> and <cite>sigma</cite> which are too large</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>str</em>) – path to save the model, create if the path does not exist</p></li>
+<li><p><strong>results</strong> (<em>bool</em>) – if save estimation results to <cite>results</cite> as well, to be load by <cite>BatchFitResults</cite>,
+Default True</p></li>
+<li><p><strong>bs_results</strong> (<em>bool</em>) – if save bootstrap results</p></li>
+<li><p><strong>sep_files</strong> (<em>bool</em>) – if save the record of bootstrap as separate files in a subfolder <cite>results/seqs/</cite>
+Default True</p></li>
+<li><p><strong>tables</strong> (<em>bool</em>) – if save tables (y_data_batch, sigma) in the folder. Default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitter.save_results">
+<code class="sig-name descname">save_results</code><span class="sig-paren">(</span><em class="sig-param">result_path</em>, <em class="sig-param">bs_results=True</em>, <em class="sig-param">sep_files=True</em>, <em class="sig-param">use_pickle=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter.save_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save results to disk as JSON or pickle
+JSON is preferred for speed, readability, compatibility, and security</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitter.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><em class="sig-param">save_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter.summary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.BatchFitter.worker_generator">
+<code class="sig-name descname">worker_generator</code><span class="sig-paren">(</span><em class="sig-param">stream_to_disk=None</em>, <em class="sig-param">overwrite=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.BatchFitter.worker_generator" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.estimator.least_square.Bootstrap">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">Bootstrap</code><span class="sig-paren">(</span><em class="sig-param">fitter</em>, <em class="sig-param">bootstrap_num</em>, <em class="sig-param">bs_record_num</em>, <em class="sig-param">bs_method</em>, <em class="sig-param">grouper=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.Bootstrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="k_seq.estimator.least_square.Bootstrap.bs_method">
+<em class="property">property </em><code class="sig-name descname">bs_method</code><a class="headerlink" href="#k_seq.estimator.least_square.Bootstrap.bs_method" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.Bootstrap.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.Bootstrap.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform bootstrap with arguments indicated in instance attributes
+Returns</p>
+<blockquote>
+<div><p>summary, results</p>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.estimator.least_square.ConvergenceTester">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">ConvergenceTester</code><span class="sig-paren">(</span><em class="sig-param">fitter</em>, <em class="sig-param">reps=10</em>, <em class="sig-param">init_range=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.ConvergenceTester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Apply repeated fitting on <cite>SingleFitter</cite> with perturbed initial value for empirical convergence test
+Store the convergence test results as these are separate tests from estimation</p>
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.ConvergenceTester.reps">
+<code class="sig-name descname">reps</code><a class="headerlink" href="#k_seq.estimator.least_square.ConvergenceTester.reps" title="Permalink to this definition">¶</a></dt>
+<dd><p>number of repeated fittings conducted</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.ConvergenceTester.fitter">
+<code class="sig-name descname">fitter</code><a class="headerlink" href="#k_seq.estimator.least_square.ConvergenceTester.fitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the associated Fitter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.estimator.html#k_seq.estimator.least_square.SingleFitter" title="k_seq.estimator.least_square.SingleFitter">SingleFitter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.ConvergenceTester.init_range">
+<code class="sig-name descname">init_range</code><a class="headerlink" href="#k_seq.estimator.least_square.ConvergenceTester.init_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>a list of two tuple range (min, max) with same length as model parameters.
+All parameters are initialized from (0, 1) with random uniform draw</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of 2-tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.ConvergenceTester.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.ConvergenceTester.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>run converge test and return a summary and full records</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.ConvergenceTester.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">fitter</em>, <em class="sig-param">reps=10</em>, <em class="sig-param">init_range=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.ConvergenceTester.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply convergence test to given fitter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fitter</strong> (<a class="reference internal" href="k_seq.estimator.html#k_seq.estimator.least_square.SingleFitter" title="k_seq.estimator.least_square.SingleFitter"><em>SingleFitter</em></a>) – the target single fitter</p></li>
+<li><p><strong>reps</strong> (<em>int</em>) – number of repeated fitting, default 10</p></li>
+<li><p><strong>init_range</strong> (<em>list of 2-tuple</em>) – a list of two tuple range (min, max) with same length as model parameters.
+All parameters are initialized from (0, 1) with random uniform draw</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Run convergence test, report a summary and full records</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>param</strong> (<em>list</em>) – list of parameter/metric estimated to report. e.g. [‘A’, ‘kA’].
+All values are reported if None</p></li>
+<li><p><strong>show_sd</strong> (<em>bool</em>) – if report the standard deviation for reported params</p></li>
+<li><p><strong>show_range</strong> (<em>bool</em>) – if report the range (max - min) for reported params</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A pd.Series contains the <cite>mean</cite>, <cite>sd</cite>, <cite>range</cite> for each reported parameter
+records: A pd.Dataframe contains the all records</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.estimator.least_square.FitResults">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">FitResults</code><span class="sig-paren">(</span><em class="sig-param">fitter</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.FitResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class to store, process, and visualize fitting results for single fitter</p>
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.FitResults.fitter">
+<code class="sig-name descname">fitter</code><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.fitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the fitter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.estimator.html#k_seq.estimator.EstimatorType" title="k_seq.estimator.EstimatorType">EstimatorType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.FitResults.point_estimation">
+<code class="sig-name descname">point_estimation</code><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.point_estimation" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores point estimation results, includes
+params (pd.Series): stores the parameter estimation, with extra metrics calculation
+pcov (pd.DataFrame): covariance matrix for estimated parameter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.FitResults.uncertainty">
+<code class="sig-name descname">uncertainty</code><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.uncertainty" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores uncertainty estimation results, includes
+summary (pd.Series): summary for record
+records (pd.DataFrame): records for stored bootstrapping results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="k_seq.estimator.least_square.FitResults.convergence">
+<code class="sig-name descname">convergence</code><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.convergence" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores convergence test results, includes
+summary (pd.Series): summary for records
+records (pd.DataFrame): records for repeated fitting results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.FitResults.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">fitter</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fitter</strong> (<a class="reference internal" href="k_seq.estimator.html#k_seq.estimator.EstimatorType" title="k_seq.estimator.EstimatorType"><em>EstimatorType</em></a>) – fitter used to generate this fitting result</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.FitResults.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">json_path</em>, <em class="sig-param">fitter=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>load fitting results from json records
+Note: no fitter info if fitter is None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.FitResults.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert results into a json string/file contains
+{</p>
+<blockquote>
+<div><dl class="simple">
+<dt>point_estimation: { params: jsonfy(pd.Series)</dt><dd><p>pcov: jsonfy(pd.DataFrame) }</p>
+</dd>
+<dt>uncertainty: { summary: jsonfy(pd.DataFrame)</dt><dd><p>records: jsonfy(pd.DataFrame) }</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>}</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.FitResults.to_series">
+<code class="sig-name descname">to_series</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.FitResults.to_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert point_estimation, uncertainty (if possible), and convergence (if possible) to a series include
+flattened info:
+e.g. columns will include [param1, param2, param1_mean, param1_std, param1_2.5%, …, param1_range]</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="k_seq.estimator.least_square.SingleFitter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">SingleFitter</code><span class="sig-paren">(</span><em class="sig-param">x_data</em>, <em class="sig-param">y_data</em>, <em class="sig-param">model</em>, <em class="sig-param">name=None</em>, <em class="sig-param">parameters=None</em>, <em class="sig-param">sigma=None</em>, <em class="sig-param">bounds=None</em>, <em class="sig-param">init_guess=None</em>, <em class="sig-param">opt_method='trf'</em>, <em class="sig-param">exclude_zero=False</em>, <em class="sig-param">metrics=None</em>, <em class="sig-param">rnd_seed=None</em>, <em class="sig-param">grouper=None</em>, <em class="sig-param">bootstrap_num=0</em>, <em class="sig-param">bs_record_num=0</em>, <em class="sig-param">bs_method='pct_res'</em>, <em class="sig-param">curve_fit_kwargs=None</em>, <em class="sig-param">conv_reps=0</em>, <em class="sig-param">init_range=None</em>, <em class="sig-param">save_to=None</em>, <em class="sig-param">overwrite=False</em>, <em class="sig-param">silent=False</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="k_seq.estimator.html#k_seq.estimator.EstimatorType" title="k_seq.estimator.EstimatorType"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.estimator.EstimatorType</span></code></a></p>
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.convergence_test">
+<code class="sig-name descname">convergence_test</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.convergence_test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Empirically estimate convergence by repeated fittings,
+Wrapper over <cite>ConvergenceTester</cite>
+:keyword reps: number of repeated fitting to conduct, default 10
+:kwtype reps: int
+:keyword init_range: range of parameters to initialize fitting, default (0, 1)
+:kwtype init_range: list of 2-tuples
+:keyword param: list of parameter to report. Report all parameter if None
+:kwtype param: list of string
+:keyword show_sd: if report standard deviation for parameters in summary
+:kwtype show_sd: bool
+:keyword show_range: if report range for parameters in summary
+:kwtype show_range: bool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>summary, results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param">point_estimate=True</em>, <em class="sig-param">bootstrap=False</em>, <em class="sig-param">convergence_test=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run fitting, configuration are from the object
+:param point_estimate: if do point estimation, default True
+:type point_estimate: bool
+:param bootstrap: if do bootstrap, default False
+:type bootstrap: bool
+:param convergence_test: if do convergence test, default False
+:type convergence_test: bool</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">file_path</em>, <em class="sig-param">model</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a fitter from saved json file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<em>str</em>) – path to saved json file</p></li>
+<li><p><strong>model</strong> (<em>callable</em>) – as callable is not json-able, need to reassign</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.point_estimate">
+<code class="sig-name descname">point_estimate</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.point_estimate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.run_bootstrap">
+<code class="sig-name descname">run_bootstrap</code><span class="sig-paren">(</span><em class="sig-param">bs_record_num=-1</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.run_bootstrap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a pd.series as fitting summary with flatten info</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.to_dict">
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save fitter configuration as a dictionary</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dict of configurations for the Fitter</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="k_seq.estimator.least_square.SingleFitter.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">save_to_file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.SingleFitter.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the fitter configuration as a json file, except for model as model object is usually not json-able</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.estimator.least_square.load_estimation_results">
+<code class="sig-prename descclassname">k_seq.estimator.least_square.</code><code class="sig-name descname">load_estimation_results</code><span class="sig-paren">(</span><em class="sig-param">count_table=None</em>, <em class="sig-param">table_name=None</em>, <em class="sig-param">input_samples=None</em>, <em class="sig-param">point_est_csv=None</em>, <em class="sig-param">seqtable_path=None</em>, <em class="sig-param">bootstrap_csv=None</em>, <em class="sig-param">convergence_csv=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.least_square.load_estimation_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collect estimation results (summary.csv files)and compose a table
+As</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq_table</strong> (<em>str</em>) – path to pickled <cite>SeqTable</cite> or <cite>pd.DataFrame</cite> object,
+will import ‘input_counts’/, ‘mean_counts’</p></li>
+<li><p><strong>point_est_csv</strong> (<em>str</em>) – optional, path to reported csv file from point estimation</p></li>
+<li><p><strong>seqtable_path</strong> (<em>str</em>) – optional. path to original seqTable object for count info</p></li>
+<li><p><strong>bootstrap_csv</strong> (<em>str</em>) – optional. path to csv file from bootstrap</p></li>
+<li><p><strong>kwargs</strong> – optional keyword argument of callable to calculate extra columns, apply on results dataframe row-wise</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a pd.DataFrame contains composed results from provided information</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.estimator.models">
+<span id="k-seq-estimator-models-module"></span><h3>k_seq.estimator.models module<a class="headerlink" href="#module-k_seq.estimator.models" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt id="k_seq.estimator.models.byo_model">
+<code class="sig-prename descclassname">k_seq.estimator.models.</code><code class="sig-name descname">byo_model</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">A</em>, <em class="sig-param">k</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.models.byo_model" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Default kinetic model used in BYO k-seq estimator:</dt><dd><p>A * (1 - np.exp(- 0.479 * 90 * k * x))</p>
+</dd>
+</dl>
+<ul class="simple">
+<li><p>90: t, reaction time (min)</p></li>
+<li><p>0.479: alpha, degradation adjustment parameter for BYO in 90 min</p></li>
+<li><p>k: kinetic coefficient</p></li>
+<li><p>A: maximal conversion the self-aminoacylation ribozyme</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<cite>float</cite>) – predictor, concentration of BYO for each sample, needs have unit mol</p></li>
+<li><p><strong>A</strong> (<cite>float</cite>) – </p></li>
+<li><p><strong>k</strong> (<cite>float</cite>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>reacted fraction given the predictor x and parameter (A, k)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.estimator.visualizer">
+<span id="k-seq-estimator-visualizer-module"></span><h3>k_seq.estimator.visualizer module<a class="headerlink" href="#module-k_seq.estimator.visualizer" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt id="k_seq.estimator.visualizer.bootstrap_params_dist_plot">
+<code class="sig-prename descclassname">k_seq.estimator.visualizer.</code><code class="sig-name descname">bootstrap_params_dist_plot</code><span class="sig-paren">(</span><em class="sig-param">fitting_res, model=None, seq_ix=None, params_to_plot=['k', 'A'], subsample_num=500, seq_name=None, save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.visualizer.bootstrap_params_dist_plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.estimator.visualizer.fitting_curve_plot">
+<code class="sig-prename descclassname">k_seq.estimator.visualizer.</code><code class="sig-name descname">fitting_curve_plot</code><span class="sig-paren">(</span><em class="sig-param">fitting_res</em>, <em class="sig-param">model=None</em>, <em class="sig-param">seq_ix=None</em>, <em class="sig-param">show_data=True</em>, <em class="sig-param">show_bootstrap_curves=50</em>, <em class="sig-param">legend_off=False</em>, <em class="sig-param">axis_labels=('x_label'</em>, <em class="sig-param">'y_label')</em>, <em class="sig-param">seq_name=None</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">save_fig_to=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.visualizer.fitting_curve_plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="k_seq.estimator.visualizer.param_value_plot">
+<code class="sig-prename descclassname">k_seq.estimator.visualizer.</code><code class="sig-name descname">param_value_plot</code><span class="sig-paren">(</span><em class="sig-param">fitting_res</em>, <em class="sig-param">param</em>, <em class="sig-param">seq_to_show=None</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">line_postfix=''</em>, <em class="sig-param">line_color='#2C73B4'</em>, <em class="sig-param">line_marker=''</em>, <em class="sig-param">show_shade=True</em>, <em class="sig-param">upper_postfix='_97.5%'</em>, <em class="sig-param">lower_postfix='_2.5%'</em>, <em class="sig-param">shade_color='#2C73B4'</em>, <em class="sig-param">shade_alpha=0.3</em>, <em class="sig-param">sort_by=None</em>, <em class="sig-param">y_log=False</em>, <em class="sig-param">save_fig_to=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.visualizer.param_value_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot of given estimated parameter values across selected sequences</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="k_seq.estimator.visualizer.parse_fitting_results">
+<code class="sig-prename descclassname">k_seq.estimator.visualizer.</code><code class="sig-name descname">parse_fitting_results</code><span class="sig-paren">(</span><em class="sig-param">fitting_res</em>, <em class="sig-param">model=None</em>, <em class="sig-param">seq_ix=None</em>, <em class="sig-param">seq_name=None</em>, <em class="sig-param">num_bootstrap_records=0</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimator.visualizer.parse_fitting_results" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Yuning Shen
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

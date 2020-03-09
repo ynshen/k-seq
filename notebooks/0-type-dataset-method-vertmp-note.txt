@@ -1,6 +1,0 @@
-This contains the naming convention for this notebooks
-For possible future compatibility (google web search), please don't use underscore (_), only hyphen (-)
-All letter should be non-capitalized
-We sacrifice readablility and use camelcase for words, no camelCase, Camelcase, or CamelCase
-
-**yeah hyphen is not allowed in python module naming, so, every file type is different

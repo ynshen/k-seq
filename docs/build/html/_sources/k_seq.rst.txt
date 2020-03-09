@@ -1,0 +1,15 @@
+*****************
+``k_seq`` Modules
+*****************
+
+.. toctree::
+   :hidden:
+   k_seq.data
+   k_seq.model
+   k_seq.estimator
+   k_seq.utility
+
+==============
+
+Modules
+============

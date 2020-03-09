@@ -23,8 +23,7 @@ Step 2: run installation code
 > sh ./install.sh
 ```
 
-There might be a prop to uninstall the old `k-seq` package.
-
+There might be a prop to uninstall the old `k-seq` package, if installed.
 
 #### To varify the installation of package
 ```bash

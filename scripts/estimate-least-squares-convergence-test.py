@@ -23,7 +23,7 @@ def get_args():
                              'flag, and there are 4 replicates for each concentration to balance number of data points')
     parser.add_argument('--uniq_seq_num', dest='uniq_seq_num', type=int, default=int(1e4),
                         help='Number of random sequences ')
-    parser.add_argument('--reps', dest='reps', type=int, default=20,
+    parser.add_argument('--conv_reps', dest='conv_reps', type=int, default=20,
                         help='Number of repeated fitting performed for convergence test')
     parser.add_argument('--cores', dest='core', type=int, default=1,
                         help='Number of parallel processes to use')
@@ -60,10 +60,10 @@ def kA(params):
 
 def convergence_test(seq, c, reps=20):
     """seq: a row of reacted frac table"""
-    from k_seq.estimator import least_square
+    from k_seq.estimator import least_squares
     from k_seq.model.kinetic import BYOModel
 
-    fitter = least_square.SingleFitter(
+    fitter = least_squares.SingleFitter(
         x_data=c, y_data=seq,
         model=BYOModel.reacted_frac, name=seq.name,
         sigma=None, bounds=[[0, 0], [np.inf, 1]], init_guess=None,

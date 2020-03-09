@@ -1,7 +1,4 @@
 """Test code for function tools"""
-from yuning_util.dev_mode import DevMode
-dev_mode = DevMode('k-seq')
-dev_mode.on()
 
 import pandas as pd
 import numpy as np
@@ -20,4 +17,3 @@ def test_check_sparse_works():
     assert func_tools.is_sparse(df_sparse)
     df_dense = pd.DataFrame({"A": val, "B": val})
     assert ~func_tools.is_sparse(df_dense)
-

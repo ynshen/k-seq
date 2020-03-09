@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from ..utility.func_tools import AttrScope, FuncToMethod
 from ..utility.file_tools import _name_template_example
-from ..utility.log import logging, Logger
+from yutility import logging
 from .transform import _spike_in_doc, _total_dna_doc
 from doc_helper import DocHelper
 
@@ -25,7 +25,7 @@ _doc = DocHelper(
     data=('pd.DataFrame or np.ndarray', '2-D data with indices as sequences and columns as samples. '
                                         'If data is pd.DataFrame, values in index and column will be used as '
                                         'sequences and samples; if data is a 2-D np.ndarray, `sample_list` and '
-                                        '`seq_list` are needed with same length and order as data'),
+                                        '`seq_to_fit` are needed with same length and order as data'),
     sample_list=('list-like', 'list of samples in the sample, should match the columns in the table data'),
     seq_list=('list-like', 'list of seqs in the sample, should match the rows in the table data'),
     data_unit=('str', 'The unit of table values, e.g. counts, ng, M. Default counts.'),
@@ -53,7 +53,7 @@ class SeqTable(pd.DataFrame):
 
     @_doc.compose("""Initialize SeqTable instance
     Args:
-    <<data, sample_list, seq_list, unit, note, use_sparse>>
+    <<data, sample_list, seq_to_fit, unit, note, use_sparse>>
     """)
     def __init__(self, data, sample_list=None, seq_list=None, unit='count', note=None, use_sparse=True, **kwargs):
 
@@ -69,15 +69,15 @@ class SeqTable(pd.DataFrame):
             super().__init__(data.values, index=data.index, columns=data.columns, dtype=dtype, **kwargs)
         elif isinstance(data, (np.ndarray, list)):
             if (sample_list is None) or (seq_list is None):
-                logging.error("Please provide sample_list and seq_list if data is np.ndarray", error_type=ValueError)
+                logging.error("Please provide sample_list and seq_to_fit if data is np.ndarray", error_type=ValueError)
             super().__init__(data, index=seq_list, columns=sample_list, dtype=dtype, **kwargs)
         else:
             super().__init__(data, **kwargs)
         self.unit = unit
         self.note = note
         self.is_sparse = use_sparse
-        self.vis = FuncToMethod([seq_overview, sample_overview],
-                                obj=self)
+        self.analysis = FuncToMethod([seq_overview, sample_overview],
+                                     obj=self)
 
     @property
     def _constructor_expanddim(self):
@@ -230,7 +230,7 @@ Attributes:
         note (str): note for the dataset
         other dataset metadata objects could be added
     
-    vis (AttrScope): accessor to some pre-built visualizations
+    analysis (AttrScope): accessor to some pre-built analyses
 
 Plugins:
     grouper (GrouperCollection): collection of ``Grouper`` to slice subtables
@@ -239,7 +239,6 @@ Plugins:
 
 Methods:
     TODO: add methods
-
 
 
 """)
@@ -256,7 +255,7 @@ class SeqData(object):
     @_doc.compose("""Initialize a `SeqData` object
 
     Args:
-    <<data, data_unit, sample_list, seq_list, data_note, use_sparse, seq_metadata, grouper, x_values, x_unit, note, dataset_metadata>>
+    <<data, data_unit, sample_list, seq_to_fit, data_note, use_sparse, seq_metadata, grouper, x_values, x_unit, note, dataset_metadata>>
     grouper (dict of list, or dict of dict of list): optional. dict of list (Type 1) of dict of list (Type 2) to 
         create grouper plugin
     """)
@@ -323,6 +322,20 @@ class SeqData(object):
     def seqs(self, seqs):
         logging.error("seqs is inferred from original table and should not be changed",
                       error_type=PermissionError)
+
+    def add_grouper(self, **kwargs):
+        """Add an accessor of GrouperCollection of SeqData if not yet. Add Groupers to the accessor
+        Initialize a Grouper instance with keyword arguments with a dictionary of:
+            group (list or dict): list creates a Type 0 Grouper (single group) and dict creates a Type 1 Grouper
+                (multiple groups)
+            target (pd.DataFrame): optional, target table
+            axis (0 or 1): axis to apply the grouper
+        """
+        if hasattr(self, 'grouper'):
+            self.grouper.add(**kwargs)
+        else:
+            from .grouper import GrouperCollection
+            setattr(self, 'grouper', GrouperCollection(**kwargs))
 
     @_spike_in_doc.compose("""Add SpikeInNormalizer to quantify seq amount using spike-in sequence as accessor 
     ``spike_in`` to the instance
@@ -475,7 +488,7 @@ class SeqData(object):
 #     #         random_init=random_init,
 #     #         metrics=metrics
 #     #     )
-#     #     self.logger.info('BatchFitting fitter added')
+#     #     self.logger.info('BatchFitting estimator added')
 #     #
 
 

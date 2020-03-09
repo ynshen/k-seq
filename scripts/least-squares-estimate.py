@@ -51,7 +51,7 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
     """Main function
     """
 
-    from k_seq.estimator.least_square import BatchFitter
+    from k_seq.estimator.least_squares import BatchFitter
     from k_seq.model.kinetic import BYOModel
     import numpy as np
 
@@ -76,7 +76,7 @@ def main(seq_table=None, table_name=None, fit_partial=-1, exclude_zero=False, in
     stream_to_disk = f"{output_dir}/results" if stream else None
     # TODO: add bootstrap, convergence_test control
     batch_fitter.fit(deduplicate=deduplicate, parallel_cores=core_num,
-                     stream_to_disk=stream_to_disk, overwrite=overwrite,
+                     stream_to=stream_to_disk, overwrite=overwrite,
                      bootstrap=bootstrap_num > 0, convergence_test=convergence_num > 0)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')

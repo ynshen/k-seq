@@ -116,7 +116,7 @@ After survey of the spike-in sequence, we can visualize the peak around the spik
 ```python
 import numpy as np
 
-# Manual marker/color list for each reps
+# Manual marker/color list for each conv_reps
 marker_list = np.repeat(['-o', '->', '-+', '-s'], 7)
 color_list = np.tile(['#FC820D', '#2C73B4', '#1C7725', '#B2112A', '#70C7C7', '#810080', '#AEAEAE'], reps=4).reshape([28])
 

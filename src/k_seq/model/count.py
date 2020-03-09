@@ -7,7 +7,7 @@ Notes:
 
 import numpy as np
 import pandas as pd
-from ..utility.log import logging
+from yutility import logging
 from ..utility.func_tools import is_numeric
 
 

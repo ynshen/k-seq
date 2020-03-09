@@ -1,5 +1,5 @@
 def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-    from .least_square import BatchFitter, SingleFitter
+    from .least_squares import BatchFitter, SingleFitter
     from ..data.seq_data import SeqData
 
     def extract_info_from_SingleFitting(single_res):
@@ -155,7 +155,7 @@ def param_value_plot(fitting_res, param, seq_to_show=None, ax=None,
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    from .least_square import BatchFitResults, BatchFitter
+    from .least_squares import BatchFitResults, BatchFitter
     from ..data.seq_data import SeqData
 
     def get_res_col():
