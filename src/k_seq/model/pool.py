@@ -53,8 +53,8 @@ class PoolModel(ModelBase):
         else:
             logging.error('model should be a ModelBase subclass or a callable', error_type=TypeError)
 
-        self.kinetic_params = get_func_params(self.kinetic_model, exclude_x=False)
-        self.count_params = get_func_params(self.count_model, exclude_x=False)
+        self.kinetic_params = get_func_params(self.kinetic_model, required_only=True)
+        self.count_params = get_func_params(self.count_model, required_only=True)
         if param_table is not None:
             params.update({col: param_table[col] for col in param_table.columns})
         self.params = params

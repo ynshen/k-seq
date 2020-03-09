@@ -3,11 +3,14 @@
 Notes:
     kinetic models were currently implemented as callable function. It might migrate to `Model` subclass for
       storing parameters, set required parameters, etc
+
+TODO: fix broadcast problem: including broadcast as argument changed the signature for the model function
 """
 
 import numpy as np
 from ..utility import DocHelper
 from yutility import logging
+from functools import partial
 
 doc_helper = DocHelper(
     c=('float or 1-D list-like', 'Concentration of substrates, return input pool if negative'),
@@ -36,16 +39,15 @@ def to_scalar(value):
     else:
         return np.array(value)
 
+@doc_helper.compose("""Base first-order kinetic model, returns reacted fraction of input seqs given parameters
+broadcast are available on A, k, c and a full return tensor will have shape (A, k, c)
+if any of these 3 parameters is scalar, the dimension is automatically squeezed while maintaining the order
+Note: for c_i < 0, returns ones as it is input pool
 
+Args:
+<<>>
+""")
 def first_order(c, k, A, alpha, t, broadcast=True):
-    f"""Base first-order kinetic model, returns reacted fraction of input seqs given parameters
-    broadcast are available on A, k, c and a full return tensor will have shape (A, k, c)
-    if any of these 3 parameters is scalar, the dimension is automatically squeezed while maintaining the order
-    Note: for c_i < 0, returns ones as it is input pool
-     
-    Args:
-    {doc_helper.get(first_order, indent=4)} 
-    """
 
     if check_scalar(c):
         c = np.array([to_scalar(c)])
@@ -112,7 +114,7 @@ class BYOModel:
     """.format(params=doc_helper.get(['p0', 'c', 'k', 'A']))
 
     @staticmethod
-    def reacted_frac(c, k, A, broadcast=True):
+    def reacted_frac(broadcast=True):
         f"""Reacted fraction for each seq in a pool
         Args:
         {doc_helper.get(BYOModel.reacted_frac)}
@@ -121,8 +123,7 @@ class BYOModel:
             Reacted fraction for each sequence in each sample
             float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
         """
-
-        return first_order(c=c, k=k, A=A, broadcast=broadcast, alpha=0.479, t=90)
+        return partial(first_order, broadcast=broadcast, alpha=0.479, t=90)
 
     @staticmethod
     def amount_first_order(c, p0, k, A, broadcast=False):

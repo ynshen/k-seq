@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from yutility import logging
 
 
 def is_int(x):
@@ -41,24 +42,25 @@ def dict_flatten(d, parent_key='', sep='_'):
     return dict(items)
 
 
-def get_func_params(func, exclude_x=True):
-    """Utility function to get the number of arguments for a function (callable)
+def get_func_params(func, required_only=True):
+    """Get the name of arguments for a function (callable), or the arguments in __init__ for a Class (self not included)
+
     Args:
         func (`callable`): the function
-        exclude_x (`bool`): if exclude the first argument (usually `x`)
+        required_only (bool): if exclude arguments with default values
 
-    Returns: a tuple of arguments name in order
+    Returns: a list of arguments name in order
     """
     from inspect import signature
 
-    if callable(func):
-        arg_tuple = tuple(signature(func).parameters.keys())
+    if not callable(func):
+        logging.error('func is not a callable', error_type=TypeError)
+
+    sign = signature(func)
+    if required_only:
+        return [key for key, param in sign.parameters.items() if param.default is sign.return_annotation]
     else:
-        raise TypeError('Unidentified func passed')
-    if exclude_x:
-        return arg_tuple[1:]
-    else:
-        return arg_tuple
+        return list(sign.parameters.keys())
 
 
 class FuncToMethod(object):

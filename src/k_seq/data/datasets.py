@@ -4,6 +4,7 @@ Available datasets:
   - BYO selection pool: byo-selected
 """
 
+import os
 from yutility import logging
 from .seq_data import SeqData, SeqTable
 
@@ -15,8 +16,12 @@ def load_dataset(dataset, from_count_file=False, **kwargs):
       - BYO-selected: 'byo-selected'
       - BFO: not implemented
     """
-    if dataset.lower() in ['byo_doped', 'byo-doped', 'doped']:
+    if dataset.lower() in ['byo_doped', 'byo-doped']:
         return load_byo_doped(from_count_file=from_count_file, **kwargs)
+    elif dataset.lower() in ['byo-doped-test', 'byo_doped_test']:
+        return load_byo_doped(from_count_file=from_count_file,
+                              count_file_path=os.getenv('BYO_DOPED_COUNT_FILE_TEST'),
+                              **kwargs)
     elif dataset.lower() in ['byo_selected', 'byo-selected', 'selected', 'byo-selection']:
         return load_byo_selected(from_count_file=from_count_file, **kwargs)
     else:

@@ -8,12 +8,16 @@ Several functions are included:
   - confidence interval estimation using bootstrap
 """
 
-from ..estimator import Estimator
+from ._estimator import Estimator
 from doc_helper import DocHelper
 from ..utility.file_tools import read_json, dump_json, check_dir
 from yutility import logging
 import pandas as pd
 import numpy as np
+
+
+__all__ = ['doc_helper', 'SingleFitter', 'FitResults']
+
 
 doc_helper = DocHelper(
     x_data=('list', 'list of x values in fitting'),
@@ -115,7 +119,7 @@ class SingleFitter(Estimator):
             logging.error('Shapes of x and y do not match', error_type=ValueError)
 
         self.model = model
-        self.parameters = get_func_params(model, exclude_x=True)
+        self.parameters = get_func_params(model, required_only=True)[1:]
         self.name = name
         self.config = AttrScope(
             opt_method=opt_method,
@@ -165,9 +169,8 @@ class SingleFitter(Estimator):
         )
 
         if conv_reps > 0:
-            self.converge_tester = ConvergenceTester(conv_reps=conv_reps,
-                                                     estimator=self,
-                                                     conv_init_range=conv_init_range)
+            self.converge_tester = ConvergenceTester(conv_reps=conv_reps, estimator=self,
+                                                     conv_init_range=conv_init_range, conv_stats=conv_stats)
         else:
             self.converge_tester = None
         self.config.add(
@@ -201,7 +204,7 @@ class SingleFitter(Estimator):
         from ..utility.func_tools import get_func_params
 
         model = update_none(model, self.model)
-        parameters = get_func_params(model, exclude_x=True)
+        parameters = get_func_params(model, required_only=True)[1:]
         x_data = update_none(x_data, self.x_data)
         y_data = update_none(y_data, self.y_data)
         sigma = update_none(sigma, self.config.sigma)
@@ -575,7 +578,7 @@ class FitResults:
                 results.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
         if 'uncertainty' in json_data.keys():
             if json_data['uncertainty']['summary'] is not None:
-                results.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'])
+                results.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'], typ='series')
             if 'record' in json_data['uncertainty'].keys():
                 label = 'record'
             else:
@@ -584,11 +587,11 @@ class FitResults:
                 results.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
         if 'convergence' in json_data.keys():
             if json_data['convergence']['summary'] is not None:
-                results.uncertainty.summary = pd.read_json(json_data['convergence']['summary'])
+                results.convergence.summary = pd.read_json(json_data['convergence']['summary'], typ='series')
             if 'record' in json_data['convergence'].keys():
                 label = 'record'
             else:
                 label = 'records'
             if json_data['convergence'][label] is not None:
-                results.uncertainty.records = pd.read_json(json_data['convergence'][label])
+                results.convergence.records = pd.read_json(json_data['convergence'][label])
         return results

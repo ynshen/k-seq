@@ -2,11 +2,13 @@
 
 from yutility import logging
 from .least_squares import SingleFitter, FitResults, doc_helper
-from . import Estimator
+from ._estimator import Estimator
 import numpy as np
 import pandas as pd
 from ..utility.file_tools import check_dir, read_json, dump_json, dump_pickle, read_pickle
 from pathlib import Path
+
+__all__ = ['BatchFitter', 'BatchFitResults']
 
 
 def _work_fn(worker, point_estimate, bootstrap, convergence_test):
@@ -24,11 +26,11 @@ doc_helper.add(
 @doc_helper.compose("""Least-squares fitting for batch of sequences
 
 Attributes:
-    <<y_dataframe, model, x_data, parameters, seq_to_fit, sigma>>
+    <<y_dataframe, model, x_data, seq_to_fit, sigma>>
     note (str): note about this fitting job
     results (BatchFitResult): accessor to fitting results
-    fit_params (AttrScope): collection of parameters pass to each single seq fitting, includes:
-        <<x_data, model, parameters, bounds, init_guess, opt_method, exclude_zero, metrics, rnd_seed, curve_fit_kwargs, 8>>
+    fit_params (AttrScope): collection of arguments pass to each single seq fitting, includes:
+        <<x_data, model, bounds, init_guess, opt_method, exclude_zero, metrics, rnd_seed, curve_fit_kwargs, 8>>
         <<bootstrap_num, bs_record_num, bs_method, bs_stats, grouper, record_full, 8>>
         <<conv_reps, conv_init_range, conv_stats, 8>>
         <<overwrite, 8>>
@@ -58,7 +60,7 @@ class BatchFitter(Estimator):
                  conv_reps=0, conv_init_range=None, conv_stats=None,
                  note=None, large_dataset=False, result_path=None):
 
-        from ..utility.func_tools import AttrScope
+        from ..utility.func_tools import AttrScope, get_func_params
 
         super().__init__()
 
@@ -103,11 +105,10 @@ class BatchFitter(Estimator):
             bootstrap_num = 0
         self.bootstrap = bootstrap_num > 0
 
-        # contains parameters should pass to the single estimator
+        # contains arguments should pass to the single estimator
         self.fit_params = AttrScope(
             x_data=self.x_data,
             model=self.model,
-            parameters=self.parameters,
             bounds=bounds,
             init_guess=init_guess,
             opt_method=opt_method,
@@ -125,11 +126,12 @@ class BatchFitter(Estimator):
             conv_init_range=conv_init_range,
             conv_stats=conv_stats,
         )
-        self.large_dataset = large_dataset
         if result_path is None:
             self.results = BatchFitResults(estimator=self)
         else:
             self.results = BatchFitResults.load_result(result_path)
+        self.large_dataset = large_dataset
+        self.results.large_dataset = large_dataset
 
         # TODO: recover the visualizer
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
@@ -150,17 +152,14 @@ class BatchFitter(Estimator):
         else:
             seq_list = self.seq_to_fit
         for seq in seq_list:
-            try:
-                yield SingleFitter(
-                    name=seq,
-                    y_data=self.y_dataframe.loc[seq],
-                    sigma=None if self.sigma is None else self.sigma.loc[seq],
-                    save_to=None if stream_to_disk is None else f"{stream_to_disk}/seqs/{seq}.json",
-                    overwrite=overwrite,
-                    **self.fit_params.__dict__
-                )
-            except:
-                logging.warning(f'Can not create fitting worker for {seq}')
+            yield SingleFitter(
+                name=seq,
+                y_data=self.y_dataframe.loc[seq],
+                sigma=None if self.sigma is None else self.sigma.loc[seq],
+                save_to=None if stream_to_disk is None else f"{stream_to_disk}/seqs/{seq}.json",
+                overwrite=overwrite,
+                **self.fit_params.__dict__
+            )
 
     def fit(self, parallel_cores=1, point_estimate=True, bootstrap=False, convergence_test=False,
             stream_to=None, overwrite=False):
@@ -175,51 +174,53 @@ class BatchFitter(Estimator):
             overwrite (bool): if overwrite existing results when stream to disk. Default False.
         """
 
+        from yutility.log import Timer
         logging.info('Batch fitting starting...')
 
-        if self.large_dataset and stream_to is None:
-            logging.error('You are working with large dataset and stream_to needs to be specified',
-                          error_type=ValueError)
-        if not self.large_dataset and stream_to is not None:
-            self.large_dataset = True
-            logging.warning("You provided `stream_to` so the large_dataset is triggered on")
+        with Timer():
+            if self.large_dataset and stream_to is None:
+                logging.error('You are working with large dataset and stream_to needs to be specified',
+                              error_type=ValueError)
+            if not self.large_dataset and stream_to is not None:
+                self.large_dataset = True
+                logging.warning("You provided `stream_to` so the large_dataset is triggered on")
 
-        if self.large_dataset:
-            self._hash()
-            self.results.result_path = stream_to
-            check_dir(stream_to + '/seqs/')
-            dump_json(obj=self._seq_to_hash, path=f"{stream_to}/seqs/seq_to_hash.json")
-
-        from functools import partial
-        work_fn = partial(_work_fn, point_estimate=point_estimate,
-                          bootstrap=bootstrap, convergence_test=convergence_test)
-        worker_generator = self._worker_generator(stream_to_disk=stream_to, overwrite=overwrite)
-        if parallel_cores > 1:
-            import multiprocessing as mp
-            pool = mp.Pool(processes=int(parallel_cores))
-            logging.info('Use multiprocessing to fit in {} parallel threads...'.format(parallel_cores))
-            workers = pool.map(work_fn, worker_generator)
-        else:
-            # single thread
-            logging.info('Fitting in a single thread...')
-            workers = [work_fn(worker) for worker in worker_generator]
-
-        self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
-        # record results
-        if self.bootstrap:
             if self.large_dataset:
-                self.results._bs_record = stream_to
-            else:
-                self.results._bs_record = {worker.name: worker.results.uncertainty.records for worker in workers}
-        if convergence_test:
-            if self.large_dataset:
-                self.results._conv_record = stream_to
-            else:
-                self.results._conv_record = {worker.name: worker.results.convergence.records for worker in workers}
+                self._hash()
+                self.results.result_path = Path(stream_to)
+                check_dir(stream_to + '/seqs/')
+                dump_json(obj=self._seq_to_hash, path=f"{stream_to}/seqs/seq_to_hash.json")
 
-        if self.large_dataset:
-            self._hash_inv()
-        logging.info('Fitting finished')
+            from functools import partial
+            work_fn = partial(_work_fn, point_estimate=point_estimate,
+                              bootstrap=bootstrap, convergence_test=convergence_test)
+            worker_generator = self._worker_generator(stream_to_disk=stream_to, overwrite=overwrite)
+            if parallel_cores > 1:
+                import multiprocessing as mp
+                pool = mp.Pool(processes=int(parallel_cores))
+                logging.info('Use multiprocessing to fit in {} parallel threads...'.format(parallel_cores))
+                workers = pool.map(work_fn, worker_generator)
+            else:
+                # single thread
+                logging.info('Fitting in a single thread...')
+                workers = [work_fn(worker) for worker in worker_generator]
+
+            self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
+            # record results
+            if self.bootstrap:
+                if self.large_dataset:
+                    self.results._bs_record = self._seq_to_hash
+                else:
+                    self.results._bs_record = {worker.name: worker.results.uncertainty.records for worker in workers}
+            if convergence_test:
+                if self.large_dataset:
+                    self.results._conv_record = self._seq_to_hash
+                else:
+                    self.results._conv_record = {worker.name: worker.results.convergence.records for worker in workers}
+
+            if self.large_dataset:
+                self._hash_inv()
+            logging.info('Fitting finished')
 
     def summary(self, save_to=None):
         if save_to is None:
@@ -297,8 +298,7 @@ class BatchFitter(Estimator):
         check_dir(output_dir)
         dump_pickle(
             obj={
-                **{'parameters': self.parameters,
-                   'note': self.note,
+                **{'note': self.note,
                    'seq_to_fit': self.seq_to_fit},
                 **self.fit_params.__dict__
             },
@@ -445,7 +445,7 @@ class BatchFitResults:
         self._conv_record = None
         self.summary = None
         self.result_path = None
-        self.large_dataset=False
+        self.large_dataset = False
 
         # TODO: add visualization here
 
@@ -459,7 +459,7 @@ class BatchFitResults:
             seq_to_hash = self._bs_record
 
         if self.result_path.joinpath('seqs').exists():
-            return FitResults.from_json(self.resolt_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
+            return FitResults.from_json(self.result_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
         elif self.result_path.joinpath('seqs.tar.gz').exists():
             try:
                 return FitResults.from_json(json_path=f'seqs/{seq_to_hash[seq]}.json',
@@ -471,19 +471,29 @@ class BatchFitResults:
     def get_record(self, seqs):
         """Get record for given seqs"""
         if isinstance(seqs, str):
-            seqs = [seqs]
-        if self.large_dataset:
-            results = {seq: self.get_FitResult(seq) for seq in seqs}
-            return {seq: {'bootstrap': seq.bootstrap.records, 'convergence': seq.convergence.records} for seq in results}
+            if self.large_dataset:
+                results = self.get_FitResult(seqs)
+                return {'bootstrap': results.uncertainty.records, 'convergence': results.convergence.records}
+            else:
+                record = {'bootstrap': None, 'convergence': None}
+                if self._bs_record is not None:
+                    record['bootstrap'] = self._bs_record[seqs]
+                if self._conv_record is not None:
+                    record['convergence'] = self._conv_record[seqs]
+                return record
         else:
-            record = {seq: {'bootstrap': None, 'convergence': None} for seq in seqs}
-            if self._bs_record is not None:
-                for seq in seqs:
-                    record[seq]['bootstrap'] = self._bs_record[seq]
-            if self._conv_record is not None:
-                for seq in seqs:
-                    record[seq]['convergence'] = self._conv_record[seq]
-            return record
+            if self.large_dataset:
+                results = {seq: self.get_FitResult(seq) for seq in seqs}
+                return {seq: {'bootstrap': seq.uncertainty.records, 'convergence': seq.convergence.records} for seq in results}
+            else:
+                record = {seq: {'bootstrap': None, 'convergence': None} for seq in seqs}
+                if self._bs_record is not None:
+                    for seq in seqs:
+                        record[seq]['bootstrap'] = self._bs_record[seq]
+                if self._conv_record is not None:
+                    for seq in seqs:
+                        record[seq]['convergence'] = self._conv_record[seq]
+                return record
 
     def bs_record(self, seqs=None):
         """Retrieve bootstrap records"""
@@ -494,11 +504,15 @@ class BatchFitResults:
             return self._bs_record
         else:
             if isinstance(seqs, str):
-                seqs = [seqs]
-            if self.large_dataset:
-                return {seq: self.get_FitResult(seq).bootstrap.records for seq in seqs}
+                if self.large_dataset:
+                    return self.get_FitResult(seqs).uncertainty.records
+                else:
+                    return self._bs_record[seqs]
             else:
-                return {seq:self._bs_record[seq] for seq in seqs}
+                if self.large_dataset:
+                    return {seq: self.get_FitResult(seq).uncertainty.records for seq in seqs}
+                else:
+                    return {seq:self._bs_record[seq] for seq in seqs}
 
     def conv_record(self, seqs=None):
         """Retrieve convergence records"""
@@ -509,11 +523,15 @@ class BatchFitResults:
             return self._conv_record
         else:
             if isinstance(seqs, str):
-                seqs = [seqs]
-            if self.large_dataset:
-                return {seq: self.get_FitResult(seq).convergence.records for seq in seqs}
+                if self.large_dataset:
+                    return self.get_FitResult(seqs).convergence.records
+                else:
+                    return self._bs_record[seqs]
             else:
-                return {seq:self._conv_record[seq] for seq in seqs}
+                if self.large_dataset:
+                    return {seq: self.get_FitResult(seq).convergence.records for seq in seqs}
+                else:
+                    return {seq: self._conv_record[seq] for seq in seqs}
 
     def summary_to_csv(self, path):
         """Save summary table as csv file"""
@@ -606,7 +624,7 @@ class BatchFitResults:
 
         result._bs_record = seq_to_hash
         result._conv_record = seq_to_hash
-        result.result_path = path_to_folder
+        result.result_path = Path(path_to_folder)
         result.large_dataset = True
         return result
     
