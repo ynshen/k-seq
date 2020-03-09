@@ -21,7 +21,7 @@ def test_byo_reacted_frac_correct_value():
     c = [-1, 50e-6]
     k = 50
     A = 0.5
-    results = kinetic.BYOModel.reacted_frac(c=c, k=k, A=A)
+    results = kinetic.BYOModel.reacted_frac(broadcast=False)(c=c, k=k, A=A)
     np.testing.assert_array_almost_equal(results, np.array([1, 0.051085207]))
 
 
@@ -37,7 +37,7 @@ def test_byo_reacted_frac_can_broadcast():
     c = [-1, 50e-6]
     k = [50, 100]
     A = 0.5
-    results = kinetic.BYOModel.reacted_frac(c=c, k=k, A=A)
+    results = kinetic.BYOModel.reacted_frac(broadcast=True)(c=c, k=k, A=A)
     np.testing.assert_array_almost_equal(results, np.array([[1, 0.051085207],
                                                             [1, 0.096951017]]))
 
@@ -46,7 +46,7 @@ def test_byo_reacted_frac_can_disable_broadcast():
     c = [-1, 50e-6]
     k = [50, 100]
     A = [0.5, 0.5]
-    results = kinetic.BYOModel.reacted_frac(c=c, k=k, A=A, broadcast=False)
+    results = kinetic.BYOModel.reacted_frac(broadcast=False)(c=c, k=k, A=A)
     np.testing.assert_array_almost_equal(results, np.array([[1, 0.051085207],
                                                             [1, 0.096951017]]))
 

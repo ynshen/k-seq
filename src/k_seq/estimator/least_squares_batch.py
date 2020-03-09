@@ -220,6 +220,7 @@ class BatchFitter(Estimator):
 
             if self.large_dataset:
                 self._hash_inv()
+
             logging.info('Fitting finished')
 
     def summary(self, save_to=None):
@@ -601,7 +602,7 @@ class BatchFitResults:
         """
         check_dir(output_dir)
         check_dir(f'{output_dir}/seqs/')
-        dump_json(obj=self.summary.dump_json(), path=f'{output_dir}/summary.json')
+        self.summary.to_json(f'{output_dir}/summary.json')
         self.large_dataset = True
 
     @classmethod

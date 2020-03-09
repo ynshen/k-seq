@@ -260,7 +260,7 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     if kinetic_model is None:
         # default use BYO first-order model returns absolute amount
         from ..model import kinetic
-        kinetic_model = kinetic.BYOModel.amount_first_order
+        kinetic_model = kinetic.BYOModel.amount_first_order(broadcast=False)
         logging.info('No kinetic model provided, use BYOModel.amount_first_order')
     if count_model is None:
         # default use multinomial

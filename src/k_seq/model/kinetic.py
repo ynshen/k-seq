@@ -23,7 +23,7 @@ doc_helper = DocHelper(
     b=('float or 1-D list-like', 'Bias for each sequences, with length as number of sequences'),
     p0=('1-D list-like', 'Amount or composition of sequences in the input pool'),
     broadcast=('bool', 'if True, apply broadcast for k and A, outer product between A and k are calculated;'
-                       'if False, k and A have to be same length and apply elementwise production')
+                       'if False, k and A have to be same length and apply elementwise production. Default False.')
 )
 
 
@@ -39,15 +39,18 @@ def to_scalar(value):
     else:
         return np.array(value)
 
+
 @doc_helper.compose("""Base first-order kinetic model, returns reacted fraction of input seqs given parameters
+
 broadcast are available on A, k, c and a full return tensor will have shape (A, k, c)
 if any of these 3 parameters is scalar, the dimension is automatically squeezed while maintaining the order
+
 Note: for c_i < 0, returns ones as it is input pool
 
 Args:
 <<>>
 """)
-def first_order(c, k, A, alpha, t, broadcast=True):
+def first_order(c, k, A, alpha, t, broadcast=False):
 
     if check_scalar(c):
         c = np.array([to_scalar(c)])
@@ -95,70 +98,82 @@ def first_order(c, k, A, alpha, t, broadcast=True):
     return y
 
 
-class BYOModel:
-    r"""A collection of BYO kinetic models (static functions)
-    where some values are fixed:
-        exp time (t): 90 min
-        BYO degradation factor ($\alpha$): 0.479
+@doc_helper.compose("""A collection of BYO kinetic models
+where some values are fixed:
+    exp time (t): 90 min
+    BYO degradation factor ($\alpha$): 0.479
 
-    functions:
-        - reacted_frac
-        - amount_first_order
-        - composition_first_order
+models:
+    - reacted_frac(broadcast=False)
+    - amount_first_order(broadcast=False)
+    - composition_first_order(c, p0, k, A)
         
-    parameters:
-    {params}
+parameters:
+    <<p0, c, k, A>>
 
-    return:
-        concentration/composition at the name (time, concentration) point
-    """.format(params=doc_helper.get(['p0', 'c', 'k', 'A']))
+return:
+concentration/composition at the name (time, concentration) point
+""")
+class BYOModel:
 
     @staticmethod
-    def reacted_frac(broadcast=True):
-        f"""Reacted fraction for each seq in a pool
-        Args:
-        {doc_helper.get(BYOModel.reacted_frac)}
+    @doc_helper.compose("""Get model for Reacted fraction for each seq in a pool
+    Args:
+        <<broadcast>>
         
-        Return:
+    Return:
+        a callable with arguments:
+        <<c, k, A, 8>>
+        which returns:
             Reacted fraction for each sequence in each sample
             float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
-        """
+    """)
+    def reacted_frac(broadcast=False):
         return partial(first_order, broadcast=broadcast, alpha=0.479, t=90)
 
     @staticmethod
-    def amount_first_order(c, p0, k, A, broadcast=False):
-        f"""Absolute amount of reacted pool, if c is negative, return 0
-        Notice: broadcast should be False if multiple p0 is used.
+    @doc_helper.compose("""Get model for absolute amount of reacted pool, if c is negative, return 0
+    Notice: broadcast should be False if multiple p0 is used.
 
-        Args:
-        {doc_helper.get(BYOModel.amount_first_order)}
+    Args:
+        <<broadcast>>
         
-        Return:
+    Return:
+        a callable with arguments:
+        <<p0, c, k, A, 8>>
+        which returns:
             Absolute amount of each sequence in each sample
             float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)
-        """
+        """)
+    def amount_first_order(broadcast=False):
 
-        reacted_frac = BYOModel.reacted_frac(c=c, k=k, A=A, broadcast=broadcast)
-        if len(np.shape(reacted_frac)) == 1:
-            return np.array(p0) * reacted_frac
-        else:
-            return np.expand_dims(p0, -1) * reacted_frac
+        reacted_frac = BYOModel.reacted_frac(broadcast=broadcast)
+
+        def amount_first_order_func(c, p0, k, A):
+            reacted_frac_res = reacted_frac(c=c, k=k, A=A)
+
+            if len(np.shape(reacted_frac_res)) == 1:
+                return np.array(p0) * reacted_frac_res
+            else:
+                return np.expand_dims(p0, -1) * reacted_frac_res
+
+        return amount_first_order_func
 
     @staticmethod
+    @doc_helper.compose("""Function of pool composition w.r.t. BYO concentration (c)
+    if x < 0, output is p0
+        broadcast is not supported that is k and A should have same length
+
+    Args:
+        <<c, p0, k, A>>
+
+    Return:
+        Pool composition for sequences in each sample
+        float, 1-D or 2-D np.ndarray with shape (len(k), sample_num)
+    """)
     def composition_first_order(c, p0, k, A):
-        f"""Function of pool composition w.r.t. BYO concentration (c)
-        if x < 0, output is p0
-        broadcast is not supported that is k and A should have sem length
 
-        Args:
-        {BYOModel.composition_first_order}
-
-        Return:
-            Pool composition for sequences in each sample
-            float, 1-D or 2-D np.ndarray with shape (len(k), sample_num)
-        """
-
-        amounts = BYOModel.amount_first_order(c=c, p0=p0, k=k, A=A, broadcast=False)
+        amounts = BYOModel.amount_first_order(broadcast=False)(c=c, p0=p0, k=k, A=A)
 
         if check_scalar(p0):
             return amounts
