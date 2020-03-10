@@ -236,10 +236,10 @@ Procedure:
   3. Simulated counts with given total total_reads were simulated for input pool and reacted pools.
 
 Args:
-<<uniq_seq_num, x_values, total_reads, p0, kinetic_model, count_model>>
-    param_sample_from_df (pd.DataFrame): optional to sample sequences from given seq_table
-    weights (list or str): weights/col of weight for sampling from seq_table
-<<total_amount_error, conv_reps, seed, save_to, param_generator>>
+    <<uniq_seq_num, x_values, total_reads, p0, kinetic_model, count_model>>
+    param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
+    weights (list or str): weights/col of weight for sampling from table
+    <<total_amount_error, conv_reps, seed, save_to, param_generator>>
 
 Returns:
     x (pd.DataFrame): c, n value for samples

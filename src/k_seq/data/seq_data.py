@@ -82,7 +82,6 @@ class SeqTable(pd.DataFrame):
         from .seq_data_analyzer import SeqTableAnalyzer
         self.analysis = SeqTableAnalyzer(self)
 
-
     @property
     def _constructor_expanddim(self):
         """abstract method needed to implemented, not used"""
@@ -291,7 +290,7 @@ class SeqData(object):
         Initialize a Grouper instance with keyword arguments with a dictionary of:
             group (list or dict): list creates a Type 0 Grouper (single group) and dict creates a Type 1 Grouper
                 (multiple groups)
-            target (pd.DataFrame): optional, target seq_table
+            target (pd.DataFrame): optional, target table
             axis (0 or 1): axis to apply the grouper
         """
         if hasattr(self, 'grouper'):
@@ -424,7 +423,3 @@ class SeqData(object):
 #     #         metrics=metrics
 #     #     )
 #     #     seq_data.logger.info('BatchFitting estimator added')
-#     #
-
-
-

@@ -19,7 +19,7 @@ def _work_fn(worker, point_estimate, bootstrap, convergence_test):
 
 doc_helper.add(
     y_dataframe=('pd.DataFrame', 'Table of y values for sequences (rows) to fit kinetic models'),
-    seq_to_fit=('int or list of seq', 'pick top n sequences in the seq_table for fitting or only fit selected sequences')
+    seq_to_fit=('int or list of seq', 'pick top n sequences in the table for fitting or only fit selected sequences')
 )
 
 
@@ -88,7 +88,7 @@ class BatchFitter(Estimator):
         if isinstance(x_data, pd.Series):
             self.x_data = x_data[y_dataframe.columns.values]
         elif len(x_data) != y_dataframe.shape[1]:
-            logging.error('x_data length and seq_table column number does not match', error_type=ValueError)
+            logging.error('x_data length and table column number does not match', error_type=ValueError)
         else:
             self.x_data = np.array(x_data)
 
@@ -136,7 +136,7 @@ class BatchFitter(Estimator):
         # TODO: recover the visualizer
         # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
         # from ..utility import FunctionWrapper
-        # seq_data.visualizer = FunctionWrapper(data=seq_data,
+        # self.visualizer = FunctionWrapper(data=self,
         #                                   functions=[
         #                                       fitting_curve_plot,
         #                                       bootstrap_params_dist_plot,
@@ -247,7 +247,7 @@ class BatchFitter(Estimator):
         if isinstance(self.sigma, pd.DataFrame):
             # only accept sigma as an pd.DataFrame
             self._sigma_dup = self.sigma.copy()
-            # filter sigma seq_table for only the first instance of each hash
+            # filter sigma table for only the first instance of each hash
             self.sigma = self.sigma.loc[self.y_dataframe.index]
             # convert seq --> hash
             self.sigma.rename(index=self._seq_to_hash, inplace=True)
@@ -255,13 +255,13 @@ class BatchFitter(Estimator):
         self.y_dataframe.rename(index=self._seq_to_hash, inplace=True)
         if self.seq_to_fit is not None:
             self.seq_to_fit = [self._seq_to_hash[seq] for seq in self.seq_to_fit]
-        logging.info('Shrink rows in seq_table by removing duplicates: '
+        logging.info('Shrink rows in table by removing duplicates: '
                      f'{self._y_dataframe_dup.shape[0]} --> {self.y_dataframe.shape[0]}')
 
     def _hash_inv(self):
         """Recover the hashed results"""
 
-        logging.info('Recovering original seq_table from hash...')
+        logging.info('Recovering original table from hash...')
 
         def get_summary(seq):
             return self.results.summary.loc[self._seq_to_hash[seq]]
@@ -328,8 +328,8 @@ class BatchFitter(Estimator):
 
         Args:
             model_path (str): path to picked model configuration file or the saved folder
-            y_dataframe (pd.DataFrame or str): y_data seq_table for fitting
-            sigma (pd.DataFrame or str): optional sigma seq_table for fitting
+            y_dataframe (pd.DataFrame or str): y_data table for fitting
+            sigma (pd.DataFrame or str): optional sigma table for fitting
             result_path (str): path to fitting results
 
         Returns:
@@ -352,7 +352,7 @@ class BatchFitter(Estimator):
 
 # def load_estimation_results(point_est_csv=None, seqtable=None, bootstrap_csv=None,
 #                             **kwargs):
-#     """Collect estimation results from multiple resources (e.g. summary.csv files) and compose a summary seq_table
+#     """Collect estimation results from multiple resources (e.g. summary.csv files) and compose a summary table
 #     Sequences will be the union of indices in point estimate, bootstrap, and convergence test if avaiable
 # 
 #     Resources:
@@ -383,9 +383,9 @@ class BatchFitter(Estimator):
 #         from ..utility import file_tools
 #         seq_table = file_tools.read_pickle(seqtable_path)
 #         if seq_table.grouper and hasattr(seq_table.grouper, 'input'):
-#             est_res['input_counts'] = seq_table.seq_table[seq_table.grouper.input.group].loc[seq_list].mean(axis=1)
-#         est_res['mean_counts'] = seq_table.seq_table.loc[seq_list].mean(axis=1)
-#         est_res['min_counts'] = seq_table.seq_table.loc[seq_list].min(axis=1)
+#             est_res['input_counts'] = seq_table.table[seq_table.grouper.input.group].loc[seq_list].mean(axis=1)
+#         est_res['mean_counts'] = seq_table.table.loc[seq_list].mean(axis=1)
+#         est_res['min_counts'] = seq_table.table.loc[seq_list].min(axis=1)
 # 
 #         if hasattr(seq_table, 'pool_peaks'):
 #             # has doped pool, add dist to center
@@ -417,9 +417,9 @@ class BatchFitResults:
     Only save results (separate from each estimator), corresponding estimator should be found by sequence
     We used two data storage strategies:
         1. smaller dataset that was saved as ``results.pkl``: the pickled file is passed, and the results will be
-            loaded to seq_data.summary, seq_data.bs_record, seq_data.conv_record
-        2. larger dataset that was saved in ``results/`` folder: seq_data. summary will be loaded, seq_data.bs_record and
-            seq_data.conv_record will be linked
+            loaded to self.summary, self.bs_record, self.conv_record
+        2. larger dataset that was saved in ``results/`` folder: self. summary will be loaded, self.bs_record and
+            self.conv_record will be linked
 
     Attributes:
         estimator: proxy to the `BatchFitter`
@@ -535,7 +535,7 @@ class BatchFitResults:
                     return {seq: self._conv_record[seq] for seq in seqs}
 
     def summary_to_csv(self, path):
-        """Save summary seq_table as csv file"""
+        """Save summary table as csv file"""
         self.summary.to_csv(path)
 
     def to_pickle(self, output_dir, bs_record=True, conv_record=True):
