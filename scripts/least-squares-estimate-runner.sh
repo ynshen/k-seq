@@ -15,7 +15,7 @@
 #      - table_nf_filtered_reacted_frac
 #      - table_nf_filtered_seq_in_all_smpl_reacted_frac
 ######################################## Define estimator details #############################################
-# output nameing: prefix _ table _  bs-num _ bs-mtd _ no-zero _ inv-weight _ core _ postfix
+# output nameing: prefix _ seq_table _  bs-num _ bs-mtd _ no-zero _ inv-weight _ core _ postfix
 ###############################################################################################################
 
 DATA_DIR='/mnt/storage/projects/k-seq/datasets/'

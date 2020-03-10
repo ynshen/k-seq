@@ -31,7 +31,7 @@ def main():
     _ = simu.simulate_from_sample(
         sample_table=simu.get_sample_table(
             seq_table='byo-doped',
-            estimation='/mnt/storage/projects/k-seq/working/byo_doped/least_square/all-seq-point-est_2019-11/table-spike_in_bs-num-0_bs-mtd-data_no-zero-false_inv-weight-false_core-40/fit_summary.csv'),
+            estimation='/mnt/storage/projects/k-seq/working/byo_doped/least_square/all-seq-point-est_2019-11/seq_table-spike_in_bs-num-0_bs-mtd-data_no-zero-false_inv-weight-false_core-40/fit_summary.csv'),
         seq_num=1e3,
         dna_amount_error=simu.dna_amount_error,
         save_to='/mnt/storage/projects/k-seq/datasets/simulated/on_doped_s1000_d40/'

@@ -135,8 +135,8 @@ def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, i
 # --------------------- Belows are SeqSampleSet visualizers ----------------------
 
 def count_file_info_table(sample_set, return_table=False):
-    """Generate an overview info table for all samples in sample_set
-    Print out HTML table for sequencing samples, including spike-in info if applicable
+    """Generate an overview info seq_table for all samples in sample_set
+    Print out HTML seq_table for sequencing samples, including spike-in info if applicable
 
     Args:
         sample_set (`SeqSampleSet`): sample set to survey
@@ -218,7 +218,6 @@ def length_dist_plot_all(sample_set, black_list=None, fig_layout=None, y_log=Tru
     if save_fig_to:
         fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
     plt.show()
-
 
 
 

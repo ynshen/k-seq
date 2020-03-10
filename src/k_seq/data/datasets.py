@@ -28,14 +28,38 @@ def load_dataset(dataset, from_count_file=False, **kwargs):
         logging.error(f'Dataset {dataset} is not implemented', error_type=NotImplementedError)
 
 
+def byo_doped_rename_sample(name):
+    """Rename results loaded from raw reads and samples as
+
+    A1/d-A1_S1 --> 1250uM-1
+    ...
+    R/R0 --> input
+    """
+
+    if len(name) > 2:
+        name = name.split('_')[0].split('-')[-1]
+
+    if 'R' in name:
+        return 'Input'
+    else:
+        concen_mapper = {
+            'A': '1250',
+            'B': '250',
+            'C': '50',
+            'D': '10',
+            'E': '2'
+        }
+        return "{} $\mu M$-{}".format(concen_mapper[name[0]], name[1])
+
+
 def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
                    pandaseq_joined=True, radius=2):
     """BYO doped pool k-seq datatable contains k-seq results for seqs from doped-pool for BYO aminoacylation,
 
-    this dataset contains following pre-computed table (``.table`` accessor) to use
+    this dataset contains following pre-computed seq_table (``.seq_table`` accessor) to use
 
-        - original (4313709, 16): count table contains all sequences detected in any samples and all the samples
-        - filtered (3290337, 16): count table with non 21 nt sequences and spike-in sequences filtered
+        - original (4313709, 16): count seq_table contains all sequences detected in any samples and all the samples
+        - filtered (3290337, 16): count seq_table with non 21 nt sequences and spike-in sequences filtered
         - reacted_frac_spike_in (764756, 15): reacted fraction for valid seqs quantified by spike-in
         - reacted_frac_qpcr (764756, 15): reacted fraction for valid seqs quantified by qPCR
         - reacted_frac_spike_in_seq_in_all_smpl (22525, 15): only contains seqs with counts >= 1 in all samples
@@ -95,8 +119,8 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                  'quantified with spike-in sequence with 2 edit distance as radius or qPCR + Qubit'
         )
 
-        # temp note: spike-in norm factor were calculated on original table when a SpikeInNormalizer is created,
-        # notice the table normalized on were already without some (~10%) sequence Abe used for qPRC quantification
+        # temp note: spike-in norm factor were calculated on original seq_table when a SpikeInNormalizer is created,
+        # notice the seq_table normalized on were already without some (~10%) sequence Abe used for qPRC quantification
         byo_doped.add_spike_in(
             base_table=byo_doped.table.original,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
@@ -109,12 +133,12 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
             unit='ng',
         )
 
-        # temp note: DNA Amount normalizer is calculated on whichever table it applies to
+        # temp note: DNA Amount normalizer is calculated on whichever seq_table it applies to
         from . import filters
         spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
         seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21)  # remove non-21 nt seq
 
-        # filtered table by removing spike-in within 2 edit distance and seqs not with 21 nt
+        # filtered seq_table by removing spike-in within 2 edit distance and seqs not with 21 nt
         byo_doped.table.filtered = seq_length_filter(target=spike_in_filter(target=byo_doped.table.original))
         byo_doped.add_sample_total(
             total_amounts=dna_amount,
@@ -173,11 +197,11 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
 
 
 _byo_selected_description = """
-        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed table to 
+        contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed seq_table to 
           use
 
-            - table: original count table contains all sequences detected in any samples and all the samples
-            - table_no_failed: count table with sample `2C`, `3D`, `3E`, `3F`, `4D`, `4F` removed (failed in sequencing)
+            - seq_table: original count seq_table contains all sequences detected in any samples and all the samples
+            - table_no_failed: count seq_table with sample `2C`, `3D`, `3E`, `3F`, `4D`, `4F` removed (failed in sequencing)
 
             Tables based on curated quantification factor
             - table_nf_reacted_frac_curated: reacted fraction of sequences (failed samples are removed, sequences only
@@ -186,8 +210,8 @@ _byo_selected_description = """
                 has length equals to 21 nt
 
             Tables based on standard pipeline
-            - table_nf_filtered: count table for sequences that are not spike-in and have length of 21 nt
-            - table_nf_filtered_abs_amnt: absolute amount table from table_nf_filterd, quantified by spike-in for
+            - table_nf_filtered: count seq_table for sequences that are not spike-in and have length of 21 nt
+            - table_nf_filtered_abs_amnt: absolute amount seq_table from table_nf_filterd, quantified by spike-in for
                 reacted samples, total DNA amount for input pool
             - table_nf_filtered_reacted_frac: reacted fractions for sequences that are at least detected in both input
                 pool and one reacted pool
@@ -266,7 +290,7 @@ def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=Non
         )
 
         # Prepare sequences with general pipeline
-        # filtered table by removing spike-in within 4 edit distance and seqs not with 21 nt
+        # filtered seq_table by removing spike-in within 4 edit distance and seqs not with 21 nt
         byo_selected.table_nf_filtered = seq_length_filter.get_filtered_table(
             spike_in_filter(byo_selected.table_no_failed)
         )

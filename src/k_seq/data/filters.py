@@ -12,22 +12,22 @@ from ..utility.func_tools import update_none
 class Filter(ABC):
     """Template class for filters
 
-    ``Filters`` filter a ``target`` table by index or column to another table, similar to ``Transformer``, but by
-        design do not change the content in the table. To write a filter, one should:
+    ``Filters`` filter a ``target`` seq_table by index or column to another seq_table, similar to ``Transformer``, but by
+        design do not change the content in the seq_table. To write a filter, one should:
 
         - indicate default ``axis`` in ``__init__`` and store as an attribute, indicating which axis you are filtering,
         0 for index (row), 1 for columns
 
-        - implement staticmethod ``_get_mask`` with input of target table and return a bool mask along the axis it
+        - implement staticmethod ``_get_mask`` with input of target seq_table and return a bool mask along the axis it
         filters. True for pass, False for not pass.
-        classmethod ``filter`` should then apply to a target pd.DataFrame table and return a filtered table
+        classmethod ``filter`` should then apply to a target pd.DataFrame seq_table and return a filtered seq_table
 
         - implement method ``get_mask`` wrapper over ``_get_mask`` to assign stored attributes as argument. By design,
-        it should only need to take a ``target`` argument, or without argument, returns ``self.mask`` corresponding to
-        ``self.target``
+        it should only need to take a ``target`` argument, or without argument, returns ``seq_data.mask`` corresponding to
+        ``seq_data.target``
 
     Note: please assign ``target`` at the end of __init__ as assigning ``target`` will do filtering and update
-        ``self.mask``
+        ``seq_data.mask``
     """
 
     def __init__(self, target=None, axis=0):
@@ -50,7 +50,7 @@ class Filter(ABC):
     @abstractmethod
     def get_mask(self, target=None, axis=None, **kwargs):
         """Implementation required
-        Return the the boolean mask for given table
+        Return the the boolean mask for given seq_table
         Wrapper over _get_mask to for preprocessing arguments
         This content is a minimal example
         """
@@ -116,14 +116,14 @@ class Filter(ABC):
             return list(target.index[mask])
 
     def __call__(self, target=None, remove_empty=False, reverse=False, axis=None):
-        """Directly call on the filter returns a filtered table"""
+        """Directly call on the filter returns a filtered seq_table"""
         return self.get_filtered_table(target=target, remove_empty=remove_empty, reverse=reverse, axis=axis)
 
     def get_filtered_table(self, target=None, remove_empty=False, reverse=False, axis=None):
-        """Return a filtered table
+        """Return a filtered seq_table
 
         Args:
-            target (pd.DataFrame): table to filter
+            target (pd.DataFrame): seq_table to filter
             remove_empty (bool): if remove all-zero items from another axis after filtering. Default False.
             reverse (bool): if return filtered items instead of items passed the filter. Default False.
             axis (0 or 1): if apply filter on index/row (0) or columns (1)
@@ -260,7 +260,7 @@ class SpikeInFilter(Filter):
     def __init__(self, target, center_seq=None, radius=None, dist_type=None, reverse=False, axis=0):
         """
         Args:
-            target (pd.DataFrame or table.SeqData): needed to calculate distance of sequences to center seq
+            target (pd.DataFrame or seq_table.SeqData): needed to calculate distance of sequences to center seq
                 If target is pd.DataFrame, center, radius, and dist_type must
                 provide. If target is SeqData, it must infer from ``SeqData.spike_in`` accessor if applicable for
                 consistency
@@ -316,7 +316,7 @@ class SpikeInFilter(Filter):
             return target.column.isin(non_peak_seq.index)
 
     def get_mask(self, target=None, axis=None):
-        """Apply to a target table"""
+        """Apply to a target seq_table"""
         target = update_none(target, self.target)
         axis = update_none(axis, self.axis)
         return self._get_mask(target=target, dist_to_center=self.peak.dist_to_center,

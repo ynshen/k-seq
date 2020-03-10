@@ -45,17 +45,17 @@ def main(table_path, table_name, fit_partial, bootstrap_num, bs_record_num, bs_m
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
     batch_fitter.save_model(model_path=f'{output_dir}/model.pkl',
                             result_path=f'{output_dir}/results.pkl',
-                            table_path=f'{output_dir}/table.pkl')
+                            table_path=f'{output_dir}/seq_table.pkl')
 
 
 def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser(description='Individual least squared kinetic model fitting')
-    parser.add_argument('--table_path', '-T', type=str, default='./byo_doped.pkl', help='Path to input seq table')
+    parser.add_argument('--table_path', '-T', type=str, default='./byo_doped.pkl', help='Path to input seq seq_table')
     parser.add_argument('--fit_partial', '-p', type=int, default=-1,
                         help='Select top p sequences to fit, fit all seq if p is negative')
-    parser.add_argument('--table_name', '-t', type=str, default='table_filtered_reacted_frac', help='table to use')
+    parser.add_argument('--table_name', '-t', type=str, default='table_filtered_reacted_frac', help='seq_table to use')
     parser.add_argument('--bootstrap_num', '-n', type=int, default=0,
                         help='Number of bootstraps to perform')
     parser.add_argument('--bs_record_num', '-r',type=int, default=-1,

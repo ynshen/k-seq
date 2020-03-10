@@ -1,5 +1,5 @@
 """
-Module contains the classes to transform table (`pd.DataFrame` or `SeqData`) instance as well as related calculation
+Module contains the classes to transform seq_table (`pd.DataFrame` or `SeqData`) instance as well as related calculation
     and visualizations
 
 Current available transformers:
@@ -20,7 +20,7 @@ from yutility import logging
 class Transformer(ABC):
     """Abstract class type for transformer
 
-    Transformers are classes transform a table instance (`pd.DataFrame` or `SeqData`) to another table
+    Transformers are classes transform a seq_table instance (`pd.DataFrame` or `SeqData`) to another seq_table
 
     To write your transformer, components are:
         - Attributes to store parameters
@@ -70,7 +70,7 @@ Attributes:
 
 Methods:
     plot_spike_in_peak: plot the shape of spike-in sequences for each sample
-    apply: apply the normalization to a `name` table
+    apply: apply the normalization to a `name` seq_table
     _get_mask: static method to calculate normalization
 """)
 class SpikeInNormalizer(Transformer):
@@ -172,10 +172,10 @@ class SpikeInNormalizer(Transformer):
 
 _total_dna_doc = DocHelper(
     total_amounts=('dict or pd.Series', 'Total DNA amount for samples measured in experiment'),
-    target=('pd.DataFrame', 'Target table to convert, samples are columns'),
+    target=('pd.DataFrame', 'Target seq_table to convert, samples are columns'),
     unit=('str', 'Unit of amount measured'),
     norm_factor=('dict', 'Amount per sequence. Sequence amount = norm_factor * reads'),
-    full_table=('pd.DataFrame', 'table where the total amount were measured and normalize to'),
+    full_table=('pd.DataFrame', 'seq_table where the total amount were measured and normalize to'),
 )
 
 
@@ -220,12 +220,12 @@ class TotalAmountNormalizer(Transformer):
     @full_table.setter
     def full_table(self, value):
         if not isinstance(value, pd.DataFrame):
-            logging.error("full table needs to be a pd.DataFrame", error_type=TypeError)
+            logging.error("full seq_table needs to be a pd.DataFrame", error_type=TypeError)
         self._full_table = value
         self._update_norm_factor()
 
     def _update_norm_factor(self):
-        """Update norm factor value based on current self.total_amounts and self.full_table"""
+        """Update norm factor value based on current seq_data.total_amounts and seq_data.full_table"""
         if (self.full_table is not None) and (self.total_amounts is not None):
             for sample in self.full_table.columns:
                 if sample not in self.total_amounts.keys():
@@ -245,10 +245,10 @@ class TotalAmountNormalizer(Transformer):
 
     @staticmethod
     def func(target, norm_factor):
-        """Normalize name table w.r.t norm_factor
+        """Normalize name seq_table w.r.t norm_factor
 
         Returns:
-            pd.DataFrame of normalized name table with only samples provided in norm_factor
+            pd.DataFrame of normalized name seq_table with only samples provided in norm_factor
         """
 
         def sample_normalize(col):
@@ -269,7 +269,7 @@ class TotalAmountNormalizer(Transformer):
     <<name>>
 
     Returns:
-        pd.DataFrame of normalized name table with only samples in norm_factor
+        pd.DataFrame of normalized name seq_table with only samples in norm_factor
     """)
     def apply(self, target):
         from .seq_data import SeqTable
@@ -277,7 +277,7 @@ class TotalAmountNormalizer(Transformer):
     
 
 class ReactedFractionNormalizer(Transformer):
-    """Get reacted fraction of each sequence from an absolute amount table"""
+    """Get reacted fraction of each sequence from an absolute amount seq_table"""
 
     def __init__(self, input_samples, target=None, reduce_method='median', remove_empty=True):
         super().__init__()
@@ -313,10 +313,10 @@ class ReactedFractionNormalizer(Transformer):
     def apply(self, target=None, input_samples=None, reduce_method=None, remove_empty=None):
         """Convert absolute amount to reacted fraction
             Args:
-                target (pd.DataFrame): the table with absolute amount to normalize on inputs, including input pools
+                target (pd.DataFrame): the seq_table with absolute amount to normalize on inputs, including input pools
                 input_samples (list of str): list of indices of input pools
                 reduce_method (str or callable): 'mean' or 'median' or a callable apply on a pd.DataFrame to list-like
-                remove_empty (bool): if will remove all-zero seqs from output table
+                remove_empty (bool): if will remove all-zero seqs from output seq_table
 
             Returns:
                 pd.DataFrame
@@ -332,7 +332,7 @@ class ReactedFractionNormalizer(Transformer):
         if reduce_method is None:
             reduce_method = self.reduce_method
         if not isinstance(target, pd.DataFrame):
-            target = getattr(target, 'table')
+            target = getattr(target, 'seq_table')
         if remove_empty is None:
             remove_empty = self.remove_empty
 
@@ -352,7 +352,7 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
         self.q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
         # TODO: check unit
         # q_factor should be:
-        # self.q_factors = {'0.0005,
+        # seq_data.q_factors = {'0.0005,
         #             0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133,
         #             0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812,
         #             0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207,
@@ -369,12 +369,12 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
     def apply(self, target=None, q_factor=None):
         """Normalize counts using Abe's curated quantification factor
             Args:
-                target (pd.DataFrame): this should be the original count table from BYO-selected k-seq exp.
-                q_factor (pd.DataFrame or str): table contains first col as q-factor with sample as index
+                target (pd.DataFrame): this should be the original count seq_table from BYO-selected k-seq exp.
+                q_factor (pd.DataFrame or str): seq_table contains first col as q-factor with sample as index
                     or path to stored csv file
 
             Returns:
-                A normalized table of absolute amount of sequences in each sample
+                A normalized seq_table of absolute amount of sequences in each sample
         """
         if target is None:
             target = self.target

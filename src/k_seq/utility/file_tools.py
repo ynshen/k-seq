@@ -239,7 +239,7 @@ def dump_json(obj, path=None, indent=2):
 
 
 def read_table_files(file_path, col_name=None, header=1):
-    """Read common table files
+    """Read common seq_table files
     - .xls or .xlsx: first sheet will be read with first row as header
     - .csv: read the csv files with first row as header, separator is ','
     - .tsv: read the tsv files with first row as header, separator is '/t'

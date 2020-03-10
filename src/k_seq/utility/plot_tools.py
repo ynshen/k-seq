@@ -1,6 +1,7 @@
 """
 This module contains project level utility functions
 """
+import matplotlib.pyplot as plt
 
 
 class Presets:
@@ -109,29 +110,6 @@ def barplot(series, ax, label=None, yticklabels=None, barplot_kwargs=None):
     ax.set_xticklabels(pos, yticklabels, fontsize=12, rotation=90)
 
 
-def sample_rename_byo_doped(name):
-    """Rename results loaded from raw reads and samples as
-
-    A1/d-A1_S1 --> 1250uM-1
-    ...
-    R/R0 --> input
-    """
-
-    if len(name) > 2:
-        name = name.split('_')[0].split('-')[-1]
-
-    if 'R' in name:
-        return 'Input'
-    else:
-        concen_mapper = {
-            'A': '1250',
-            'B': '250',
-            'C': '50',
-            'D': '10',
-            'E': '2'
-        }
-        return "{} $\mu M$-{}".format(concen_mapper[name[0]], name[1])
-
 def pairplot(data, vars_name=None, vars_lim=None, vars_log=None, figsize=(2, 2), **kwargs):
     """Wrapper over seaborn.pairplot to visualize pairwise correlationw with log option"""
     import numpy as np
@@ -150,3 +128,16 @@ def pairplot(data, vars_name=None, vars_lim=None, vars_log=None, figsize=(2, 2),
     return sns.pairplot(data=data, vars=data.columns,
                         markers='o', plot_kws=dict(s=5, edgecolor=None, alpha=0.3),
                         height=figsize[1], aspect=figsize[0] / figsize[1], **kwargs)
+
+
+def savefig(save_fig_to, dpi=300, alpha=0):
+    if save_fig_to is not None:
+        fig = plt.gcf()
+        fig.patch.set_alpha(alpha)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=dpi)
+
+
+def ax_none(ax, figsize=None):
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    return ax

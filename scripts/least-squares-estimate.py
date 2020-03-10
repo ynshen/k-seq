@@ -9,16 +9,16 @@ def kA(params):
 
 
 def read_table(seq_table=None, table_name=None, fit_partial=-1, inverse_weight=False):
-    """Parse data table source SeqData
+    """Parse data seq_table source SeqData
 
     Args:
         seq_table (str): path to a SeqData instance with x_value
-        table_name (str): the table to use in SeqData, default 'table'
-        fit_partial (int): if fit the first k sequences in the table. Fit all sequences if negative
+        table_name (str): the seq_table to use in SeqData, default 'seq_table'
+        fit_partial (int): if fit the first k sequences in the seq_table. Fit all sequences if negative
         inverse_weight (bool): if weight the data by the inverse of their counts (sigma = counts + 0.5)
 
     Returns:
-        work_table (pd.DataFrame): the work table contains sequences to fit
+        work_table (pd.DataFrame): the work seq_table contains sequences to fit
         x_data (list): list of x values (BYO concentration), same order as samples in work_table
         sigma (pd.DataFrame): sigma same as counts + 0.5 or None if not weighted
     """
@@ -96,7 +96,7 @@ def parse_args():
     parser.add_argument('--seq_table', '-T', type=str,
                         help='Path to input seq_table object')
     parser.add_argument('--table_name', '-t', type=str,
-                        help='table name in seq_table to use')
+                        help='seq_table name in seq_table to use')
     parser.add_argument('--fit_partial', '-p', type=int, default=-1,
                         help='Select top p sequences to fit, fit all seq if p is negative')
     parser.add_argument('--exclude_zero', dest='exclude_zero', default=False, action='store_true',

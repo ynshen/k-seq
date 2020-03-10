@@ -1,4 +1,4 @@
-"""Submodule of `SeqData`, a rich functions class of table for sequencing manipulation This module contains methods
+"""Submodule of `SeqData`, a rich functions class of seq_table for sequencing manipulation This module contains methods
 for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
@@ -21,16 +21,16 @@ _doc = DocHelper(
     sample_metadata=('dict of objects', 'optional. Extra sample metadata'),
     seq_metadata=('dict of objects', 'optional. Extra seq metadata'),
     dataset_metadata=('dict of objects', 'optional. Extra dataset metadata'),
-    note=('str', 'Note for dataset/table'),
+    note=('str', 'Note for dataset/seq_table'),
     data=('pd.DataFrame or np.ndarray', '2-D data with indices as sequences and columns as samples. '
                                         'If data is pd.DataFrame, values in index and column will be used as '
                                         'sequences and samples; if data is a 2-D np.ndarray, `sample_list` and '
                                         '`seq_to_fit` are needed with same length and order as data'),
-    sample_list=('list-like', 'list of samples in the sample, should match the columns in the table data'),
-    seq_list=('list-like', 'list of seqs in the sample, should match the rows in the table data'),
-    data_unit=('str', 'The unit of table values, e.g. counts, ng, M. Default counts.'),
-    use_sparse=('bool', 'If store the table value as sparse matrix'),
-    data_note=('str', 'Note for data table'),
+    sample_list=('list-like', 'list of samples in the sample, should match the columns in the seq_table data'),
+    seq_list=('list-like', 'list of seqs in the sample, should match the rows in the seq_table data'),
+    data_unit=('str', 'The unit of seq_table values, e.g. counts, ng, M. Default counts.'),
+    use_sparse=('bool', 'If store the seq_table value as sparse matrix'),
+    data_note=('str', 'Note for data seq_table'),
     remove_empty=('bool', 'If remove the empty column/rows after filtering')
 
 )
@@ -40,13 +40,13 @@ class SeqTable(pd.DataFrame):
     """Enhanced ``pd.DataFrame`` with added property and functions for SeqData
 
     Additional Attributes:
-        unit (str): unit of entries in this table
-        note (str): note for this table
-        samples (pd.Series): samples in the table
-        seqs (pd.Series): sequences in the table
+        unit (str): unit of entries in this seq_table
+        note (str): note for this seq_table
+        samples (pd.Series): samples in the seq_table
+        seqs (pd.Series): sequences in the seq_table
 
     Additional Methods:
-      about: print a summary of the table
+      about: print a summary of the seq_table
       analysis: accessor to SeqTableAnalyzer
     """
 
@@ -75,12 +75,13 @@ class SeqTable(pd.DataFrame):
         self.unit = unit
         self.note = note
         self.is_sparse = use_sparse
-        self.analysis = "No added, run add_analysis"
+        self.update_analysis()
 
-    def add_analysis(self):
-        """Add accessor to SeqTableAnalyzer"""
+    def update_analysis(self):
+        """update the accessor to SeqTableAnalyzer"""
         from .seq_data_analyzer import SeqTableAnalyzer
         self.analysis = SeqTableAnalyzer(self)
+
 
     @property
     def _constructor_expanddim(self):
@@ -119,13 +120,13 @@ class SeqTable(pd.DataFrame):
             self._density = ((self == 0) | np.isnan(self)).sum().sum() / self.shape[0] / self.shape[1]
         return self._density
 
-    @_doc.compose("""Filter table along with one axis
+    @_doc.compose("""Filter seq_table along with one axis
 
     Args:
         filter (callable): a callable to apply on row/columns and returns a bool value
         axis (0 or 1): the axis to filter. 0: row, seqs; 1: column, sample
         <<remove_empty>>
-        inplace (bool): if change the table inplace. If False, return a new table
+        inplace (bool): if change the seq_table inplace. If False, return a new seq_table
     """)
     def filter_axis(self, filter, axis=0, remove_empty=False, inplace=False):
 
@@ -151,11 +152,11 @@ class SeqTable(pd.DataFrame):
         return slice_table(self, axis=axis, keys=filter, remove_empty=remove_empty)
 
 
-@_doc.compose("""Slice pd.DataFrame table with a list of key values or filter functions returning True/False along 
+@_doc.compose("""Slice pd.DataFrame seq_table with a list of key values or filter functions returning True/False along 
 given axis. Optional to remove all zero entries
 Args:
-    table (pd.DataFrame): table to slice
-    keys (list-like or callable): list of keys to preserve. If is callable, apply to row/column of table and returns
+    seq_table (pd.DataFrame): seq_table to slice
+    keys (list-like or callable): list of keys to preserve. If is callable, apply to row/column of seq_table and returns
         bool of preserve (True) or discard (False)
     axis (0 or 1): which axis to filter
     <<remove_empty>>
@@ -183,7 +184,7 @@ def slice_table(table, axis, keys, remove_empty=False):
 @_doc.compose("""Data instance to store k-seq result
 
 Attributes:
-    table (AttrScope): accessor for tables stored. Including ``original`` created during initialization.
+    seq_table (AttrScope): accessor for tables stored. Including ``original`` created during initialization.
         tables stored should be ``pd.DataFrame`` or ``SeqTable``
 <<x_values, x_unit>>
     seqs
@@ -236,7 +237,7 @@ class SeqData(object):
             self.metadata.seqs = AttrScope(seq_metadata)
         logging.info('SeqData created')
 
-        # add original table
+        # add original seq_table
         self.table = AttrScope(original=SeqTable(data=data, sample_list=sample_list, seq_list=seq_list,
                                                  unit=data_unit, note=data_note, use_sparse=use_sparse))
 
@@ -258,7 +259,7 @@ class SeqData(object):
             self.grouper = GrouperCollection()
             self.grouper.add(**grouper)
 
-        self.analysis = "No added, run add_analysis"
+        self.update_analysis()
 
     @property
     def samples(self):
@@ -266,7 +267,7 @@ class SeqData(object):
 
     @samples.setter
     def samples(self, samples):
-        logging.error("samples is inferred from original table and should not be changed",
+        logging.error("samples is inferred from original seq_table and should not be changed",
                       error_type=PermissionError)
 
     @property
@@ -275,20 +276,22 @@ class SeqData(object):
 
     @seqs.setter
     def seqs(self, seqs):
-        logging.error("seqs is inferred from original table and should not be changed",
+        logging.error("seqs is inferred from original seq_table and should not be changed",
                       error_type=PermissionError)
 
-    def add_analysis(self):
-        """add accessor to SeqDataAnalyzer"""
+    def update_analysis(self):
+        """Update accessor to SeqDataAnalyzer"""
         from .seq_data_analyzer import SeqDataAnalyzer
         self.analysis = SeqDataAnalyzer(self)
+        for table in self.table.__dict__.values():
+            table.update_analysis()
 
     def add_grouper(self, **kwargs):
         """Add an accessor of GrouperCollection of SeqData if not yet. Add Groupers to the accessor
         Initialize a Grouper instance with keyword arguments with a dictionary of:
             group (list or dict): list creates a Type 0 Grouper (single group) and dict creates a Type 1 Grouper
                 (multiple groups)
-            target (pd.DataFrame): optional, target table
+            target (pd.DataFrame): optional, target seq_table
             axis (0 or 1): axis to apply the grouper
         """
         if hasattr(self, 'grouper'):
@@ -371,39 +374,11 @@ class SeqData(object):
         from .count_file import load_Seqtable_from_count_files
         return load_Seqtable_from_count_files(**kwargs)
 
-    def sample_info(self):
-        """Summarize sample info for a SeqData, with info of
-        Returns:
-            A `pd.DataFrame` show the summary for samples
-        """
-        info = pd.DataFrame(index=self.samples)
-        if hasattr(self, 'grouper') and hasattr(self.grouper, 'input'):
-            def get_sample_type(sample):
-                if sample in self.grouper.input.group:
-                    return 'input'
-                elif sample in self.grouper.reacted.group:
-                    return 'reacted'
-                else:
-                    return np.nan
-            info['sample type'] = info.index.to_series().apply(get_sample_type)
 
-        if self.x_values is not None:
-            info['x values'] = self.x_values
-
-        info = pd.concat([info, self.table.original.analysis.sample_overview()], axis=1)
-
-        if hasattr(self, 'spike_in'):
-            info['total amount (spike-in)'] = self.spike_in.norm_factor * self.spike_in.base_table.sum(axis=0)
-            info['spike-in fraction'] = self.spike_in.peak.peak_abun(use_relative=False)[0].sum(axis=0) / self.spike_in.base_table.sum(axis=0)
-        
-        if hasattr(self, 'sample_total'):
-            info['total amount (sample total)'] = pd.Series(self.sample_total.total_amounts)
-
-        return info
 
 
 #     # TODO: consider add accessor to fitting
-#     # def add_fitting(self, model, seq_to_fit=None, weights=None, bounds=None,
+#     # def add_fitting(seq_data, model, seq_to_fit=None, weights=None, bounds=None,
 #     #                 bootstrap_depth=0, bs_return_size=None,
 #     #                 resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None):
 #     #     """
@@ -435,8 +410,8 @@ class SeqData(object):
 #     #         bs_return_size = None
 #     #     if metrics is None:
 #     #         metrics = None
-#     #     self.fitting = BatchFitting.from_SeqTable(
-#     #         seq_table=self,
+#     #     seq_data.fitting = BatchFitting.from_SeqTable(
+#     #         seq_table=seq_data,
 #     #         model=model,
 #     #         seq_to_fit=seq_to_fit,
 #     #         weights=weights,
@@ -448,7 +423,7 @@ class SeqData(object):
 #     #         random_init=random_init,
 #     #         metrics=metrics
 #     #     )
-#     #     self.logger.info('BatchFitting estimator added')
+#     #     seq_data.logger.info('BatchFitting estimator added')
 #     #
 
 

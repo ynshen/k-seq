@@ -5,141 +5,230 @@ todo:
 
 """
 
-from .seq_data import SeqData
+from .seq_data import SeqData, SeqTable
+from ..utility.func_tools import FuncToMethod, update_none
+from ..utility.plot_tools import savefig, ax_none
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
+import pandas as pd
 
 
-class SeqTableAnalyzer:
+class SeqTableAnalyzer(FuncToMethod):
 
     def __init__(self, seq_table):
+        super().__init__(
+            functions=[
+                seq_overview, 
+                sample_overview,
+                sample_unique_seqs_barplot,
+                sample_total_reads_barplot,
+                seq_mean_count_detected_samples_scatterplot,
+                seq_length_dist
+            ],
+            seq_table=seq_table
+        )
+
         self.seq_table = seq_table
 
 
-class SeqDataAnalyzer:
-
-    def __init__(self, seq_data):
-        self.seq_data = seq_data
-
-
-
-
-def seq_overview(table, axis=0):
-    """Summarize sample for a given table, with info of seq length, sample detected, mean, sd
+def seq_overview(seq_table, axis=0):
+    """Summarize sample in seq_table, with info of seq length, sample detected, mean, sd
     Returns:
         A `pd.DataFrame` show the summary for sequences
     """
     if axis == 1:
-        table = table.transpose()
+        seq_table = seq_table.transpose()
 
     return pd.DataFrame.from_dict(
-        {'length': table.index.to_series().apply(len),
-         'samples detected': (table > 0).sum(axis=1),
-         'mean': table.mean(axis=1),
-         'sd': table.std(axis=1)},
+        {'length': seq_table.index.to_series().apply(len),
+         'samples detected': (seq_table > 0).sum(axis=1),
+         'mean': seq_table.mean(axis=1),
+         'sd': seq_table.std(axis=1)},
         orient='columns'
     )
 
 
-def sample_overview(table, axis=1):
-    """Summarize sequences for a given table, with info of unique seqs, total amount
+def seq_length_dist(seq_table, axis=0, ax=None, figsize=(6, 3), bins=20, logx=False, logy=False,
+                    hist_kwargs=None, save_fig_to=None):
+    """Distribution of unique sequences in their length"""
+
+    seqs = seq_table.index.to_series() if axis == 0 else seq_table.columns.to_series()
+    seqs_length = seqs.apply(len)
+
+    hist_kwargs = update_none(hist_kwargs, {})
+    ax = ax_none(ax, figsize)
+    if isinstance(bins, int):
+        if logx:
+            bins = np.logspace(np.log10(np.min(seqs_length)) - 0.1, np.log10(np.max(seqs_length)) + 0.1, bins + 1)
+        else:
+            bins = np.linspace(np.min(seqs_length) - 0.1, np.max(seqs_length) + 0.1, bins + 1)
+
+    ax.hist(seqs_length, bins=bins, **hist_kwargs)
+    ax.set_xlabel('Sequence length', fontsize=12)
+    ax.set_ylabel('Unique sequences', fontsize=12)
+
+    if logy:
+        ax.set_yscale('log')
+    if logx:
+        ax.set_xscale('log')
+
+    savefig(save_fig_to)
+
+
+def sample_overview(seq_table, axis=1):
+    """Summarize sequences for a given seq_table, with info of unique seqs, total amount
 
     Returns:
         A `pd.DataFrame` show the summary for sequences
     """
-    if axis == 0:
-        table = table.transpose()
 
-    if isinstance(table, SeqTable):
-        col_name = f'total amount ({table.unit})'
+    if axis == 0:
+        seq_table = seq_table.transpose()
+
+    if isinstance(seq_table, SeqTable):
+        col_name = f'total amount ({seq_table.unit})'
     else:
         col_name = 'total amount'
 
     return pd.DataFrame.from_dict(
-        {'unique seqs': (table > 0).sum(axis=0),
-         col_name: table.sum(axis=0)},
+        {'unique seqs': (seq_table > 0).sum(axis=0),
+         col_name: seq_table.sum(axis=0)},
         orient='columns'
     )
 
 
-
-
-def sample_unique_seqs_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
-                               figsize=None, label_mapper=None, barplot_kwargs=None):
+def sample_unique_seqs_barplot(seq_table, black_list=None, logy=False,
+                               ax=None, save_fig_to=None, figsize=None,
+                               x_label=None, y_label='Unique sequences', fontsize=14,
+                               label_mapper=None, barplot_kwargs=None):
     """Barplot of unique seqs in each sample"""
 
     if not barplot_kwargs:
         barplot_kwargs = {}
-    if hasattr(seq_table, 'table'):
-        seq_table = seq_table.table
     if black_list is not None:
         seq_table = seq_table[~seq_table.columns.isin(black_list)]
-    uniq_counts = (seq_table > 0).sum(0)
-    if ax is None:
-        if figsize is None:
-            figsize = (len(uniq_counts)/2, 4)
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    else:
-        fig = None
-    pos = np.arange(len(uniq_counts))
-    ax.bar(pos, uniq_counts, **barplot_kwargs)
-    ax.set_xticks(pos)
+    uniq_seqs = (seq_table > 0).sum(0)
     if label_mapper:
-        if callable(label_mapper):
-            label_mapper = {sample: label_mapper(sample) for sample in uniq_counts.index}
-    else:
-        label_mapper = {sample: sample for sample in uniq_counts.index}
+        uniq_seqs = uniq_seqs.rename(label_mapper)
 
-    ax.set_xticklabels(list([label_mapper[sample] for sample in uniq_counts.index]), fontsize=12, rotation=90)
-    ax.set_ylabel('Unique seqs', fontsize=14)
-    ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}', ))
-    ax.tick_params(axis='both', labelsize=12)
+    barplot_kwargs['ax'] = ax
+    barplot_kwargs['figsize'] = figsize
+    barplot_kwargs['logy'] = logy
 
-    if fig is not None and save_fig_to is not None:
-        fig.patch.set_alpha(0)
-        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+    uniq_seqs.plot(kind='bar', **barplot_kwargs)
 
-    return uniq_counts
+    if ax is None:
+        ax = plt.gca()
+    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.set_xlabel(x_label, fontsize=fontsize)
+    ax.tick_params(axis='both', labelsize=fontsize)
+
+    savefig(save_fig_to)
+
+    return uniq_seqs
 
 
-def sample_total_counts_barplot(seq_table, black_list=None, ax=None, save_fig_to=None,
-                                figsize=None, label_mapper=None, barplot_kwargs=None):
+def sample_total_reads_barplot(seq_table, black_list=None, logy=False,
+                                ax=None, save_fig_to=None, figsize=None,
+                                x_label=None, y_label='Total reads', fontsize=14,
+                                label_mapper=None, barplot_kwargs=None):
     """Barplot of total counts in each sample"""
 
-    if barplot_kwargs is None:
+    if not barplot_kwargs:
         barplot_kwargs = {}
-    if hasattr(seq_table, 'table'):
-        seq_table = seq_table.table
     if black_list is not None:
         seq_table = seq_table[~seq_table.columns.isin(black_list)]
-    total_counts = seq_table.sum(0)
-    if ax is None:
-        if figsize is None:
-            figsize = (len(total_counts)/2, 4)
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    else:
-        fig = None
-    pos = np.arange(len(total_counts))
-    ax.bar(pos, total_counts, **barplot_kwargs)
-    ax.set_xticks(pos)
+    total_reads = seq_table.sum(0)
     if label_mapper:
-        if callable(label_mapper):
-            label_mapper = {sample: label_mapper(sample) for sample in total_counts.index}
+        total_reads = total_reads.rename(label_mapper)
+
+    barplot_kwargs['ax'] = ax
+    barplot_kwargs['figsize'] = figsize
+    barplot_kwargs['logy'] = logy
+
+    total_reads.plot(kind='bar', **barplot_kwargs)
+
+    if ax is None:
+        ax = plt.gca()
+    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.set_xlabel(x_label, fontsize=fontsize)
+    ax.tick_params(axis='both', labelsize=fontsize)
+
+    savefig(save_fig_to)
+
+    return total_reads
+
+
+def seq_mean_count_detected_samples_scatterplot(seq_table, figsize=5,
+                                                log_counts=True, subsample=None,
+                                                color='#1F77B4',
+                                                marker_size=5, scatter_kwargs=None):
+    import seaborn as sns
+    data = pd.DataFrame({'Mean counts': seq_table.mean(axis=1),
+                         'Detected samples': (seq_table > 0).sum(axis=1)})
+
+    if log_counts:
+        y = '$\log_{10}$(Mean counts)'
+        data_to_plot = pd.DataFrame({y: np.log10(data['Mean counts']),
+                                     'Detected samples': data['Detected samples']})
     else:
-        label_mapper = {sample: sample for sample in total_counts.index}
+        data_to_plot = data
+        y = 'Mean counts'
+    scatter_kwargs = update_none(scatter_kwargs, {})
+    if subsample:
+        data_to_plot = data_to_plot.sample(subsample)
+    sns.jointplot(data=data_to_plot,
+                  x='Detected samples', y=y, kind='scatter', height=figsize, ratio=3, space=0.1, color=color,
+                  joint_kws={'s': marker_size}.update(scatter_kwargs))
 
-    ax.set_xticklabels([label_mapper[sample] for sample in total_counts.index], fontsize=12, rotation=90)
-    ax.get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}', ))
-    plt.setp(ax.get_yticklabels()[-1], visible=False)
-    ax.set_ylabel('Total counts', fontsize=14)
-    ax.tick_params(axis='both', labelsize=12)
+    return data
 
-    if fig is not None and save_fig_to is not None:
-        fig.patch.set_alpha(0)
-        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
 
-    return total_counts
+class SeqDataAnalyzer(FuncToMethod):
+
+    def __init__(self, seq_data):
+        super().__init__(
+            functions=[
+                sample_info
+            ],
+            seq_data=seq_data
+        )
+        self.seq_data = seq_data
+
+
+def sample_info(seq_data):
+    """Summarize sample info for a SeqData, with info of total amount and spike-in
+    Returns:
+        A `pd.DataFrame` show the summary for samples
+    """
+    info = pd.DataFrame(index=seq_data.samples)
+    if hasattr(seq_data, 'grouper') and hasattr(seq_data.grouper, 'input'):
+        def get_sample_type(sample):
+            if sample in seq_data.grouper.input.group:
+                return 'input'
+            elif sample in seq_data.grouper.reacted.group:
+                return 'reacted'
+            else:
+                return np.nan
+
+        info['sample type'] = info.index.to_series().apply(get_sample_type)
+
+    if seq_data.x_values is not None:
+        info['x values'] = seq_data.x_values
+
+    info = pd.concat([info, seq_data.table.original.analysis.sample_overview()], axis=1)
+    info = info.rename(columns={'total amount': 'total reads'})
+
+    if hasattr(seq_data, 'spike_in'):
+        info[f'total amount (spike-in, {seq_data.spike_in.unit})'] = seq_data.spike_in.norm_factor * seq_data.spike_in.base_table.sum(axis=0)
+        info['spike-in fraction'] = seq_data.spike_in.peak.peak_abun(use_relative=False)[0].sum(
+            axis=0) / seq_data.spike_in.base_table.sum(axis=0)
+
+    if hasattr(seq_data, 'sample_total'):
+        info[f'total amount (sample total, {seq_data.sample_total.unit})'] = pd.Series(seq_data.sample_total.total_amounts)
+
+    return info
 
 
 def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_fig_to=None,

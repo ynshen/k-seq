@@ -1,4 +1,4 @@
-"""Grouper slice table into pre-defined groups. E.g. input samples, reacted samples, different concentrations
+"""Grouper slice seq_table into pre-defined groups. E.g. input samples, reacted samples, different concentrations
 """
 
 from .seq_data import slice_table
@@ -14,7 +14,7 @@ class Grouper(object):
         Type 1: initialize with group as dict. This defines a collection of groups of samples/sequences
 
     Attributes:
-        target (pd.DataFrame): accessor for table to group
+        target (pd.DataFrame): accessor for seq_table to group
         axis (0 or 1): axis to apply grouping (0 for index, 1 for columns)
         group (list or dict): dictionary with structure {group_name: group_members}
         type (0 or 1): type of the grouper
@@ -31,7 +31,7 @@ class Grouper(object):
         Args:
             group (list or dict): list creates a Type 0 Grouper (single group) and dict creates a Type 1 Grouper
                 (multiple groups)
-            target (pd.DataFrame): optional, target table
+            target (pd.DataFrame): optional, target seq_table
             axis (0 or 1): axis to apply the grouper
         """
         import numpy as np
@@ -49,13 +49,13 @@ class Grouper(object):
         self.axis = axis
 
     def __call__(self, target=None, axis=1, group=None, remove_zero=False):
-        """Call self.get_table"""
+        """Call seq_data.get_table"""
         return self.get_table(group=group, target=target, axis=axis, remove_zero=remove_zero)
 
     def __iter__(self):
         """Group iterator to return a generator of subtables"""
         if self.target is None:
-            logging.error('self.target is None, please assign before iteration', error_type=ValueError)
+            logging.error('seq_data.target is None, please assign before iteration', error_type=ValueError)
 
         if self.type == 0:
             if self.axis == 0:
@@ -66,16 +66,16 @@ class Grouper(object):
             return (self.get_table(group) for group in self.group.keys())
 
     def __getitem__(self, group=None):
-        """Index-like access to return a sub-table with indicated group name;
-        type 1 table will just return the subtable"""
+        """Index-like access to return a sub-seq_table with indicated group name;
+        type 1 seq_table will just return the subtable"""
         return self.get_table(group=group)
 
     def get_table(self, group=None, target=None, axis=None, remove_zero=False):
-        """Return a sub-table from target given group"""
+        """Return a sub-seq_table from target given group"""
         if target is None:
             target = self.target
         if target is None:
-            logging.error("Please indicate target table to group")
+            logging.error("Please indicate target seq_table to group")
         if axis is None:
             axis = self.axis
         if self.type == 0:
@@ -90,7 +90,7 @@ class Grouper(object):
         if target is None:
             target = self.target
         if target is None:
-            logging.error("Please indicate target table to group")
+            logging.error("Please indicate target seq_table to group")
         if self.type == 0:
             return self.get_table(target=target, remove_zero=remove_zero)
         else:

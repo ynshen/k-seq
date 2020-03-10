@@ -117,7 +117,7 @@ simu_doc = DocHelper(
                     'and a pickled SeqData object'),
     x=('pd.DataFrame', 'controlled variable (c, n) for samples'),
     Y=('pd.DataFrame', 'simulated sequence counts for given samples'),
-    param_table=('pd.DataFrame', 'table list the parameters for simulated sequences, including p0, k, A, kA'),
+    param_table=('pd.DataFrame', 'seq_table list the parameters for simulated sequences, including p0, k, A, kA'),
     seq_table=('data.SeqData', 'a SeqData object to stores all the data'),
     truth=('pd.DataFrame', 'true values of parameters (e.g. p0, k, A) for simulated sequences')
 )
@@ -237,14 +237,14 @@ Procedure:
 
 Args:
 <<uniq_seq_num, x_values, total_reads, p0, kinetic_model, count_model>>
-    param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
-    weights (list or str): weights/col of weight for sampling from table
+    param_sample_from_df (pd.DataFrame): optional to sample sequences from given seq_table
+    weights (list or str): weights/col of weight for sampling from seq_table
 <<total_amount_error, conv_reps, seed, save_to, param_generator>>
 
 Returns:
     x (pd.DataFrame): c, n value for samples
     Y (pd.DataFrame): simulated sequence counts for given samples
-    param_table (pd.DataFrame): table list the parameters for simulated sequences
+    param_table (pd.DataFrame): seq_table list the parameters for simulated sequences
     seq_table (data.SeqData): a SeqData object to stores all the data
 """)
 def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
@@ -533,8 +533,8 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 #         kinetic_model (callable): kinetic model of the reaction
 #         percent_noise (float or list): percent variance of Gaussian noise, if list, should have same shape as x_values,
 #             default: 0.2
-#         param_sample_from_df (pd.DataFrame): optional to sample sequences from given table
-#         weights (list or str): weights/col of weight for sampling from table
+#         param_sample_from_df (pd.DataFrame): optional to sample sequences from given seq_table
+#         weights (list or str): weights/col of weight for sampling from seq_table
 #         replace (bool): if sample with replacement
 #         conv_reps (int): number of replicates for each c, N
 #         allow_zero (bool): if allow reacted fraction to be zero after noise. If False, repeated sampling until a
@@ -545,8 +545,8 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 #
 #     Returns:
 #         x (pd.Series): x_values with replication
-#         Y (pd.DataFrame): a table of reacted fraction
-#         param_table (pd.DataFrame): a table of parameter truth
+#         Y (pd.DataFrame): a seq_table of reacted fraction
+#         param_table (pd.DataFrame): a seq_table of parameter truth
 #     """
 #
 #     def add_noise(mean, noise, allow_zero=False):

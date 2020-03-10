@@ -43,7 +43,7 @@ def dict_flatten(d, parent_key='', sep='_'):
 
 
 def get_func_params(func, required_only=True):
-    """Get the name of arguments for a function (callable), or the arguments in __init__ for a Class (self not included)
+    """Get the name of arguments for a function (callable), or the arguments in __init__ for a Class (seq_data not included)
 
     Args:
         func (`callable`): the function
@@ -67,22 +67,21 @@ class FuncToMethod(object):
     """Convert a set of functions to a collection of methods on the object"""
 
     @staticmethod
-    def _wrap_function(func, obj=None):
+    def _wrap_function(func, *args, **kwargs):
         from functools import partial, update_wrapper
-        if obj is None:
+        if kwargs == {} and args == ():
             return func
         else:
-            wrapped = partial(func, obj)
+            wrapped = partial(func, *args, **kwargs)
             update_wrapper(wrapped, func)
             return wrapped
 
-    def __init__(self, functions, obj=None):
+    def __init__(self, functions, *args, **kwargs):
         if callable(functions):
             functions = [functions]
 
-        self.__dict__.update({
-            func.__name__: self._wrap_function(func, obj=obj) for func in functions
-        })
+        for func in functions:
+            setattr(self, func.__name__, self._wrap_function(func, *args, **kwargs))
 
 
 class AttrScope(object):
@@ -117,7 +116,6 @@ class AttrScope(object):
         if kwargs is None:
             kwargs = {}
         self.__dict__.update({**kwargs, **attr_dict})
-
 
 
 def param_to_dict(key_list, **kwargs):
