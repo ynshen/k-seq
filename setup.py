@@ -14,7 +14,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='k-seq',   # this is the name registered on pypi
-    version='0.4.0a',
+    version='0.4.2a',
     description='Kinetic sequencing analysis by Chen lab at University of California, Santa Barbara',
     long_description=long_description,
     long_description_content_type='text/markdown', # to use markdown, make sure wheel, setuptools, twine are up to date
