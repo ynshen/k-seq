@@ -46,7 +46,7 @@ doc_helper.add(
     bs_method=('`str`', "Bootstrap method, choose from 'pct_res' (resample percent residue),"
                         "'data' (resample data), or 'stratified' (resample within replicates)"),
     grouper=('dict or Grouper', 'Indicate the grouping of samples'),
-    bs_stats=('dict of callable', 'a dict of stats functions to input the full record seq_table (pd.DataFrame with '
+    bs_stats=('dict of callable', 'a dict of stats functions to input the full record table (pd.DataFrame with '
                                   'parameters and metrics as columns) and return a single value, dict, or pd.Series'),
     record_full=('bool', 'if record the x_value and y_value for each bootstrapped sample; if False, '
                          'only parameters and metrics are recorded. Default False.')
@@ -58,7 +58,7 @@ doc_helper.add(
     conv_reps=('int', 'number of repeated fitting from perturbed initial points for convergence test'),
     conv_init_range=('list of 2-tuple', 'a list of two tuple range (min, max) with same length as model parameters. '
                                         'If None, all parameters are initialized from (0, 1) with random uniform draw'),
-    conv_stats=('dict of callable', 'a dict of stats functions to input the full record seq_table (pd.DataFrame with '
+    conv_stats=('dict of callable', 'a dict of stats functions to input the full record table (pd.DataFrame with '
                                     'parameters and metrics as columns) and return a single value, dict, or pd.Series'),
 )
 

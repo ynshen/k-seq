@@ -59,7 +59,7 @@ def kA(params):
 
 
 def convergence_test(seq, c, reps=20):
-    """seq: a row of reacted frac seq_table"""
+    """seq: a row of reacted frac table"""
     from k_seq.estimator import least_squares
     from k_seq.model.kinetic import BYOModel
 

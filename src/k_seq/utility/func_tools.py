@@ -43,7 +43,7 @@ def dict_flatten(d, parent_key='', sep='_'):
 
 
 def get_func_params(func, required_only=True):
-    """Get the name of arguments for a function (callable), or the arguments in __init__ for a Class (seq_data not included)
+    """Get the name of arguments for a function (callable), or the arguments in __init__ for a Class (self not included)
 
     Args:
         func (`callable`): the function

@@ -27,7 +27,7 @@ class Filter(ABC):
         ``seq_data.target``
 
     Note: please assign ``target`` at the end of __init__ as assigning ``target`` will do filtering and update
-        ``seq_data.mask``
+        ``self.mask``
     """
 
     def __init__(self, target=None, axis=0):

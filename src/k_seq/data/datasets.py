@@ -56,10 +56,10 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
                    pandaseq_joined=True, radius=2):
     """BYO doped pool k-seq datatable contains k-seq results for seqs from doped-pool for BYO aminoacylation,
 
-    this dataset contains following pre-computed seq_table (``.table`` accessor) to use
+    this dataset contains following pre-computed table (``.table`` accessor) to use
 
-        - original (4313709, 16): count seq_table contains all sequences detected in any samples and all the samples
-        - filtered (3290337, 16): count seq_table with non 21 nt sequences and spike-in sequences filtered
+        - original (4313709, 16): count table contains all sequences detected in any samples and all the samples
+        - filtered (3290337, 16): count table with non 21 nt sequences and spike-in sequences filtered
         - reacted_frac_spike_in (764756, 15): reacted fraction for valid seqs quantified by spike-in
         - reacted_frac_qpcr (764756, 15): reacted fraction for valid seqs quantified by qPCR
         - reacted_frac_spike_in_seq_in_all_smpl (22525, 15): only contains seqs with counts >= 1 in all samples
