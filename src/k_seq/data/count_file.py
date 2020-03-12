@@ -11,7 +11,10 @@ import pandas as pd
 
 
 def _load_single_source(count_files, file_list=None, pattern_filter=None, name_template=None, black_list=None):
-    """Load count files from single source (directory), return a dictionary contains file info"""
+    """Load count files from single source (directory), return a dictionary contains file info
+    Return:
+          dict with sample names and metadata extracted
+    """
 
     from ..utility.file_tools import get_file_list, extract_metadata
     # parse file metadata
@@ -94,9 +97,14 @@ def load_Seqtable_from_count_files(
     else:
         grouper = None
 
+    if x_values is not None and isinstance(x_values, str):
+        x_values = {
+            sample: sample_metadata.pop(x_values, None) for sample, sample_metadata in samples.items()
+        }
+
     from .seq_data import SeqData
 
-    return SeqData(data_mtx, data_unit='count', grouper=grouper, sample_metadata=sample_metadata,
+    return SeqData(data_mtx, data_unit='count', grouper=grouper, sample_metadata={'info': samples},
                    x_values=x_values, x_unit=x_unit, note=note)
 
 

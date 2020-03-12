@@ -240,12 +240,11 @@ class SeqData(object):
         # add original seq_table
         self.table = AttrScope(original=SeqTable(data=data, sample_list=sample_list, seq_list=seq_list,
                                                  unit=data_unit, note=data_note, use_sparse=use_sparse))
-
         # add x values
         if x_values is None:
             self.x_values = None
             self.x_unit = None
-        elif isinstance(x_values, dict):
+        elif isinstance(x_values, (dict, pd.Series)):
             self.x_values = pd.Series(x_values)
             self.x_unit = x_unit
         elif isinstance(x_values, (list, np.ndarray)):
@@ -253,6 +252,8 @@ class SeqData(object):
             self.x_unit = x_unit
         else:
             logging.error('Unknown type for x_values', error_type=TypeError)
+        self.x_values = self.x_values[self.table.original.samples]
+        self.x_values = self.x_values[~self.x_values.isna()]
 
         if grouper is not None:
             from .grouper import GrouperCollection
