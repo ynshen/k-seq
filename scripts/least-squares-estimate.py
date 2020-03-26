@@ -2,6 +2,7 @@
 import sys
 from yutility import logging
 from scipy import stats
+import numpy as np
 
 
 def remove_nan(df):
@@ -10,22 +11,34 @@ def remove_nan(df):
 
 def spearman(records):
     records = remove_nan(records)
-    return stats.spearmanr(records['k'], records['A']).correlation
+    if records.shape[0] > 10:
+        return stats.spearmanr(records['k'], records['A']).correlation
+    else:
+        return np.nan
 
 
 def pearson(records):
     records = remove_nan(records)
-    return stats.pearsonr(records['k'], records['A'])[0]
+    if records.shape[0] > 10:
+        return stats.pearsonr(records['k'], records['A'])[0]
+    else:
+        return np.nan
 
 
 def normality_dAgostino_test(records):
     records = remove_nan(records)
-    return stats.normaltest(records['kA'], nan_policy='propagate').pvalue
+    if records.shape[0] > 10:
+        return stats.normaltest(records['kA'], nan_policy='propagate').pvalue
+    else:
+        return np.nan
 
 
 def normality_shapiro_test(records):
     records = remove_nan(records)
-    return stats.shapiro(records['kA'])[0]
+    if records.shape[0] > 10:
+        return stats.shapiro(records['kA'])[0]
+    else:
+        return np.nan
 
 
 def kA(params):
@@ -73,7 +86,7 @@ def main(seq_data, table_name, fit_top_n=None, exclude_zero=False, inverse_weigh
          bootstrap_num=None, bs_record_num=None, bs_method='data', stratified_grouper=None,
          convergence_num=0,
          core_num=1, large_data=False, output_dir=None,
-         overwrite=False, note=None):
+         overwrite=False, note=None, rnd_seed=23):
     """Main function for fitting"""
 
     from k_seq.estimator import BatchFitter
@@ -94,19 +107,22 @@ def main(seq_data, table_name, fit_top_n=None, exclude_zero=False, inverse_weigh
     logging.info(f'inverse_weight: {inverse_weight}')
     logging.info(f'fit_top_n: {fit_top_n}')
     logging.info(f'large_data: {large_data}')
+    logging.info(f'convergence: {convergence_num > 0}')
+    logging.info(f'bootstrap: {bootstrap_num > 0}')
+
     batch_fitter = BatchFitter(
         y_dataframe=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
         model=BYOModel.reacted_frac(broadcast=False), exclude_zero=exclude_zero, grouper=grouper,
         bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
         bs_stats={'norm_dAgostino': normality_dAgostino_test,
                   'norm_shapiro': normality_shapiro_test},
-        conv_reps=20,
-        conv_init_range=((0, 1), (0, 10)),
+        conv_reps=convergence_num,
+        conv_init_range=((0, 10), (0, 1)),
         conv_stats={'spearman': spearman,
                     'pearson': pearson},
         large_dataset=True,
         note=note,
-        rnd_seed=23
+        rnd_seed=rnd_seed
     )
     stream_to = output_dir if large_data else None
     batch_fitter.fit(parallel_cores=core_num, point_estimate=True,

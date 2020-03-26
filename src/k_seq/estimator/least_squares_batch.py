@@ -14,6 +14,9 @@ __all__ = ['BatchFitter', 'BatchFitResults']
 def _work_fn(worker, point_estimate, bootstrap, convergence_test):
     """Utility work function to parallelize workers"""
     worker.fit(point_estimate=point_estimate, bootstrap=bootstrap, convergence_test=convergence_test)
+    print(f'\nFit sequence: {worker.name}')
+    print(worker.x_data)
+    print(worker.y_data)
     return worker
 
 
@@ -204,6 +207,8 @@ class BatchFitter(Estimator):
                 # single thread
                 logging.info('Fitting in a single thread...')
                 workers = [work_fn(worker) for worker in worker_generator]
+
+            self.workers = workers
 
             self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
             # record results
@@ -460,6 +465,7 @@ class BatchFitResults:
             seq_to_hash = self._bs_record
 
         if self.result_path.joinpath('seqs').exists():
+            logging.info(f"load result from {seq_to_hash[seq]}.json")
             return FitResults.from_json(self.result_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
         elif self.result_path.joinpath('seqs.tar.gz').exists():
             try:
