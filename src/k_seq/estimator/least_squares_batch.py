@@ -147,7 +147,7 @@ class BatchFitter(Estimator):
         #                                   ])
         logging.info('BatchFitter created')
 
-    def _worker_generator(self, stream_to_disk=None, overwrite=False):
+    def _worker_generator(self, stream_to=None, overwrite=False):
         """Return a generator of worker for each sequence"""
 
         if self.seq_to_fit is None:
@@ -159,7 +159,7 @@ class BatchFitter(Estimator):
                 name=seq,
                 y_data=self.y_dataframe.loc[seq],
                 sigma=None if self.sigma is None else self.sigma.loc[seq],
-                save_to=None if stream_to_disk is None else f"{stream_to_disk}/seqs/{seq}.json",
+                save_to=None if stream_to is None else f"{str(stream_to)}/seqs/{seq}.json",
                 overwrite=overwrite,
                 **self.fit_params.__dict__
             )
@@ -186,18 +186,18 @@ class BatchFitter(Estimator):
                               error_type=ValueError)
             if not self.large_dataset and stream_to is not None:
                 self.large_dataset = True
-                logging.warning("You provided `stream_to` so the large_dataset is triggered on")
+                logging.warning("You provided `stream_to` so the large_dataset method is used")
 
             if self.large_dataset:
                 self._hash()
                 self.results.result_path = Path(stream_to)
-                check_dir(stream_to + '/seqs/')
-                dump_json(obj=self._seq_to_hash, path=f"{stream_to}/seqs/seq_to_hash.json")
+                check_dir(self.results.result_path.joinpath('seqs'))
+                dump_json(obj=self._seq_to_hash, path=self.results.result_path.joinpath('seqs', 'seq_to_hash.json'))
 
             from functools import partial
             work_fn = partial(_work_fn, point_estimate=point_estimate,
                               bootstrap=bootstrap, convergence_test=convergence_test)
-            worker_generator = self._worker_generator(stream_to_disk=stream_to, overwrite=overwrite)
+            worker_generator = self._worker_generator(stream_to=stream_to, overwrite=overwrite)
             if parallel_cores > 1:
                 import multiprocessing as mp
                 pool = mp.Pool(processes=int(parallel_cores))
@@ -225,6 +225,7 @@ class BatchFitter(Estimator):
 
             if self.large_dataset:
                 self._hash_inv()
+                self.results.to_json(output_dir=stream_to)
 
             logging.info('Fitting finished')
 

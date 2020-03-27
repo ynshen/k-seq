@@ -487,10 +487,10 @@ class FitResults:
         self.convergence = AttrScope(keys=['summary', 'records'])
 
         # TODO: update to make visualizer work
-        from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot
-        from ..utility.func_tools import FuncToMethod
-        self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
-                                                            bootstrap_params_dist_plot])
+        # from k_seq.estimator.visualizer.single_fit import fitting_curve_plot, bootstrap_params_dist_plot
+        # from ..utility.func_tools import FuncToMethod
+        # self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
+        #                                                     bootstrap_params_dist_plot])
 
     def to_series(self):
         """Convert point_estimation, uncertainty (if possible), and convergence (if possible) to a series include
@@ -499,13 +499,15 @@ class FitResults:
         """
         from ..utility.func_tools import dict_flatten
 
-        res = self.point_estimation.params
+        res = pd.Series()
+        if self.point_estimation.params is not None:
+            res = res.append(self.point_estimation.params)
         if self.uncertainty.summary is not None:
             # uncertainty estimation results exists
             res = res.append(pd.Series(dict_flatten(self.uncertainty.summary.to_dict())))
 
         if self.convergence.summary is not None:
-            # uncertainty estimation results exists
+            #  convergence test results exists
             res = res.append(pd.Series(dict_flatten(self.convergence.summary.to_dict())))
 
         if self.estimator is not None:
