@@ -701,3 +701,58 @@ def _read_work_fn(seq):
     res = _read_seq_json(seq[1])
     res.name = seq[0]
     return res
+
+
+
+# TODO: check following result
+
+def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
+    from .least_squares import BatchFitter, SingleFitter
+    from ..data.seq_data import SeqData
+
+    def extract_info_from_SingleFitting(single_res):
+        data = {
+            'x_data': single_res.x_data,
+            'y_data': single_res.y_data,
+            'params': single_res.point_est.params[:len(single_res.config['parameters'])]
+        }
+        if num_bootstrap_records is not None:
+            if single_res.bootstrap.records.shape[0] > num_bootstrap_records:
+                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
+                    axis=0,
+                    n=num_bootstrap_records
+                )
+            else:
+                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])]
+        return data
+
+    if num_bootstrap_records == 0:
+        num_bootstrap_records = None
+    if isinstance(fitting_res, SeqData):
+        fitting_res = fitting_res.fitting
+    if isinstance(fitting_res, BatchFitter):
+        if seq_ix is None:
+            raise Exception('Please provide the names of sequences to plot')
+        else:
+            if isinstance(seq_ix, str):
+                seq_ix = [seq_ix]
+            if seq_name is None:
+                seq_name = seq_ixs
+            if model is None:
+                model = fitting_res.model
+            data_to_plot = {
+                name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
+                for name, seq_ix in zip(seq_name, seq_ix)
+            }
+    elif isinstance(fitting_res, SingleFitter):
+        if seq_name is None:
+            seq_name = fitting_res.name
+        if model is None:
+            model = fitting_res.model
+        data_to_plot = {
+            seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
+        }
+    else:
+        raise Exception('The input fitting_res should be SeqData, SingleFitting or BatchFitting')
+
+    return model, data_to_plot

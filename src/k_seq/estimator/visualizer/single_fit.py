@@ -1,121 +1,285 @@
-def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-    from .least_squares import BatchFitter, SingleFitter
-    from ..data.seq_data import SeqData
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from ...utility.plot_tools import ax_none
+from ...utility.func_tools import update_none
+from yutility import logging
 
-    def extract_info_from_SingleFitting(single_res):
-        data = {
-            'x_data': single_res.x_data,
-            'y_data': single_res.y_data,
-            'params': single_res.point_est.params[:len(single_res.config['parameters'])]
-        }
-        if num_bootstrap_records is not None:
-            if single_res.bootstrap.records.shape[0] > num_bootstrap_records:
-                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
-                    axis=0,
-                    n=num_bootstrap_records
-                )
-            else:
-                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])]
-        return data
+__all__ = ['plot_curve', 'plot_loss_heatmap']
 
-    if num_bootstrap_records == 0:
-        num_bootstrap_records = None
-    if isinstance(fitting_res, SeqData):
-        fitting_res = fitting_res.fitting
-    if isinstance(fitting_res, BatchFitter):
-        if seq_ix is None:
-            raise Exception('Please provide the names of sequences to plot')
+
+def plot_curve(model, x, y, param=None, major_param=None, subsample=20,
+               x_label=None, y_label=None, x_lim=None, y_lim=None,
+               major_curve_kwargs=None, curve_kwargs=None, datapoint_kwargs=None,
+               major_curve_label='major curve', curve_label='curves', datapoint_label='data',
+               legend=False, legend_loc='upper right', ax=None):
+    """Plot curve of fitting results
+    Args:
+        model (callable): kinetic model returns y with first argument as x
+        x (list-like): x values of data
+        y (list-like): y values of corresponding x data, same length
+        param (dict or pd.DataFrame): estimated parameters for model from fitting(s)
+        major_param (dict): a major parameter estimated
+        subsample (int): maximal num of fitting curves to show
+        x_label (str): x axis label name
+        y_label (str): y axis label name
+        x_lim (2-tuple): lower and upper limit of x axis
+        y_lim (2-tuple): lower and upper limit of y axis
+        major_curve_kwargs (dict): plot arguments for major curve
+        curve_kwargs (dict): plot arguments for other curves
+        datapoint_kwargs (dict): scatter plot arguments for data points
+        major_curve_label (str): label on legend for major curve
+        curve_label (str): label on legend for other curves
+        datapoint_label (str): label on legend for data points
+        legend (bool): if show legend
+        legend_loc (str or 4-tuple): specify the location of legend, default is upper right
+        ax (plt.Axes): Axes to plot on
+    """
+    ax = ax_none(ax, figsize=(4, 3))
+    major_curve_kwargs = update_none(major_curve_kwargs, {})
+    curve_kwargs = update_none(curve_kwargs, {})
+    datapoint_kwargs = update_none(datapoint_kwargs, {})
+
+    # prep plotting kwargs
+    major_curve_kwargs = {**{'color': '#4C78A8', 'alpha': 0.5}, **major_curve_kwargs}
+    if major_param is None:
+        curve_kwargs = {**{'color': '#4C78A8', 'alpha': 0.5}, **curve_kwargs}
+    else:
+        curve_kwargs = {**{'color': '#AEAEAE', 'alpha': 0.3}, **datapoint_kwargs}
+    datapoint_kwargs = {**{'color': '#E45756', 'alpha': 1, 'zorder': 3, 'marker': 'x'}, **datapoint_kwargs}
+
+    # plot curves
+    if x_lim:
+        xs = np.linspace(0, x_lim[1] * 0.9, 100)
+    else:
+        xs = np.linspace(0, np.max(x) * 1.1, 100)
+
+    def add_curve(data, plot_args):
+        if isinstance(data, dict):
+            y_ = model(xs, **data)
+        elif isinstance(data, pd.Series):
+            y_ = model(xs, **data.to_dict())
         else:
-            if isinstance(seq_ix, str):
-                seq_ix = [seq_ix]
-            if seq_name is None:
-                seq_name = seq_ixs
-            if model is None:
-                model = fitting_res.model
-            data_to_plot = {
-                name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
-                for name, seq_ix in zip(seq_name, seq_ix)
-            }
-    elif isinstance(fitting_res, SingleFitter):
-        if seq_name is None:
-            seq_name = fitting_res.name
-        if model is None:
-            model = fitting_res.model
-        data_to_plot = {
-            seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
-        }
+            logging.error('Unknown parameter input type, should be pd.Series or dict', error_type=TypeError)
+
+        ax.plot(xs, y_, marker=None, **plot_args)
+
+    if param is not None:
+        if isinstance(param, dict):
+            add_curve(param)
+        elif isinstance(param, pd.DataFrame):
+            if param.shape[0] > subsample:
+                param = param.sample(subsample)
+        param.apply(add_curve, axis=1, plot_args=curve_kwargs)
+
+    # add major curve if applicable
+    if major_param:
+        add_curve(major_param, plot_args=major_curve_kwargs)
+
+    # add raw data points
+    ax.scatter(x, y, label=datapoint_label, **datapoint_kwargs)
+
+    if x_lim:
+        ax.set_xlim(x_lim)
+    if y_lim:
+        ax.set_ylim(y_lim)
+    if x_label:
+        ax.set_xlabel(x_label, fontsize=14)
+    if y_label:
+        ax.set_ylabel(y_label, fontsize=14)
+
+    if legend:
+        if major_param is not None:
+            ax.plot([0], [0], label=major_curve_label, **major_curve_kwargs)
+        if param is not None:
+            ax.plot([0], [0], label=curve_label, **curve_kwargs)
+        ax.legend(loc=legend_loc, frameon=True, edgecolor=None, framealpha=0.5)
+
+
+def mse(y_, y):
+    """Unweighted mean square error between y and y_"""
+    return np.mean((y_ - y)**2)
+
+
+def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range,
+                      param_log=False, resolution=100,
+                      fixed_params=None,
+                      cost_fn=mse, z_log=True,
+                      datapoint_color='#E45756', datapoint_label='data', datapoint_kwargs=None,
+                      legend=False, legend_loc='upper left',
+                      ax=None):
+    """Plot a heatmap to show the energy landscape for cost function, on two params
+
+    Args:
+      model (callable): kinetic model with first argument as x. Broadcase should be
+        implemented with x as the innest dimension
+      x (list-like): x values of data
+      y (list-like): y values of corresponding x data, same length
+      param (dict or pd.DataFrame): estimated parameters for model from fitting(s)
+      param_name (2-tuple of str): name for two params to scan
+      scan_range (dict of two tuple): scan range of two parameters:
+        {param1:(low, high),
+         param2:(low, high)}
+        Note: in model output, dim of param1 should always be out of dim param2
+      fix_params (dict): optional. If there is any fixed params, except for the two to scan
+      param_log (bool or dict of bool): if the scan is spacing on log scale
+      resolution (int or dict of int): resolution for two scan, default 50
+      cost_fn (callable): cost function in calculating cost between y_ and y, take (y_, y)
+      ax (plt.Axes): Axes to plot on
+    """
+    from functools import partial
+
+    if isinstance(resolution, int):
+        resolution = (resolution, resolution)
+    if isinstance(param_log, bool):
+        param_log = (param_log, param_log)
+
+    def get_scan_point(scan_range, resolution=101, log=False):
+        """Generate 1d array contains the scanning point of a dimension"""
+        if log:
+            return np.logspace(np.log10(scan_range[0]), np.log10(scan_range[1]), resolution)
+        else:
+            return np.linspace(scan_range[0], scan_range[1], resolution)
+
+    param1_list = get_scan_point(param1_range, resolution[0], param_log[0])
+    param2_list = get_scan_point(param2_range, resolution[1], param_log[1])
+
+    if not fixed_params:
+        fixed_params = {}
+
+    # generate ys_ with shape (param1, param2)
+    ys_ = model(x, **{param_name[0]: param1_list, param_name[1]: param2_list}, **fixed_params)
+    cost = np.apply_along_axis(arr=ys_, axis=-1, func1d=partial(cost_fn, y=np.array(y)))
+
+    # plot heatmap
+    ax = ax_none(ax, figsize=(8, 6))
+    ax.grid(False)
+
+    if z_log:
+        hm = ax.pcolormesh(np.log10(cost), vmax=np.max(np.log10(cost)), cmap='viridis')
     else:
-        raise Exception('The input fitting_res should be SeqData, SingleFitting or BatchFitting')
+        hm = ax.pcolormesh(cost, vmax=np.max(cost), cmap='viridis')
+    ax.set_xlabel(param_name[0], fontsize=14)
+    ax.set_ylabel(param_name[1], fontsize=14)
 
-    return model, data_to_plot
+    # plot marker
 
+    def value_to_loc(value, param_to_scan, log):
+        """Convert value for parameter to its location on resolution scale"""
 
-def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, show_bootstrap_curves=50,
-                       legend_off=False, axis_labels=('x_label', 'y_label'), seq_name=None,
-                       ax=None, save_fig_to=None):
+        vmin = param_to_scan[0]
+        vmax = param_to_scan[-1]
 
-    import matplotlib.pyplot as plt
-    import numpy as np
+        if log:
+            return np.log10(value / vmin) / np.log10(vmax / vmin) * len(param_to_scan)
+        else:
+            return (value - vmin) / (vmax - vmin) * len(param_to_scan)
 
-    if ax is None:
-        ax_return = False
+    if datapoint_kwargs is None:
+        datapoint_kwargs = {'marker': 'x', 'alpha': 0.8}
     else:
-        ax_return = True
+        datapoint_kwargs = {**{'marker': 'x', 'alpha': 0.8}, **datapoint_kwargs}
 
-    if seq_ix is None:
-        seq_ix = None
-    if seq_name is None:
-        seq_name = None
-    if model is None:
-        model = None
+    ax.scatter(value_to_loc(param[param_name[0]], param1_list, param_log[0]),
+               value_to_loc(param[param_name[1]], param2_list, param_log[1]),
+               color=datapoint_color, label=datapoint_label, **datapoint_kwargs)
 
-    model, data_to_plot = parse_fitting_results(fitting_res=fitting_res,
-                                                model=model,
-                                                seq_ix=seq_ix,
-                                                seq_name=seq_name,
-                                                num_bootstrap_records=show_bootstrap_curves)
+    # add ticks
+    tick_ix = np.linspace(0, resolution[0] - 1, 5, dtype=int)
+    ax.set_xticks(tick_ix)
 
-    for seq_name, data in data_to_plot.items():
-        if not ax_return:
-            fig = plt.figure(figsize=[8, 6])
-            ax = fig.add_subplot(111)
+    if param_log[0]:
+        ax.set_xticklabels([f'$\mathregular{{10^{{{int(np.log10(tick))}}}}}$' for tick in param1_list[tick_ix]])
+    else:
+        ax.set_xticklabels([f'{tick:.2f}' for tick in param1_list[tick_ix]])
 
-        if show_data:
-            ax.scatter(data['x_data'], data['y_data'], marker='x', s=15, color='#2C73B4', zorder=2)
+    tick_ix = np.linspace(0, resolution[1] - 1, 5, dtype=int)
+    ax.set_yticks(tick_ix)
+    if param_log[1]:
+        ax.set_yticklabels([f'$\mathregular{{10^{{{int(np.log10(tick))}}}}}$' for tick in param2_list[tick_ix]])
+    else:
+        ax.set_yticklabels([f'{tick:.2f}' for tick in param2_list[tick_ix]])
 
-        x_series = np.linspace(0, np.max(data['x_data']) * 1.2, 100)
-        if show_bootstrap_curves:
-            for params in data['bs_params'].values:
-                ax.plot(x_series, model(x_series, *params), color='#AEAEAE', ls='-', lw=2, alpha=0.2, zorder=1)
+    ax.set_xlim([-0.5, resolution[0] - 0.5])
+    ax.set_ylim([-0.5, resolution[1] - 0.5])
 
-        ax.plot(x_series, model(x_series, *data['params'].values), color='#F39730', ls='-', lw=3, zorder=3)
-        ax.set_xlim([0, np.max(data['x_data']) * 1.2])
-        ax.set_ylim([0, np.max(data['y_data']) * 1.2])
+    fig = plt.gcf()
+    cbar = fig.colorbar(hm, fraction=0.045, pad=0.05)
+    cbar.set_label(r'$\log_{10}(MSE)$', fontsize=16)
+    cbar.ax.tick_params(labelsize=12)
 
-        if axis_labels is not None:
-            ax.set_xlabel(axis_labels[0], fontsize=12)
-            ax.set_ylabel(axis_labels[1], fontsize=12)
+    if legend:
+        ax.legend(loc=legend_loc, frameon=True, edgecolor=None, framealpha=0.5)
 
-        xlims = ax.get_xlim()
-        ylims = ax.get_ylim()
-        ax.text(s=seq_name,
-                x=xlims[0] + 0.05 * (xlims[1] - xlims[0]),
-                y=ylims[1] - 0.05 * (ylims[1] - ylims[0]),
-                ha='left', va='top',
-                fontsize=12)
+    return ys_
 
-        if not legend_off:
-            from matplotlib.lines import Line2D
-            handles = [ax.scatter([], [], marker='x', s=15, color='#2C73B4', label='Data'),
-                       Line2D([], [], color='#F39730', ls='-', lw=2, label='Fitted line'),
-                       Line2D([], [], color='#AEAEAE', ls='-', lw=2, label='Bootstrapped lines')]
-            labels = ['Data', 'Fitted line', 'Bootstrapped lines']
-            ax.legend(handles, labels, frameon=False, loc='lower right')
-        if save_fig_to:
-            plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-    if ax_return:
-        return ax
-    plt.show()
+
+# def fitting_curve_plot(fitting_res, model=None, seq_ix=None, show_data=True, show_bootstrap_curves=50,
+#                        legend_off=False, axis_labels=('x_label', 'y_label'), seq_name=None,
+#                        ax=None, save_fig_to=None):
+#
+#     import matplotlib.pyplot as plt
+#     import numpy as np
+#
+#     if ax is None:
+#         ax_return = False
+#     else:
+#         ax_return = True
+#
+#     if seq_ix is None:
+#         seq_ix = None
+#     if seq_name is None:
+#         seq_name = None
+#     if model is None:
+#         model = None
+#
+#     model, data_to_plot = parse_fitting_results(fitting_res=fitting_res,
+#                                                 model=model,
+#                                                 seq_ix=seq_ix,
+#                                                 seq_name=seq_name,
+#                                                 num_bootstrap_records=show_bootstrap_curves)
+#
+#     for seq_name, data in data_to_plot.items():
+#         if not ax_return:
+#             fig = plt.figure(figsize=[8, 6])
+#             ax = fig.add_subplot(111)
+#
+#         if show_data:
+#             ax.scatter(data['x_data'], data['y_data'], marker='x', s=15, color='#2C73B4', zorder=2)
+#
+#         x_series = np.linspace(0, np.max(data['x_data']) * 1.2, 100)
+#         if show_bootstrap_curves:
+#             for params in data['bs_params'].values:
+#                 ax.plot(x_series, model(x_series, *params), color='#AEAEAE', ls='-', lw=2, alpha=0.2, zorder=1)
+#
+#         ax.plot(x_series, model(x_series, *data['params'].values), color='#F39730', ls='-', lw=3, zorder=3)
+#         ax.set_xlim([0, np.max(data['x_data']) * 1.2])
+#         ax.set_ylim([0, np.max(data['y_data']) * 1.2])
+#
+#         if axis_labels is not None:
+#             ax.set_xlabel(axis_labels[0], fontsize=12)
+#             ax.set_ylabel(axis_labels[1], fontsize=12)
+#
+#         xlims = ax.get_xlim()
+#         ylims = ax.get_ylim()
+#         ax.text(s=seq_name,
+#                 x=xlims[0] + 0.05 * (xlims[1] - xlims[0]),
+#                 y=ylims[1] - 0.05 * (ylims[1] - ylims[0]),
+#                 ha='left', va='top',
+#                 fontsize=12)
+#
+#         if not legend_off:
+#             from matplotlib.lines import Line2D
+#             handles = [ax.scatter([], [], marker='x', s=15, color='#2C73B4', label='Data'),
+#                        Line2D([], [], color='#F39730', ls='-', lw=2, label='Fitted line'),
+#                        Line2D([], [], color='#AEAEAE', ls='-', lw=2, label='Bootstrapped lines')]
+#             labels = ['Data', 'Fitted line', 'Bootstrapped lines']
+#             ax.legend(handles, labels, frameon=False, loc='lower right')
+#         if save_fig_to:
+#             plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+#     if ax_return:
+#         return ax
+#     plt.show()
 
 
 def bootstrap_params_dist_plot(fitting_res, model=None, seq_ix=None, params_to_plot=['k', 'A'],

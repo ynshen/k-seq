@@ -120,14 +120,16 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         )
 
         # temp note: spike-in norm factor were calculated on original seq_table when a SpikeInNormalizer is created,
-        # notice the seq_table normalized on were already without some (~10%) sequence Abe used for qPRC quantification
+        # notice the seq_table normalized on already excludes some (~10 %) sequence Abe used for qPRC quantification
+        # this is equivalent to using 1.11 of spike-in amount than intended, however, it should not affect the reacted
+        # fraction we get
         byo_doped.add_spike_in(
             base_table=byo_doped.table.original,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
             spike_in_amount=np.concatenate((
                 np.repeat([2, 2, 1, 0.2, .04], repeats=3),
                 np.array([10])), axis=0  # input pool sequenced is 3-times of actual initial pool
-            ),
+            ) * 1.11,
             radius=radius,
             dist_type='edit',
             unit='ng',
