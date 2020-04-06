@@ -393,3 +393,35 @@ class DetectedTimesFilter(Filter):
         min_detected_times = update_none(min_detected_times, self.min_detected_times)
         axis = update_none(axis, self.axis)
         return self._get_mask(target=target, min_detected_times=min_detected_times, axis=axis)
+
+
+class PeakFilter(Filter):
+    """Filter sequences by the provided distance to the center"""
+
+    def __init__(self, max_dist, dist_to_center=None, target=None, peak=None, axis=0, **kwargs):
+        """dist_to_center or peak needed"""
+        from k_seq.data import landscape
+        super().__init__(target)
+        self.max_dist = max_dist
+        if dist_to_center is None:
+            if peak is None:
+                peak = landscape.Peak(**kwargs)
+            self.dist_to_center = peak.dist_to_center
+        else:
+            self.dist_to_center = dist_to_center
+        self.axis = axis
+
+    @staticmethod
+    def _get_mask(target, max_dist, dist_to_center, axis=0):
+        seqs = dist_to_center[dist_to_center <= max_dist].index
+        if axis == 0:
+            return target.index.isin(seqs)
+        else:
+            return target.column.isin(seqs)
+
+    def get_mask(self, target=None, max_dist=None, axis=None):
+        target = update_none(target, self.target)
+        max_dist = update_none(max_dist, self.max_dist)
+        axis = update_none(axis, self.axis)
+        return self._get_mask(target=target, max_dist=max_dist,
+                              dist_to_center=self.dist_to_center, axis=axis)
