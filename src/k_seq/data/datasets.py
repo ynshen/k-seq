@@ -188,6 +188,25 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         byo_doped.table.reacted_frac_qpcr_seq_in_all_smpl = min_detected_times_filter(
             byo_doped.table.reacted_frac_qpcr
         )
+
+        # filter up to double mutants
+        from k_seq.data import landscape
+
+        pool_peaks = {
+            'pk2.1': 'ATTACCCTGGTCATCGAGTGA',
+            'pk1A.1': 'CTACTTCAAACAATCGGTCTG',
+            'pk1B.1': 'CCACACTTCAAGCAATCGGTC',
+            'pk3.1': 'AAGTTTGCTAATAGTCGCAAG'
+        }
+        byo_doped.pool_peaks = [
+            landscape.Peak(seqs=byo_doped.table.reacted_frac_qpcr, center_seq=seq,
+                           name=name, dist_type='hamming') for name, seq in pool_peaks.items()
+        ]
+
+        byo_doped.pool_peaks_merged = landscape.PeakCollection(peaks=byo_doped.pool_peaks)
+        peak_filter = filters.PeakFilter(max_dist=2,
+                                         dist_to_center=byo_doped.pool_peaks_merged.dist_to_center)
+        byo_doped.table.reacted_frac_qpcr_2mutants = peak_filter(byo_doped.table.reacted_frac_qpcr)
         logging.info('Finished!')
     else:
         logging.info(f'Load BYO-doped pool data from pickled record from {BYO_DOPED_PKL}')
