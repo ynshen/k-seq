@@ -703,7 +703,6 @@ def _read_work_fn(seq):
     return res
 
 
-
 # TODO: check following result
 
 def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):

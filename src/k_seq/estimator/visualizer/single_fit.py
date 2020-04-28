@@ -1,3 +1,5 @@
+"""Visualization for single fit results"""
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -45,7 +47,7 @@ def plot_curve(model, x, y, param=None, major_param=None, subsample=20,
     if major_param is None:
         curve_kwargs = {**{'color': '#4C78A8', 'alpha': 0.5}, **curve_kwargs}
     else:
-        curve_kwargs = {**{'color': '#AEAEAE', 'alpha': 0.3}, **datapoint_kwargs}
+        curve_kwargs = {**{'color': '#AEAEAE', 'alpha': 0.3}, **curve_kwargs}
     datapoint_kwargs = {**{'color': '#E45756', 'alpha': 1, 'zorder': 3, 'marker': 'x'}, **datapoint_kwargs}
 
     # plot curves
@@ -73,7 +75,7 @@ def plot_curve(model, x, y, param=None, major_param=None, subsample=20,
         param.apply(add_curve, axis=1, plot_args=curve_kwargs)
 
     # add major curve if applicable
-    if major_param:
+    if major_param is not None:
         add_curve(major_param, plot_args=major_curve_kwargs)
 
     # add raw data points
@@ -106,6 +108,7 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
                       fixed_params=None,
                       cost_fn=mse, z_log=True,
                       datapoint_color='#E45756', datapoint_label='data', datapoint_kwargs=None,
+                      colorbar=True,
                       legend=False, legend_loc='upper left',
                       ax=None):
     """Plot a heatmap to show the energy landscape for cost function, on two params
@@ -189,24 +192,25 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
     ax.set_xticks(tick_ix)
 
     if param_log[0]:
-        ax.set_xticklabels([f'$\mathregular{{10^{{{int(np.log10(tick))}}}}}$' for tick in param1_list[tick_ix]])
+        ax.set_xticklabels([f'$\mathregular{{10^{{{np.log10(tick):.1f}}}}}$' for tick in param1_list[tick_ix]])
     else:
         ax.set_xticklabels([f'{tick:.2f}' for tick in param1_list[tick_ix]])
 
     tick_ix = np.linspace(0, resolution[1] - 1, 5, dtype=int)
     ax.set_yticks(tick_ix)
     if param_log[1]:
-        ax.set_yticklabels([f'$\mathregular{{10^{{{int(np.log10(tick))}}}}}$' for tick in param2_list[tick_ix]])
+        ax.set_yticklabels([f'$\mathregular{{10^{{{np.log10(tick):.1f}}}}}$' for tick in param2_list[tick_ix]])
     else:
         ax.set_yticklabels([f'{tick:.2f}' for tick in param2_list[tick_ix]])
 
     ax.set_xlim([-0.5, resolution[0] - 0.5])
     ax.set_ylim([-0.5, resolution[1] - 0.5])
 
-    fig = plt.gcf()
-    cbar = fig.colorbar(hm, fraction=0.045, pad=0.05)
-    cbar.set_label(r'$\log_{10}(MSE)$', fontsize=16)
-    cbar.ax.tick_params(labelsize=12)
+    if colorbar is True:
+        fig = plt.gcf()
+        cbar = fig.colorbar(hm, fraction=0.045, pad=0.05)
+        cbar.set_label(r'$\log_{10}(MSE)$', fontsize=16)
+        cbar.ax.tick_params(labelsize=12)
 
     if legend:
         ax.legend(loc=legend_loc, frameon=True, edgecolor=None, framealpha=0.5)

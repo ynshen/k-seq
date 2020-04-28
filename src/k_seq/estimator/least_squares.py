@@ -468,6 +468,11 @@ class FitResults:
          convergence (AttrScope): a scope stores convergence test results, includes
              summary (pd.DataFrame): summary for each parameter or metric from records
              records (pd.DataFrame): records for repeated fitting results
+
+         data (AttrScope): a scope stores the fitting data
+             x (pd.Series):
+             y (pd.Series):
+             sigma (pd.Series):
     """
 
     def __repr__(self):
@@ -485,6 +490,7 @@ class FitResults:
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'records'])
         self.convergence = AttrScope(keys=['summary', 'records'])
+        self.data = AttrScope(keys=['x', 'y', 'sigma'])
 
         # TODO: update to make visualizer work
         # from k_seq.estimator.visualizer.single_fit import fitting_curve_plot, bootstrap_params_dist_plot
@@ -523,6 +529,8 @@ class FitResults:
                              records: jsonfy(pd.DataFrame) }
               convergence: { summary: jsonfy(pd.DataFrame)
                              records: jsonfy(pd.DataFrame) }
+              data: {x: jsonfy(pd.Series)
+                     y: jsonfy(pd.Series)}
             }
         """
 
