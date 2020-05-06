@@ -4,14 +4,27 @@
 from .seq_data import slice_table
 from ..utility.func_tools import AttrScope
 from yutility import logging
+import pandas as pd
+
+
+def get_group(table, group, axis=1, remove_empty=False):
+    """Slice or split the table based on the group
+    Args:
+        table (pd.DataFrame or SeqTable): target table to group
+        group (list-like or dict of list): single group or a set of groups
+    """
+    if isinstance(group, (list, pd.Series)):
+        return slice_table(table=table, keys=group, axis=axis, remove_empty=remove_empty)
+    if isinstance(group, dict):
+        return {key: slice_table(table=table, keys=g, axis=axis, remove_empty=remove_empty) for key, g in group.items()}
 
 
 class Grouper(object):
     """Grouper of samples/sequences
 
     Two types of grouper accepted:
-        Type 0: initialize with group as list-like. This defines a single set of samples/sequences
-        Type 1: initialize with group as dict. This defines a collection of groups of samples/sequences
+        Type 0 (list): initialize with group as list-like. This defines a single set of samples/sequences
+        Type 1 (dict): initialize with group as dict. This defines a collection of groups of samples/sequences
 
     Attributes:
         target (pd.DataFrame): accessor for seq_table to group
@@ -70,6 +83,7 @@ class Grouper(object):
         type 1 seq_table will just return the subtable"""
         return self.get_table(group=group)
 
+    # TODO: simplify the code
     def get_table(self, group=None, target=None, axis=None, remove_zero=False):
         """Return a sub-seq_table from target given group"""
         if target is None:

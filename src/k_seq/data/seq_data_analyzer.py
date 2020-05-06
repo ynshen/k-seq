@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
+from yutility import logging
 
 
 class SeqTableAnalyzer(FuncToMethod):
@@ -49,6 +50,101 @@ def seq_overview(seq_table, axis=0):
     )
 
 
+def seq_variance(table, grouper):
+    """Get the spread (standard deviation) of sequence abundance across replicates, provided by grouper
+
+    Returns:
+        if single group, returns a pd.DataFrame with columns ('mean', 'sd')
+        if multiple groups, returns two pd.DataFrame (mean, sd) with columns of each group
+    """
+
+    from .grouper import Grouper
+
+    if isinstance(grouper, Grouper):
+        sub_tables = grouper.get_table(target=table)
+    elif isinstance(grouper, (list, pd.Series, dict)):
+        from .grouper import get_group
+        sub_tables = get_group(table, grouper)
+    else:
+        logging.error("Unknown types of grouper", TypeError)
+        sub_tables = None
+
+    if isinstance(sub_tables, pd.DataFrame):
+        return pd.DataFrame({'mean': sub_tables.mean(axis=1), 'sd': sub_tables.std(axis=1)})
+    elif isinstance(sub_tables, dict):
+        mean = {}
+        sd = {}
+        for key, subtable in sub_tables.items():
+            mean[key] = subtable.mean(axis=1)
+            sd[key] = subtable.std(axis=1)
+        return pd.DataFrame(mean), pd.DataFrame(sd)
+
+
+def rep_variance_scatter(table, grouper, xaxis=None, subsample=None,
+                         xlog=True, ylog=True, xlim=None, ylim=None, group_title_pos=None,
+                         xlabel=None, ylabel=None, label_map=None,
+                         figsize=None, save_fig_to=None):
+
+    table_gen = grouper.get_table(target=table, remove_zero=True)
+    if figsize is None:
+        figsize = (len(grouper.group) * 3, 3)
+
+    fig, axes = plt.subplots(1, 5, figsize=figsize, sharey=True)
+    fig.subplots_adjust(hspace=0, wspace=0.01)
+    if xlabel is None:
+        xlabel = 'Mean'
+    if ylabel is None:
+        ylabel = 'Standard Deviation'
+
+    for ix, ((key, subtable), ax) in enumerate(zip(table_gen, axes)):
+        if subsample is not None:
+            subtable = subtable.sample(subsample, replace=False)
+
+        if xaxis is not None:
+            ax.scatter(xaxis[subtable.columns].loc[subtable.index].mean(axis=1), subtable.std(axis=1),
+                       s=3, alpha=0.3, zorder=2)
+        else:
+            ax.scatter(subtable.mean(axis=1), subtable.std(axis=1), s=3, alpha=0.3, zorder=2)
+
+        # plot lines
+        line_xlim = ax.get_xlim() if xlim is None else xlim
+        xs = np.logspace(np.log10(line_xlim[0]), np.log10(line_xlim[1]), 20)
+        ax.plot(xs, xs, '#151515', alpha=0.5, ls='--', zorder=1)
+        ax.plot(xs, xs * 0.1, '#151515', alpha=0.3, ls='--', zorder=1)
+        ax.plot(xs, xs * 0.01, '#151515', alpha=0.1, ls='--', zorder=1)
+
+        if group_title_pos is None:
+            group_title_pos = (ax.get_xlim[0], ax.get_ylim[1])
+        if label_map:
+            if callable(label_map):
+                label = label_map(key)
+            else:
+                label = label_map[key]
+        else:
+            label = f'{key:d} $\mu M$'
+        ax.text(s=label, x=group_title_pos[0], y=group_title_pos[1], ha='left', va='top', fontsize=12)
+        ax.tick_params(axis='both', labelsize=12)
+        if xlog:
+            ax.set_xscale('log')
+        if ylog:
+            ax.set_yscale('log')
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        if ix > 0:
+            xticks = [tick for tick in ax.get_xticks()][2:-1]
+            ax.set_xticks(xticks)
+        else:
+            ax.set_ylabel(ylabel, fontsize=12)
+        if xlim is not None:
+            ax.set_xlim(xlim)
+
+    fig.text(s=xlabel, x=0.5, y=0, ha='center', va='top', fontsize=12)
+    if save_fig_to:
+        fig.patch.set_alpha(0)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
+    plt.show()
+
+
 def seq_length_dist(seq_table, axis=0, ax=None, figsize=(6, 3), bins=20, logx=False, logy=False,
                     hist_kwargs=None, save_fig_to=None):
     """Distribution of unique sequences in their length"""
@@ -75,6 +171,8 @@ def seq_length_dist(seq_table, axis=0, ax=None, figsize=(6, 3), bins=20, logx=Fa
 
     savefig(save_fig_to)
 
+
+# ############################# belows are to organize ##############################
 
 def sample_overview(seq_table, axis=1):
     """Summarize sequences for a given seq_table, with info of unique seqs, total amount
@@ -453,66 +551,3 @@ def cross_table_compare(base_table, compare_table, samples=None, ax=None, figsiz
         fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
 
 
-def rep_variance_scatter(table, grouper, xaxis=None, subsample=None,
-                         xlog=True, ylog=True, xlim=None, ylim=None, group_title_pos=None,
-                         xlabel=None, ylabel=None, label_map=None,
-                         figsize=None, save_fig_to=None):
-
-    table_gen = grouper.get_table(target=table, remove_zero=True)
-    if figsize is None:
-        figsize = (len(grouper.group) * 3, 3)
-
-    fig, axes = plt.subplots(1, 5, figsize=figsize, sharey=True)
-    fig.subplots_adjust(hspace=0, wspace=0.01)
-    if xlabel is None:
-        xlabel = 'Mean'
-    if ylabel is None:
-        ylabel = 'Standard Deviation'
-
-    for ix, ((key, subtable), ax) in enumerate(zip(table_gen, axes)):
-        if subsample is not None:
-            subtable = subtable.sample(subsample, replace=False)
-
-        if xaxis is not None:
-            ax.scatter(xaxis[subtable.columns].loc[subtable.index].mean(axis=1), subtable.std(axis=1),
-                       s=3, alpha=0.3, zorder=2)
-        else:
-            ax.scatter(subtable.mean(axis=1), subtable.std(axis=1), s=3, alpha=0.3, zorder=2)
-
-        # plot lines
-        line_xlim = ax.get_xlim() if xlim is None else xlim
-        xs = np.logspace(np.log10(line_xlim[0]), np.log10(line_xlim[1]), 20)
-        ax.plot(xs, xs, '#151515', alpha=0.5, ls='--', zorder=1)
-        ax.plot(xs, xs * 0.1, '#151515', alpha=0.3, ls='--', zorder=1)
-        ax.plot(xs, xs * 0.01, '#151515', alpha=0.1, ls='--', zorder=1)
-
-        if group_title_pos is None:
-            group_title_pos = (ax.get_xlim[0], ax.get_ylim[1])
-        if label_map:
-            if callable(label_map):
-                label = label_map(key)
-            else:
-                label = label_map[key]
-        else:
-            label = f'{key:d} $\mu M$'
-        ax.text(s=label, x=group_title_pos[0], y=group_title_pos[1], ha='left', va='top', fontsize=12)
-        ax.tick_params(axis='both', labelsize=12)
-        if xlog:
-            ax.set_xscale('log')
-        if ylog:
-            ax.set_yscale('log')
-        if ylim is not None:
-            ax.set_ylim(ylim)
-        if ix > 0:
-            xticks = [tick for tick in ax.get_xticks()][2:-1]
-            ax.set_xticks(xticks)
-        else:
-            ax.set_ylabel(ylabel, fontsize=12)
-        if xlim is not None:
-            ax.set_xlim(xlim)
-
-    fig.text(s=xlabel, x=0.5, y=0, ha='center', va='top', fontsize=12)
-    if save_fig_to:
-        fig.patch.set_alpha(0)
-        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-    plt.show()

@@ -213,6 +213,7 @@ class SingleFitter(Estimator):
         if bounds is None:
             bounds = (-np.inf, np.inf)
         metrics = update_none(metrics, self.config.metrics)
+
         init_guess = update_none(init_guess, self.config.init_guess)
         curve_fit_kwargs = update_none(curve_fit_kwargs, self.config.curve_fit_kwargs)
 
@@ -224,7 +225,7 @@ class SingleFitter(Estimator):
                 curve_fit_kwargs = {}
             params, pcov = curve_fit(f=model, xdata=x_data, ydata=y_data,
                                      sigma=sigma, bounds=bounds, p0=init_guess, **curve_fit_kwargs)
-            if metrics:
+            if metrics is not None:
                 metrics_res = pd.Series({name: fn(params) for name, fn in metrics.items()})
             else:
                 metrics_res = None
@@ -244,7 +245,7 @@ class SingleFitter(Estimator):
         except ValueError:
             logging.warning(
                 f"ValueError on \n"
-                f'\tx = {self.x_data}\n'
+                f'\tx={self.x_data}\n'
                 f'\ty={self.y_data}\n'
                 f'\tsigma={self.config.sigma}'
             )
@@ -257,7 +258,7 @@ class SingleFitter(Estimator):
         except:
             logging.warning(
                 f"Other error observed on\n"
-                f'\tx = {self.x_data}\n'
+                f'\tx={self.x_data}\n'
                 f'\ty={self.y_data}\n'
                 f'\tsigma={self.config.sigma}'
             )
@@ -366,7 +367,7 @@ class SingleFitter(Estimator):
             results = self.point_estimate(**kwargs)
             self.results.point_estimation.params = results['params']
             if results['metrics'] is not None:
-                self.results.point_estimation.params.append(results['metrics'])
+                self.results.point_estimation.params = self.results.point_estimation.params.append(results['metrics'])
             self.results.point_estimation.pcov = results['pcov']
 
         if bootstrap and (len(self.x_data) >= 2):

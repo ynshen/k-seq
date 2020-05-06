@@ -14,9 +14,9 @@ __all__ = ['BatchFitter', 'BatchFitResults']
 def _work_fn(worker, point_estimate, bootstrap, convergence_test):
     """Utility work function to parallelize workers"""
     worker.fit(point_estimate=point_estimate, bootstrap=bootstrap, convergence_test=convergence_test)
-    print(f'\nFit sequence: {worker.name}')
-    print(worker.x_data)
-    print(worker.y_data)
+    logging.debug(f'\nFit sequence: {worker.name}')
+    logging.debug(worker.x_data)
+    logging.debug(worker.y_data)
     return worker
 
 
@@ -520,7 +520,7 @@ class BatchFitResults:
                 if self.large_dataset:
                     return {seq: self.get_FitResult(seq).uncertainty.records for seq in seqs}
                 else:
-                    return {seq:self._bs_record[seq] for seq in seqs}
+                    return {seq: self._bs_record[seq] for seq in seqs}
 
     def conv_record(self, seqs=None):
         """Retrieve convergence records"""

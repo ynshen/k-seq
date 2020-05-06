@@ -103,6 +103,18 @@ def mse(y_, y):
     return np.mean((y_ - y)**2)
 
 
+def value_to_loc(value, range, resolution, log):
+    """Convert actual value to location on heatmap"""
+
+    vmin = range[0]
+    vmax = range[1]
+
+    if log:
+        return np.log10(value / vmin) / np.log10(vmax / vmin) * resolution
+    else:
+        return (value - vmin) / (vmax - vmin) * resolution
+
+
 def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range,
                       param_log=False, resolution=100,
                       fixed_params=None,
@@ -167,24 +179,13 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
 
     # plot marker
 
-    def value_to_loc(value, param_to_scan, log):
-        """Convert value for parameter to its location on resolution scale"""
-
-        vmin = param_to_scan[0]
-        vmax = param_to_scan[-1]
-
-        if log:
-            return np.log10(value / vmin) / np.log10(vmax / vmin) * len(param_to_scan)
-        else:
-            return (value - vmin) / (vmax - vmin) * len(param_to_scan)
-
     if datapoint_kwargs is None:
         datapoint_kwargs = {'marker': 'x', 'alpha': 0.8}
     else:
         datapoint_kwargs = {**{'marker': 'x', 'alpha': 0.8}, **datapoint_kwargs}
 
-    ax.scatter(value_to_loc(param[param_name[0]], param1_list, param_log[0]),
-               value_to_loc(param[param_name[1]], param2_list, param_log[1]),
+    ax.scatter(value_to_loc(param[param_name[0]], param1_range, resolution[0], param_log[0]),
+               value_to_loc(param[param_name[1]], param2_range, resolution[1], param_log[1]),
                color=datapoint_color, label=datapoint_label, **datapoint_kwargs)
 
     # add ticks

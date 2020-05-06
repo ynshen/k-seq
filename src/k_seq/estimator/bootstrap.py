@@ -85,7 +85,7 @@ class Bootstrap:
         indices = np.arange(len(self.estimator.x_data))
         for _ in range(self.bootstrap_num):
             indices_resample = np.random.choice(indices, size=len(indices), replace=True)
-            yield self.estimator.x_data[indices_resample], self.estimator.y_data[indices_resample]
+            yield self.estimator.x_data.iloc[indices_resample], self.estimator.y_data.iloc[indices_resample]
 
     def _stratified(self):
         """Apply stratified bootstrap, `grouper` is required

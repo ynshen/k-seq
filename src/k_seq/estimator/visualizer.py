@@ -29,7 +29,7 @@ def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, n
             if isinstance(seq_ix, str):
                 seq_ix = [seq_ix]
             if seq_name is None:
-                seq_name = seq_ixs
+                seq_name = seq_ix
             if model is None:
                 model = fitting_res.model
             data_to_plot = {
