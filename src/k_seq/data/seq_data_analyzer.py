@@ -15,6 +15,10 @@ import pandas as pd
 from yutility import logging
 
 
+########################################################################################################################
+#                                Pre-built analyzer for SeqTable: single sequence table
+########################################################################################################################
+
 class SeqTableAnalyzer(FuncToMethod):
 
     def __init__(self, seq_table):
@@ -22,10 +26,12 @@ class SeqTableAnalyzer(FuncToMethod):
             functions=[
                 seq_overview, 
                 sample_overview,
+                seq_variance,
+                rep_variance_scatter,
                 sample_unique_seqs_barplot,
                 sample_total_reads_barplot,
-                seq_mean_count_detected_samples_scatterplot,
-                seq_length_dist
+                seq_mean_value_detected_samples_scatterplot,
+                seq_length_dist,
             ],
             seq_table=seq_table
         )
@@ -50,7 +56,29 @@ def seq_overview(seq_table, axis=0):
     )
 
 
-def seq_variance(table, grouper):
+def sample_overview(seq_table, axis=1):
+    """Summarize sequences for a given seq_table, with info of unique seqs, total amount
+
+    Returns:
+        A `pd.DataFrame` show the summary for sequences
+    """
+
+    if axis == 0:
+        seq_table = seq_table.transpose()
+
+    if isinstance(seq_table, SeqTable):
+        col_name = f'total amount ({seq_table.unit})'
+    else:
+        col_name = 'total amount'
+
+    return pd.DataFrame.from_dict(
+        {'unique seqs': (seq_table > 0).sum(axis=0),
+         col_name: seq_table.sum(axis=0)},
+        orient='columns'
+    )
+
+
+def seq_variance(seq_table, grouper):
     """Get the spread (standard deviation) of sequence abundance across replicates, provided by grouper
 
     Returns:
@@ -61,10 +89,10 @@ def seq_variance(table, grouper):
     from .grouper import Grouper
 
     if isinstance(grouper, Grouper):
-        sub_tables = grouper.get_table(target=table)
+        sub_tables = grouper.get_table(target=seq_table)
     elif isinstance(grouper, (list, pd.Series, dict)):
         from .grouper import get_group
-        sub_tables = get_group(table, grouper)
+        sub_tables = get_group(seq_table, grouper)
     else:
         logging.error("Unknown types of grouper", TypeError)
         sub_tables = None
@@ -80,12 +108,13 @@ def seq_variance(table, grouper):
         return pd.DataFrame(mean), pd.DataFrame(sd)
 
 
-def rep_variance_scatter(table, grouper, xaxis=None, subsample=None,
+def rep_variance_scatter(seq_table, grouper, xaxis=None, subsample=None,
                          xlog=True, ylog=True, xlim=None, ylim=None, group_title_pos=None,
                          xlabel=None, ylabel=None, label_map=None,
                          figsize=None, save_fig_to=None):
+    """A scatter plot for measured value variance in replicates for each sequence"""
 
-    table_gen = grouper.get_table(target=table, remove_zero=True)
+    table_gen = grouper.get_table(target=seq_table, remove_zero=True)
     if figsize is None:
         figsize = (len(grouper.group) * 3, 3)
 
@@ -139,15 +168,13 @@ def rep_variance_scatter(table, grouper, xaxis=None, subsample=None,
             ax.set_xlim(xlim)
 
     fig.text(s=xlabel, x=0.5, y=0, ha='center', va='top', fontsize=12)
-    if save_fig_to:
-        fig.patch.set_alpha(0)
-        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
-    plt.show()
+    savefig(save_fig_to)
+    return fig, axes
 
 
 def seq_length_dist(seq_table, axis=0, ax=None, figsize=(6, 3), bins=20, logx=False, logy=False,
                     hist_kwargs=None, save_fig_to=None):
-    """Distribution of unique sequences in their length"""
+    """histogram of length distribution of unique sequences"""
 
     seqs = seq_table.index.to_series() if axis == 0 else seq_table.columns.to_series()
     seqs_length = seqs.apply(len)
@@ -170,30 +197,7 @@ def seq_length_dist(seq_table, axis=0, ax=None, figsize=(6, 3), bins=20, logx=Fa
         ax.set_xscale('log')
 
     savefig(save_fig_to)
-
-
-# ############################# belows are to organize ##############################
-
-def sample_overview(seq_table, axis=1):
-    """Summarize sequences for a given seq_table, with info of unique seqs, total amount
-
-    Returns:
-        A `pd.DataFrame` show the summary for sequences
-    """
-
-    if axis == 0:
-        seq_table = seq_table.transpose()
-
-    if isinstance(seq_table, SeqTable):
-        col_name = f'total amount ({seq_table.unit})'
-    else:
-        col_name = 'total amount'
-
-    return pd.DataFrame.from_dict(
-        {'unique seqs': (seq_table > 0).sum(axis=0),
-         col_name: seq_table.sum(axis=0)},
-        orient='columns'
-    )
+    return ax, seqs_length
 
 
 def sample_unique_seqs_barplot(seq_table, black_list=None, logy=False,
@@ -228,10 +232,10 @@ def sample_unique_seqs_barplot(seq_table, black_list=None, logy=False,
 
 
 def sample_total_reads_barplot(seq_table, black_list=None, logy=False,
-                                ax=None, save_fig_to=None, figsize=None,
-                                x_label=None, y_label='Total reads', fontsize=14,
-                                label_mapper=None, barplot_kwargs=None):
-    """Barplot of total counts in each sample"""
+                               ax=None, save_fig_to=None, figsize=None,
+                               x_label=None, y_label='Total reads', fontsize=14,
+                               label_mapper=None, barplot_kwargs=None):
+    """Barplot of total counts (sum over sequences) in each sample"""
 
     if not barplot_kwargs:
         barplot_kwargs = {}
@@ -258,30 +262,40 @@ def sample_total_reads_barplot(seq_table, black_list=None, logy=False,
     return total_reads
 
 
-def seq_mean_count_detected_samples_scatterplot(seq_table, figsize=5,
-                                                log_counts=True, subsample=None,
+def seq_mean_value_detected_samples_scatterplot(seq_table, figsize=5,
+                                                ylabel='counts', ylog=True, subsample=None,
                                                 color='#1F77B4',
                                                 marker_size=5, scatter_kwargs=None):
+    """Joint plot of of mean value (e.g. count) for a sequence across samples and number of sample it is detected
+    With one scatter plot (x: number of samples detected, y: mean value)
+        and two histogram showing the distribution in each dimension
+    """
     import seaborn as sns
-    data = pd.DataFrame({'Mean counts': seq_table.mean(axis=1),
+    data = pd.DataFrame({'Mean value': seq_table.mean(axis=1),
                          'Detected samples': (seq_table > 0).sum(axis=1)})
 
-    if log_counts:
-        y = '$\log_{10}$(Mean counts)'
-        data_to_plot = pd.DataFrame({y: np.log10(data['Mean counts']),
+    if ylog:
+        y = f'$\log_{10}$(Mean {ylabel})'
+        data_to_plot = pd.DataFrame({y: np.log10(data['Mean value']),
                                      'Detected samples': data['Detected samples']})
     else:
         data_to_plot = data
-        y = 'Mean counts'
+        y = f'Mean {ylabel}'
     scatter_kwargs = update_none(scatter_kwargs, {})
+
     if subsample:
         data_to_plot = data_to_plot.sample(subsample)
-    sns.jointplot(data=data_to_plot,
-                  x='Detected samples', y=y, kind='scatter', height=figsize, ratio=3, space=0.1, color=color,
-                  joint_kws={'s': marker_size}.update(scatter_kwargs))
 
-    return data
+    jp = sns.jointplot(data=data_to_plot,
+                       x='Detected samples', y=y, kind='scatter', height=figsize, ratio=3, space=0.1, color=color,
+                       joint_kws={'s': marker_size}.update(scatter_kwargs))
 
+    return data, jp
+
+
+########################################################################################################################
+#                                Pre-built analyzer for SeqData: k-Seq dataset
+########################################################################################################################
 
 class SeqDataAnalyzer(FuncToMethod):
 
@@ -327,6 +341,14 @@ def sample_info(seq_data):
         info[f'total amount (sample total, {seq_data.sample_total.unit})'] = pd.Series(seq_data.sample_total.total_amounts)
 
     return info
+
+
+
+########################################################################################################################
+# ############################# belows are to organize ##############################
+########################################################################################################################
+
+
 
 
 def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_fig_to=None,

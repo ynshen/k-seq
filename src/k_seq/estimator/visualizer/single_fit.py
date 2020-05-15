@@ -68,8 +68,10 @@ def plot_curve(model, x, y, param=None, major_param=None, subsample=20,
 
     if param is not None:
         if isinstance(param, dict):
+            # single curve
             add_curve(param)
         elif isinstance(param, pd.DataFrame):
+            param = param[~np.any(param.isna(), axis=1)]
             if param.shape[0] > subsample:
                 param = param.sample(subsample)
         param.apply(add_curve, axis=1, plot_args=curve_kwargs)
@@ -163,6 +165,8 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
         fixed_params = {}
 
     # generate ys_ with shape (param1, param2)
+    if isinstance(param, pd.DataFrame):
+        param = param[~np.any(param.isna(), axis=1)]
     ys_ = model(x, **{param_name[0]: param1_list, param_name[1]: param2_list}, **fixed_params)
     cost = np.apply_along_axis(arr=ys_, axis=-1, func1d=partial(cost_fn, y=np.array(y)))
 
