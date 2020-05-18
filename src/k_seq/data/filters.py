@@ -4,6 +4,7 @@ TODO: write test cases for filters
 
 from .seq_data import slice_table
 import pandas as pd
+import numpy as np
 from abc import ABC, abstractmethod
 from yutility import logging
 from ..utility.func_tools import update_none
@@ -354,6 +355,28 @@ class SeqLengthFilter(Filter):
         max_len = update_none(max_len, self.max_len)
         axis = update_none(axis, self.axis)
         return self._get_mask(target=target, min_len=min_len, max_len=max_len, axis=axis)
+
+
+class NoAmbiguityFilter(Filter):
+    """Filter out sequence with ambiguity nucleotides: N"""
+
+    def __init__(self, target, axis=0):
+
+        super().__init__(target, axis)
+
+    @staticmethod
+    def _get_mask(target, axis=0):
+        if axis == 0:
+            seq = target.index
+        else:
+            seq = target.columns
+        mask = np.array(['N' in s for s in seq])
+        return ~mask
+
+    def get_mask(self, target=None, axis=None, **kwargs):
+        target = update_none(target, self.target)
+        axis = update_none(axis, self.axis)
+        return self._get_mask(target, axis=axis)
 
 
 class SingletonFilter(Filter):
