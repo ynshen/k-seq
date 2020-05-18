@@ -1,16 +1,28 @@
 
+import pandas as pd
+import numpy as np
 from .least_squares import doc_helper
+from yutility import logging
+
+
+def _parameter_gen(param_range, log, size):
+    from ..data.simu import DistGenerators
+
+    if log:
+        return 10 ** DistGenerators.uniform(low=np.log10(param_range[0]), high=np.log10(param_range[1]),
+                                            size=size)
+    else:
+        return DistGenerators.uniform(low=param_range[0], high=param_range[1], size=size)
 
 
 @doc_helper.compose("""Generate a 2d convergence map for randomly sampled data points from given parameter range
     it simulates sample_n sequence samples with random params selected from the range of (param1_range, param2_range),
     on the optional log scale
     
-    
 """)
-class ConvergenceMap:
+class SeparabilityMap:
 
-    def __init__(self, model, sample_n, x_values, save_to,
+    def __init__(self, model, sample_n, x_data, save_to,
                  param1_name, param1_range, param2_name, param2_range,
                  param1_log=False, param2_log=False, model_kwargs=None,
                  bootstrap_num=1000, bs_record_num=50, bs_method='data', bs_stats=None, grouper=None, record_full=False,
@@ -39,16 +51,16 @@ class ConvergenceMap:
         )
         self.batchfitter_kwargs.update(fitting_kwargs)
 
-        # assign x_values
-        if not isinstance(x_values, pd.Series):
-            x_values = pd.Series(x_values)
-        self.x_values = x_values
-        self.y_values = None
+        # assign x_data
+        if not isinstance(x_data, pd.Series):
+            x_data = pd.Series(x_data)
+        self.x_data = x_data
+        self.y_dataframe = None
         self.seed = seed
         self.results = None
 
         config = dict(
-            sample_n=sample_n, x_values=list(x_values),
+            sample_n=sample_n, x_data=list(x_data),
             param1_name=param1_name, param1_range=param1_range, param1_log=param1_log,
             param2_name=param2_name, param2_range=param2_range, param2_log=param2_log,
             bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
@@ -98,12 +110,12 @@ class ConvergenceMap:
 
         def partial_model(param):
 
-            y = self.model(self.x_values, **param.to_dict(), **self.model_kwargs)
-            if not isinstance(y, pd.Series) and isinstance(self.x_values, pd.Series):
-                y = pd.Series(y, index=self.x_values.index)
+            y = self.model(self.x_data, **param.to_dict(), **self.model_kwargs)
+            if not isinstance(y, pd.Series) and isinstance(self.x_data, pd.Series):
+                y = pd.Series(y, index=self.x_data.index)
             return y
 
-        self.y_values = self.parameters.apply(partial_model, axis=1)
+        self.y_dataframe = self.parameters.apply(partial_model, axis=1)
 
         if const_error is not None:
             self.y_values += np.random.normal(loc=0, scale=const_error,
@@ -119,8 +131,8 @@ class ConvergenceMap:
 
         self.save_to.joinpath('data').mkdir(exist_ok=True)
         self.parameters.to_csv(self.save_to.joinpath('data', 'parameters.csv'))
-        self.y_values.to_csv(self.save_to.joinpath('data', 'y_values.csv'))
-        self.x_values.to_csv(self.save_to.joinpath('data', 'x_values.csv'))
+        self.y_dataframe.to_csv(self.save_to.joinpath('data', 'y.csv'))
+        self.x_data.to_csv(self.save_to.joinpath('data', 'x.csv'))
 
     def fit(self, **kwargs):
         """Batch fit simulated result"""
@@ -132,7 +144,7 @@ class ConvergenceMap:
             self.simulate_samples()
 
         from ..estimator.least_squares_batch import BatchFitter
-        fitter = BatchFitter(y_dataframe=self.y_values, x_data=self.x_values, model=self.model,
+        fitter = BatchFitter(y_dataframe=self.y_dataframe, x_data=self.x_data, model=self.model,
                              large_dataset=True, **self.batchfitter_kwargs)
         fitter.fit(convergence_test=self.batchfitter_kwargs['conv_reps'] > 0,
                    bootstrap=self.batchfitter_kwargs['bootstrap_num'] > 0,
@@ -151,18 +163,42 @@ class ConvergenceMap:
         config = read_json(result_path.joinpath('config.json'))
         parameters = pd.read_csv(result_path.joinpath('data', 'parameters.csv'), index_col=0)
         parameters.index = parameters.index.astype('str')
-        y_values = pd.read_csv(result_path.joinpath('data', 'y_values.csv'), index_col=0)
-        y_values.index = y_values.index.astype('str')
-        x_values = pd.read_csv(result_path.joinpath('data', 'x_values.csv'), index_col=0, header=None, squeeze=True)
-        x_values.index = x_values.index.astype('str')
-        _ = config.pop('x_values')
-        conv_map = cls(model=model, x_values=x_values, save_to=result_path, **config)
-        conv_map.y_values = y_values
+        try:
+            y_dataframe = pd.read_csv(result_path.joinpath('data', 'y.csv'), index_col=0)
+        except FileNotFoundError:
+            y_dataframe = pd.read_csv(result_path.joinpath('data', 'y_values.csv'), index_col=0)
+        y_dataframe.index = y_dataframe.index.astype('str')
+        try:
+            x_data = pd.read_csv(result_path.joinpath('data', 'x.csv'), index_col=0, header=None, squeeze=True)
+        except FileNotFoundError:
+            x_data = pd.read_csv(result_path.joinpath('data', 'x_values.csv'), index_col=0, header=None, squeeze=True)
+
+        x_data.index = x_data.index.astype('str')
+        _ = config.pop('x_data', None)
+        _ = config.pop('x_values', None)
+
+        conv_map = cls(model=model, x_data=x_data, save_to=result_path, **config)
+        conv_map.y_dataframe = y_dataframe
         conv_map.parameters = parameters
         conv_map.results = BatchFitResults.from_json(estimator=None,
-                                                     path_to_folder=result_path)
+                                                     path_to_folder=result_path,
+                                                     x_data=x_data, y_dataframe=y_dataframe, sigma=None)
 
         return conv_map
+
+    def get_metric_values(self, metric, finite_only=False):
+        """Returns a pd.Series contains the metric value"""
+
+        if isinstance(metric, str):
+            metric_val = self.results.summary[metric]
+        elif callable(metric):
+            metric_val = self.results.summary.apply(metric, axis=1)
+        else:
+            raise TypeError()
+        metric_val.index = metric_val.index.astype(str)
+        if finite_only:
+            metric_val = metric_val[np.isfinite(metric_val)]
+        return metric_val
 
     def plot_map(self, metric=None, metric_label=None, scatter=False, gridsize=50, figsize=(5, 5),
                  ax=None, cax_pos=(0.91, 0.58, 0.03, 0.3), **plot_kwargs):
@@ -207,4 +243,6 @@ class ConvergenceMap:
             return ax, cax
         else:
             return ax
+
+
 

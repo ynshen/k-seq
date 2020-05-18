@@ -57,7 +57,9 @@ class BatchFitter(Estimator):
             to hard drive 
         result_path (str): if not None, load results from the path
     """)
-    def __init__(self, y_dataframe, x_data, model, seq_to_fit=None, sigma=None, bounds=None, init_guess=None,
+    def __init__(self, y_dataframe, x_data, model,
+                 x_label=None, y_label=None,
+                 seq_to_fit=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, curve_fit_kwargs=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', bs_stats=None, grouper=None, record_full=False,
                  conv_reps=0, conv_init_range=None, conv_stats=None,
@@ -111,6 +113,8 @@ class BatchFitter(Estimator):
         # contains arguments should pass to the single estimator
         self.fit_params = AttrScope(
             x_data=self.x_data,
+            x_label=x_label,
+            y_label=y_label,
             model=self.model,
             bounds=bounds,
             init_guess=init_guess,
@@ -136,15 +140,6 @@ class BatchFitter(Estimator):
         self.large_dataset = large_dataset
         self.results.large_dataset = large_dataset
 
-        # TODO: recover the visualizer
-        # from .visualizer import fitting_curve_plot, bootstrap_params_dist_plot, param_value_plot
-        # from ..utility import FunctionWrapper
-        # self.visualizer = FunctionWrapper(data=self,
-        #                                   functions=[
-        #                                       fitting_curve_plot,
-        #                                       bootstrap_params_dist_plot,
-        #                                       param_value_plot
-        #                                   ])
         logging.info('BatchFitter created')
 
     def _worker_generator(self, stream_to=None, overwrite=False):
@@ -356,68 +351,6 @@ class BatchFitter(Estimator):
         return cls(y_dataframe=y_dataframe, sigma=sigma, result_path=result_path, **model_config)
 
 
-# def load_estimation_results(point_est_csv=None, seqtable=None, bootstrap_csv=None,
-#                             **kwargs):
-#     """Collect estimation results from multiple resources (e.g. summary.csv files) and compose a summary table
-#     Sequences will be the union of indices in point estimate, bootstrap, and convergence test if avaiable
-# 
-#     Resources:
-#       - count_table/seq_table: input counts, mean counts
-#       - point estimates: point estimation for parameters and metrics
-#       - bootstrap: uncertainty estimation from bootstrap
-#       - convergence test: convergence tests results
-# 
-#     Args:
-#         seq_table (str): path to pickled `SeqData` or `pd.DataFrame` object,
-#             will import 'input_counts'/, 'mean_counts'
-#         point_est_csv (str): optional, path to reported csv file from point estimation
-#         seqtable_path (str): optional. path to original seqTable object for count info
-#         bootstrap_csv (str): optional. path to csv file from bootstrap
-#         kwargs: optional keyword argument of callable to calculate extra columns, apply on results dataframe row-wise
-# 
-#     Returns:
-#         a pd.DataFrame contains composed results from provided information
-# 
-#     """
-# 
-#     point_est_res = pd.read_csv(point_est_csv, index_col=0)
-#     est_res = point_est_res[point_est_res.columns]
-#     seq_list = est_res.index.values
-# 
-#     if seqtable_path:
-#         # add counts in input pool
-#         from ..utility import file_tools
-#         seq_table = file_tools.read_pickle(seqtable_path)
-#         if seq_table.grouper and hasattr(seq_table.grouper, 'input'):
-#             est_res['input_counts'] = seq_table.table[seq_table.grouper.input.group].loc[seq_list].mean(axis=1)
-#         est_res['mean_counts'] = seq_table.table.loc[seq_list].mean(axis=1)
-#         est_res['min_counts'] = seq_table.table.loc[seq_list].min(axis=1)
-# 
-#         if hasattr(seq_table, 'pool_peaks'):
-#             # has doped pool, add dist to center
-#             from ..data import landscape
-#             mega_peak = landscape.Peak.from_peak_list(seq_table.pool_peaks)
-#             est_res['dist_to_center'] = mega_peak.dist_to_center
-# 
-#     if bootstrap_csv:
-#         bootstrap_res = pd.read_csv(bootstrap_csv, index_col=0)
-#         # add bootstrap results
-#         est_res[['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']] = bootstrap_res[
-#             ['kA_mean', 'kA_std', 'kA_2.5%', 'kA_50%', 'kA_97.5%']]
-#         est_res['A_range'] = bootstrap_res['A_97.5%'] - bootstrap_res['A_2.5%']
-# 
-#     if convergence_csv:
-#         pass
-# 
-#     if kwargs:
-#         for key, func in kwargs.items():
-#             if callable(func):
-#                 est_res[key] = est_res.apply(func, axis=1)
-#             else:
-#                 logging.error(f'Keyword argument {key} is not a function', error_type=TypeError)
-#     return est_res
-
-
 class BatchFitResults:
     """Parse, store, and visualize BatchFitter results
     Only save results (separate from each estimator), corresponding estimator should be found by sequence
@@ -429,6 +362,12 @@ class BatchFitResults:
 
     Attributes:
         estimator: proxy to the `BatchFitter`
+        model (callable): model function
+        data (AttrScope): contains data information:
+            x_data (list-like): x_data for fitting
+            y_dataframe (pd.DataFrame): a table of y_data for sequences
+            simga (pd.DataFrame): a table representing each sigma for sequence in fitting
+        large_data (bool): if True, it will not load all bootstrap or convergence results
         summary (`pd.DataFrame`): summarized results with each sequence as index
 
     Methods:
@@ -440,24 +379,29 @@ class BatchFitResults:
         from_pickle: load from a picked dictionary
         from_json: load from a folder of json files
         load_result: overall method to infer either load `BatchFitResults` from pickled or a folder
+
+    Analysis:
+
     """
 
-    def __init__(self, estimator=None):
+    def __init__(self, estimator=None, model=None, x_data=None, y_dataframe=None, sigma=None):
         """Init a BatchFitResults instance
         Args:
             estimator (`BatchFitter`): corresponding estimator
         """
+        from ..utility import func_tools
         self.estimator = estimator
+        self.model = model
+        self.data = func_tools.AttrScope(x_data=x_data, y_dataframe=y_dataframe, sigma=sigma)
         self._bs_record = None
         self._conv_record = None
         self.summary = None
         self.result_path = None
         self.large_dataset = False
 
-        # TODO: add visualization here
-
-    def get_FitResult(self, seq):
-        """Get FitResults from a JSON file"""
+    def get_FitResult(self, seq=None):
+        """Get FitResults from a JSON file
+        """
         
         from .least_squares import FitResults
         if self._bs_record is None:
@@ -465,43 +409,53 @@ class BatchFitResults:
         else:
             seq_to_hash = self._bs_record
 
+        if seq is None:
+            return pd.Series(seq_to_hash)
+
         if self.result_path.joinpath('seqs').exists():
             logging.info(f"load result from {seq_to_hash[seq]}.json")
-            return FitResults.from_json(self.result_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
+            result = FitResults.from_json(self.result_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
         elif self.result_path.joinpath('seqs.tar.gz').exists():
             try:
-                return FitResults.from_json(json_path=f'seqs/{seq_to_hash[seq]}.json',
+                result = FitResults.from_json(json_path=f'seqs/{seq_to_hash[seq]}.json',
                                             tarfile=self.result_path.joinpath('seqs.tar.gz'))
             except:
-                return FitResults.from_json(json_path=f'results/seqs/{seq_to_hash[seq]}.json',
-                                            tarfile=self.result_path.joinpath('seqs.tar.gz'))
+                result = FitResults.from_json(json_path=f'results/seqs/{seq_to_hash[seq]}.json',
+                                              tarfile=self.result_path.joinpath('seqs.tar.gz'))
 
-    def get_record(self, seqs):
-        """Get record for given seqs"""
-        if isinstance(seqs, str):
-            if self.large_dataset:
-                results = self.get_FitResult(seqs)
-                return {'bootstrap': results.uncertainty.records, 'convergence': results.convergence.records}
-            else:
-                record = {'bootstrap': None, 'convergence': None}
-                if self._bs_record is not None:
-                    record['bootstrap'] = self._bs_record[seqs]
-                if self._conv_record is not None:
-                    record['convergence'] = self._conv_record[seqs]
-                return record
-        else:
-            if self.large_dataset:
-                results = {seq: self.get_FitResult(seq) for seq in seqs}
-                return {seq: {'bootstrap': seq.uncertainty.records, 'convergence': seq.convergence.records} for seq in results}
-            else:
-                record = {seq: {'bootstrap': None, 'convergence': None} for seq in seqs}
-                if self._bs_record is not None:
-                    for seq in seqs:
-                        record[seq]['bootstrap'] = self._bs_record[seq]
-                if self._conv_record is not None:
-                    for seq in seqs:
-                        record[seq]['convergence'] = self._conv_record[seq]
-                return record
+        if result.data.x_data is None and self.data.y_dataframe is not None:
+            # add from data attribute
+            result.data.x_data = self.data.x_data
+            result.data.y_data = self.data.y_dataframe.loc[seq]
+
+        return result
+
+    # def get_record(self, seqs):
+    #     """Get record for given seqs"""
+    #     if isinstance(seqs, str):
+    #         if self.large_dataset:
+    #             results = self.get_FitResult(seqs)
+    #             return {'bootstrap': results.uncertainty.records, 'convergence': results.convergence.records}
+    #         else:
+    #             record = {'bootstrap': None, 'convergence': None}
+    #             if self._bs_record is not None:
+    #                 record['bootstrap'] = self._bs_record[seqs]
+    #             if self._conv_record is not None:
+    #                 record['convergence'] = self._conv_record[seqs]
+    #             return record
+    #     else:
+    #         if self.large_dataset:
+    #             results = {seq: self.get_FitResult(seq) for seq in seqs}
+    #             return {seq: {'bootstrap': seq.uncertainty.records, 'convergence': seq.convergence.records} for seq in results}
+    #         else:
+    #             record = {seq: {'bootstrap': None, 'convergence': None} for seq in seqs}
+    #             if self._bs_record is not None:
+    #                 for seq in seqs:
+    #                     record[seq]['bootstrap'] = self._bs_record[seq]
+    #             if self._conv_record is not None:
+    #                 for seq in seqs:
+    #                     record[seq]['convergence'] = self._conv_record[seq]
+    #             return record
 
     def bs_record(self, seqs=None):
         """Retrieve bootstrap records"""
@@ -577,12 +531,12 @@ class BatchFitResults:
         dump_pickle(obj=data_to_dump, path=output_dir)
 
     @classmethod
-    def from_pickle(cls, path_to_pickle, estimator=None):
+    def from_pickle(cls, path_to_pickle, estimator=None, model=None, x_data=None, y_dataframe=None, sigma=None):
         """Create a `BatchFitResults` instance with results loaded from pickle
         Notice:
             this could take a very long time if the pickled file is large, suggest to use to_json for large dataset
         """
-        result = cls(estimator=estimator)
+        result = cls(estimator=estimator, model=model, x_data=x_data, y_dataframe=y_dataframe, sigma=sigma)
         pkl = read_pickle(path_to_pickle)
         result.summary = pkl['summary']
         if 'bs_record' in pkl.keys():
@@ -613,10 +567,10 @@ class BatchFitResults:
         self.large_dataset = True
 
     @classmethod
-    def from_json(cls, path_to_folder, estimator=None):
+    def from_json(cls, path_to_folder, estimator=None, model=None, x_data=None, y_dataframe=None, sigma=None):
         """Load results from folder of results with json format"""
 
-        result = cls(estimator=estimator)
+        result = cls(estimator=estimator, model=model, x_data=x_data, y_dataframe=y_dataframe, sigma=sigma)
         path_to_folder = Path(path_to_folder)
         result.summary = pd.read_json(path_to_folder.joinpath('summary.json'))
         if path_to_folder.joinpath('seqs').exists():
@@ -701,57 +655,3 @@ def _read_work_fn(seq):
     res = _read_seq_json(seq[1])
     res.name = seq[0]
     return res
-
-
-# TODO: check following result
-
-def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-    from .least_squares import BatchFitter, SingleFitter
-    from ..data.seq_data import SeqData
-
-    def extract_info_from_SingleFitting(single_res):
-        data = {
-            'x_data': single_res.x_data,
-            'y_data': single_res.y_data,
-            'params': single_res.point_est.params[:len(single_res.config['parameters'])]
-        }
-        if num_bootstrap_records is not None:
-            if single_res.bootstrap.records.shape[0] > num_bootstrap_records:
-                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])].sample(
-                    axis=0,
-                    n=num_bootstrap_records
-                )
-            else:
-                data['bs_params'] = single_res.bootstrap.records.iloc[:, :len(single_res.config['parameters'])]
-        return data
-
-    if num_bootstrap_records == 0:
-        num_bootstrap_records = None
-    if isinstance(fitting_res, SeqData):
-        fitting_res = fitting_res.fitting
-    if isinstance(fitting_res, BatchFitter):
-        if seq_ix is None:
-            raise Exception('Please provide the names of sequences to plot')
-        else:
-            if isinstance(seq_ix, str):
-                seq_ix = [seq_ix]
-            if seq_name is None:
-                seq_name = seq_ixs
-            if model is None:
-                model = fitting_res.model
-            data_to_plot = {
-                name: extract_info_from_SingleFitting(single_res = fitting_res.seq_list[seq_ix])
-                for name, seq_ix in zip(seq_name, seq_ix)
-            }
-    elif isinstance(fitting_res, SingleFitter):
-        if seq_name is None:
-            seq_name = fitting_res.name
-        if model is None:
-            model = fitting_res.model
-        data_to_plot = {
-            seq_name: extract_info_from_SingleFitting(single_res=fitting_res)
-        }
-    else:
-        raise Exception('The input fitting_res should be SeqData, SingleFitting or BatchFitting')
-
-    return model, data_to_plot

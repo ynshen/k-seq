@@ -37,7 +37,7 @@ _doc = DocHelper(
 
 
 class SeqTable(pd.DataFrame):
-    """Enhanced ``pd.DataFrame`` with added property and functions for SeqData
+    """Extended ``pd.DataFrame`` with added property and functions for SeqData
 
     Additional Attributes:
         unit (str): unit of entries in this seq_table
@@ -46,16 +46,27 @@ class SeqTable(pd.DataFrame):
         seqs (pd.Series): sequences in the seq_table
 
     Additional Methods:
-      about: print a summary of the seq_table
-      analysis: accessor to SeqTableAnalyzer
+        about: print a summary of the seq_table
+        analysis: accessor to SeqTableAnalyzer
     """
 
-    @_doc.compose("""Initialize SeqTable instance
-    Args:
-    <<data, sample_list, seq_to_fit, unit, note, use_sparse>>
-    """)
-    def __init__(self, data, sample_list=None, seq_list=None, unit='count', note=None, use_sparse=True, **kwargs):
+    _metadata = ['unit', 'note', 'is_sparse', 'analysis']
 
+    @_doc.compose("""Initialize SeqTable instance
+    Additional kwargs:
+    <<unit, note, use_sparse>>
+    """)
+    def __init__(self, *args, **kwargs):
+
+        use_sparse = kwargs.pop('use_sparse', True)
+        unit = kwargs.pop('unit', 'count')
+        note = kwargs.pop('note', None)
+        sample_list = kwargs.pop('sample_list', None)
+        if sample_list is not None:
+            kwargs['columns'] = sample_list
+        seq_list = kwargs.pop('seq_list', None)
+        if sample_list is not None:
+            kwargs['index'] = seq_list
         if use_sparse:
             dtype = pd.SparseDtype(
                 'int' if (unit is not None and unit.lower() in ['count', 'counts', 'read', 'reads']) else 'float',
@@ -64,23 +75,21 @@ class SeqTable(pd.DataFrame):
         else:
             dtype = int if unit.lower() in ['count', 'counts', 'read', 'reads'] else float
 
-        if isinstance(data, (pd.DataFrame, SeqTable)):
-            super().__init__(data.values, index=data.index, columns=data.columns, dtype=dtype, **kwargs)
-        elif isinstance(data, (np.ndarray, list)):
-            if (sample_list is None) or (seq_list is None):
-                logging.error("Please provide sample_list and seq_to_fit if data is np.ndarray", error_type=ValueError)
-            super().__init__(data, index=seq_list, columns=sample_list, dtype=dtype, **kwargs)
-        else:
-            super().__init__(data, **kwargs)
+        super().__init__(dtype=dtype, *args, **kwargs)
         self.unit = unit
         self.note = note
         self.is_sparse = use_sparse
+        self.analysis = None
         self.update_analysis()
 
     def update_analysis(self):
         """update the accessor to SeqTableAnalyzer"""
         from .seq_data_analyzer import SeqTableAnalyzer
         self.analysis = SeqTableAnalyzer(self)
+
+    @property
+    def _constructor(self):
+        return SeqTable
 
     @property
     def _constructor_expanddim(self):
@@ -237,7 +246,7 @@ class SeqData(object):
         logging.info('SeqData created')
 
         # add original seq_table
-        self.table = AttrScope(original=SeqTable(data=data, sample_list=sample_list, seq_list=seq_list,
+        self.table = AttrScope(original=SeqTable(data, columns=sample_list, index=seq_list,
                                                  unit=data_unit, note=data_note, use_sparse=use_sparse))
         # add x values
         if x_values is None:

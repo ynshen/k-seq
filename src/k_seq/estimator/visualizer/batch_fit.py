@@ -39,3 +39,35 @@ def scatter_plot_2d_plotly(x, y, s=10, color='#4C78A8', note=None,
 
     return fig
 
+
+#################### to organize
+
+
+def sample_curves(exp, seq_list, repeated_fitting=True, bootstrap=True, sample_n=10):
+    """Plot a list of sample curves on convergence or bootstrap results"""
+
+    if len(seq_list) > sample_n:
+        seq_list = np.random.choice(seq_list, size=sample_n, replace=False)
+
+    if repeated_fitting:
+        fig, axes = plt.subplots(2, sample_n, figsize=(4 * sample_n, 8))
+
+        for seq, ax in zip(seq_list, axes[0]):
+            plot_fitting_curve(seq=seq, exp=exp, plot_on='convergence', ax=ax)
+        for seq, ax in zip(seq_list, axes[1]):
+            plot_heatmap(seq=seq, exp=exp, ax=ax, plot_on='convergence', colorbar=(ax == axes[1][-1]), add_lines=[0.1, 1, 10, 100])
+
+        plt.tight_layout()
+        plt.show()
+
+
+    if bootstrap:
+        fig, axes = plt.subplots(2, sample_n, figsize=(4 * sample_n, 8))
+
+        for seq, ax in zip(seq_list, axes[0]):
+            plot_fitting_curve(seq=seq, exp=exp, plot_on='bootstrap', ax=ax)
+        for seq, ax in zip(seq_list, axes[1]):
+            plot_heatmap(seq=seq, ax=ax, exp=exp, plot_on='bootstrap', colorbar=(ax == axes[1][-1]), add_lines=[0.1, 1, 10, 100])
+
+        plt.tight_layout()
+        plt.show()

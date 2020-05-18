@@ -10,6 +10,7 @@ Several functions are included:
 
 from ._estimator import Estimator
 from doc_helper import DocHelper
+from ..utility import plot_tools
 from ..utility.file_tools import read_json, dump_json, check_dir
 from yutility import logging
 import pandas as pd
@@ -22,6 +23,8 @@ __all__ = ['doc_helper', 'SingleFitter', 'FitResults']
 doc_helper = DocHelper(
     x_data=('list', 'list of x values in fitting'),
     y_data=('list, pd.Series', 'y values in fitting'),
+    x_label=('str', 'name of x data'),
+    y_label=('str', 'name of y data'),
     model=('callable', 'model to fit'),
     name=('str', "Optional. Estimator's name"),
     sigma=('list, pd.Series, or pd.DataFrame', 'Optional, same size as y_data/y_dataframe.'
@@ -95,7 +98,8 @@ class SingleFitter(Estimator):
             if False, read results and skip estimation. Default False
         verbose (0, 1, 2): set different verbose level. 0: WARNING, 1: INFO, 2: DEBUG
     """)
-    def __init__(self, x_data, y_data, model, name=None, sigma=None, bounds=None, init_guess=None,
+    def __init__(self, x_data, y_data, model, name=None, x_label=None, y_label=None,
+                 sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, curve_fit_kwargs=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', bs_stats=None, grouper=None, record_full=False,
                  conv_reps=0, conv_init_range=None, conv_stats=None,
@@ -122,6 +126,7 @@ class SingleFitter(Estimator):
         self.parameters = get_func_params(model, required_only=True)[1:]
         self.name = name
         self.config = AttrScope(
+            x_label=x_label, y_label=y_label,
             opt_method=opt_method,
             exclude_zero=exclude_zero,
             init_guess=init_guess,
@@ -352,7 +357,7 @@ class SingleFitter(Estimator):
             try:
                 # don't do fitting if can saved result is readable
                 logging.debug(f'Try to recover info from {save_to}...')
-                self.results = FitResults.from_json(save_to, estimator=self)
+                self.results = FitResults.from_json(json_path=save_to, estimator=self)
                 logging.debug('Found, skip fitting...')
                 return None
             except JSONDecodeError:
@@ -452,11 +457,21 @@ class SingleFitter(Estimator):
 
 
 class FitResults:
-    """A class to store, process, and visualize fitting results for single estimator
+    """A class to store, process, and visualize fitting results for single estimator, contains almost all information
+    needed to further analysis
 
     Attributes:
 
          estimator (Estimator): proxy to the estimator
+
+         model (callable): model used in fitting
+
+         data (AttrScope): a scope stores the fitting data
+             x_data (pd.Series):
+             y_data (pd.Series):
+             sigma (pd.Series):
+             x_label (str): name for x data
+             y_label (str): name for y data
 
          point_estimation (AttrScope): a scope stores point estimation results, includes
              params (pd.Series): stores the parameter estimation, with extra metrics calculation
@@ -470,34 +485,33 @@ class FitResults:
              summary (pd.DataFrame): summary for each parameter or metric from records
              records (pd.DataFrame): records for repeated fitting results
 
-         data (AttrScope): a scope stores the fitting data
-             x (pd.Series):
-             y (pd.Series):
-             sigma (pd.Series):
     """
 
     def __repr__(self):
         return f"Fitting results for {self.estimator} " \
                f"<{self.__class__.__module__}{self.__class__.__name__} at {hex(id(self))}>"
 
-    def __init__(self, estimator):
+    def __init__(self, estimator, model=None):
         """
         Args:
-            estimator (Estimator): estimator used to generate this fitting result
+            estimator (SingleFitter): estimator used to generate this fitting result
+
         """
         from ..utility.func_tools import AttrScope
 
         self.estimator = estimator
+        self.model = model if estimator is None else estimator.model
+        if estimator is None:
+            self.data = AttrScope(keys=['x_data', 'y_data', 'sigma', 'x_label', 'y_label'])
+        else:
+            self.data = AttrScope(x_data=estimator.x_data.copy(),
+                                  y_data=estimator.y_data.copy(),
+                                  sigma=estimator.sigma.copy(),
+                                  x_label=estimator.x_label,
+                                  y_label=estimator.y_label)
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'records'])
         self.convergence = AttrScope(keys=['summary', 'records'])
-        self.data = AttrScope(keys=['x', 'y', 'sigma'])
-
-        # TODO: update to make visualizer work
-        # from k_seq.estimator.visualizer.single_fit import fitting_curve_plot, bootstrap_params_dist_plot
-        # from ..utility.func_tools import FuncToMethod
-        # self.visualizer = FuncToMethod(obj=self, functions=[fitting_curve_plot,
-        #                                                     bootstrap_params_dist_plot])
 
     def to_series(self):
         """Convert point_estimation, uncertainty (if possible), and convergence (if possible) to a series include
@@ -530,8 +544,11 @@ class FitResults:
                              records: jsonfy(pd.DataFrame) }
               convergence: { summary: jsonfy(pd.DataFrame)
                              records: jsonfy(pd.DataFrame) }
-              data: {x: jsonfy(pd.Series)
-                     y: jsonfy(pd.Series)}
+              data: {x_data: jsonfy(pd.Series)
+                     y_data: jsonfy(pd.Series),
+                     sigma: jsonfy(pd.Series),
+                     x_label: str,
+                     y_label: str}
             }
         """
 
@@ -553,6 +570,13 @@ class FitResults:
             'convergence': {
                 'summary': jsonfy(self.convergence.summary),
                 'records': jsonfy(self.convergence.records)
+            },
+            'data': {
+                'x_data': jsonfy(self.data.x_data),
+                'y_data': jsonfy(self.data.y_data),
+                'sigma': jsonfy(self.data.sigma),
+                'x_label': jsonfy(self.data.x_label),
+                'y_label': jsonfy(self.data.y_label),
             }
         }
         if path is None:
@@ -561,16 +585,17 @@ class FitResults:
             dump_json(data_to_dump, path=path)
 
     @classmethod
-    def from_json(cls, json_path, tarfile=None, gzip=True, estimator=None):
+    def from_json(cls, json_path, tarfile=None, gzip=True, estimator=None, data=None):
         """load fitting results from json records, option to load from tar.gz files
         Note: no estimator info if estimator is None
 
         Args:
-            json_path (str): path to json file, or file name under tarball file if tar_file_name is true
-            tarfile (str): if not None, the json file is in a tarfile (.tar/.tar.gz)
+            json_path (str): path to json file, or file name under tarball file if tar_file_name is true tarfile (str):
+                if not None, the json file is in a tarfile (.tar/.tar.gz)
             gzip (bool): if True, the tarfile is compressed with gzip (`.tar.gz`); if False, the tarfile is not
                 compressed (`.tar`)
-            estimator (Estimator): optional. Recover the estimator instance.
+            estimator (SingleFitter): optional. Recover the estimator instance.
+            data (dict): supplied dictionary to add data info
         """
         if tarfile is None:
             json_data = read_json(json_path)
@@ -580,29 +605,150 @@ class FitResults:
             with tf.open(tarfile, mode='r:gz' if gzip else 'r') as tf_file:
                 json_data = json.load(tf_file.extractfile(json_path))
 
-        results = cls(estimator=estimator)
+        result = cls(estimator=estimator)
 
         if 'point_estimation' in json_data.keys():
             if json_data['point_estimation']['params'] is not None:
-                results.point_estimation.params = pd.read_json(json_data['point_estimation']['params'], typ='series')
+                result.point_estimation.params = pd.read_json(json_data['point_estimation']['params'], typ='series')
             if json_data['point_estimation']['pcov'] is not None:
-                results.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
+                result.point_estimation.pcov = pd.read_json(json_data['point_estimation']['pcov'])
         if 'uncertainty' in json_data.keys():
             if json_data['uncertainty']['summary'] is not None:
-                results.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'], typ='series')
+                result.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'], typ='series')
             if 'record' in json_data['uncertainty'].keys():
                 label = 'record'
             else:
                 label = 'records'
             if json_data['uncertainty'][label] is not None:
-                results.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
+                result.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
         if 'convergence' in json_data.keys():
             if json_data['convergence']['summary'] is not None:
-                results.convergence.summary = pd.read_json(json_data['convergence']['summary'], typ='series')
+                result.convergence.summary = pd.read_json(json_data['convergence']['summary'], typ='series')
             if 'record' in json_data['convergence'].keys():
                 label = 'record'
             else:
                 label = 'records'
             if json_data['convergence'][label] is not None:
-                results.convergence.records = pd.read_json(json_data['convergence'][label])
-        return results
+                result.convergence.records = pd.read_json(json_data['convergence'][label])
+        if 'data' in json_data.keys():
+            if json_data['data']['x_data'] is not None:
+                result.data.x_data = pd.read_json(json_data['data']['x_data'], typ='series')
+            if json_data['data']['y_data'] is not None:
+                result.data.y_data = pd.read_json(json_data['data']['y_data'], typ='series')
+            if json_data['data']['sigma'] is not None:
+                result.data.sigma = pd.read_json(json_data['data']['sigma'], typ='series')
+            if json_data['data']['x_label'] is not None:
+                    result.data.x_label = json_data['data']['x_label']
+            if json_data['data']['y_label'] is not None:
+                result.data.y_label = json_data['data']['y_label']
+
+        elif data is not None:
+            from ..utility.func_tools import AttrScope
+            result.data = AttrScope(**data)
+
+        return result
+
+    def plot_fitting_curves(self, model=None, plot_on='bootstrap', subsample=20,
+                            x_lim=(-0.00003, 0.0003), y_lim=None,
+                            x_label=None, y_label=None,
+                            legend=False, legend_loc='upper left',
+                            fontsize=12,
+                            params=None, ax=None):
+        """plot fitting results for Aminoacylation ribozyme fitting curves
+        obj should be a FitResults instance
+        """
+        from ..utility.func_tools import update_none
+
+        model = update_none(model, self.model)
+        x_label, y_label = update_none(x_label, self.data.x_label), update_none(y_label, self.data.y_label)
+
+        if model is None:
+            from ..model.kinetic import BYOModel
+            model = BYOModel.reacted_frac(broadcast=False)
+        if params is None:
+            from ..utility.func_tools import get_func_params
+            params = get_func_params(model)[1:]
+
+        if plot_on.lower() in ['bootstrap', 'bs']:
+            param = self.uncertainty.records[params]
+            label = 'Bootstraps'
+        elif plot_on.lower() in ['convergence', 'conv']:
+            param = self.convergence.records[params]
+            label = 'Convergence'
+        else:
+            param = None
+            label = None
+
+        ax = plot_tools.ax_none(ax, figsize=(4, 3))
+
+        plot_tools.plot_curve(
+            model=model,
+            ax=ax,
+            x=self.data.x_data, y=self.data.y_data,
+            datapoint_kwargs=dict(color='#F58518'), datapoint_label='Observation',
+            param=param, curve_kwargs=dict(color='#7F7F7F', alpha=0.3), curve_label=label,
+            major_param=self.point_estimation.params[params],
+            major_curve_kwargs=dict(color='#4C78A8'), major_curve_label='Point estimate',
+            subsample=subsample,
+            x_label=x_label, x_lim=x_lim,
+            y_label=y_label, y_lim=y_lim,
+            legend=legend, legend_loc=legend_loc, fontsize=fontsize
+        )
+
+    def plot_loss_heatmap(self, model=None, plot_on='bootstrap',
+                          subsample=20,
+                          param1_range=(1e-2, 1e4), param2_range=(1e-3, 1),
+                          legend=False, legend_loc='upper left',
+                          colorbar=True, resolution=101, fontsize=12,
+                          param_name=None, add_lines=None, ax=None):
+        """Plot the 2-D heatmap of loss function"""
+
+        if model is None:
+            from ..model import kinetic
+            model = kinetic.BYOModel.reacted_frac(broadcast=True)
+
+        if param_name is None:
+            from ..utility.func_tools import get_func_params
+            param_name = get_func_params(model)[1:]
+
+        if plot_on.lower() in ['bootstrap', 'bs']:
+            param = self.uncertainty.records[param_name]
+            label = 'Bootstraps'
+        elif plot_on.lower() in ['convergence', 'conv']:
+            param = self.convergence.records[param_name]
+            label = 'Convergence'
+        else:
+            param = None
+            label = None
+
+        param = param
+
+        ax = plot_tools.ax_none(ax, figsize=(4, 3))
+
+        plot_tools.plot_loss_heatmap(
+            model=model,
+            x=self.data.x_data, y=self.data.y_data, param=param, subsample=subsample,
+            param_name=param_name, param1_range=param1_range, param2_range=param2_range,
+            param_log=True, resolution=resolution,
+            fixed_params=None, z_log=True,
+            datapoint_color='#E45756', datapoint_label='data', datapoint_kwargs=None,
+            legend=legend, legend_loc=legend_loc, colorbar=colorbar, fontsize=fontsize,
+            ax=ax
+        )
+
+        if add_lines is not None:
+
+            xlims = ax.get_xlim()
+            ylims = ax.set_ylim()
+
+            xs = np.logspace(np.log10(param1_range[0]), np.log10(param1_range[1]), 50)
+            for prod in add_lines:
+                ax.plot(plot_tools.value_to_loc(xs, range=param1_range, resolution=resolution, log=True),
+                        plot_tools.value_to_loc(prod / xs, range=param2_range, resolution=resolution, log=True),
+                        'w', alpha=0.8, ls='--')
+                ax.text(s=str(prod),
+                        x=plot_tools.value_to_loc(prod / param2_range[1], range=param1_range,
+                                                  resolution=resolution, log=True),
+                        y=resolution, va='bottom', ha='center', fontsize=fontsize)
+            ax.set_xlim(*xlims)
+            ax.set_ylim(*ylims)

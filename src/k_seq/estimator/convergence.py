@@ -82,13 +82,3 @@ class ConvergenceTester:
         return self._get_summary(records), records
 
 
-def _parameter_gen(param_range, log, size):
-    from ..data.simu import DistGenerators
-
-    if log:
-        return 10 ** DistGenerators.uniform(low=np.log10(param_range[0]), high=np.log10(param_range[1]),
-                                            size=size)
-    else:
-        return DistGenerators.uniform(low=param_range[0], high=param_range[1], size=size)
-
-
