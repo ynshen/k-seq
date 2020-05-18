@@ -20,7 +20,7 @@ from yutility import logging
 class Transformer(ABC):
     """Abstract class type for transformer
 
-    Transformers are classes transform a seq_table instance (`pd.DataFrame` or `SeqData`) to another seq_table
+    Transformers are classes transform a seq_table instance (`pd.DataFrame` or `SeqTable`) to another seq_table
 
     To write your transformer, components are:
         - Attributes to store parameters
@@ -252,7 +252,7 @@ class TotalAmountNormalizer(Transformer):
         """
 
         def sample_normalize(col):
-            return col * norm_factor[col.name]
+            return col.astype('float') * norm_factor[col.name]
 
         sample_list = []
         for sample in target.columns:
@@ -273,7 +273,7 @@ class TotalAmountNormalizer(Transformer):
     """)
     def apply(self, target):
         from .seq_data import SeqTable
-        return SeqTable(self.func(target=target, norm_factor=self.norm_factor), unit=self.unit)
+        return self.func(target=target, norm_factor=self.norm_factor)
     
 
 class ReactedFractionNormalizer(Transformer):
@@ -298,15 +298,15 @@ class ReactedFractionNormalizer(Transformer):
         if callable(reduce_method):
             base = reduce_method(target[input_samples])
         else:
-            if reduce_method.lower() not in method_mapper.keys():
-                raise ValueError('Unknown reduce_method')
-            else:
+            if reduce_method.lower() in method_mapper.keys():
                 base = method_mapper[reduce_method](target[input_samples], axis=1)
+            else:
+                logging.error('Unknown reduce_method', ValueError)
 
         mask = base > 0  # if any does not exist in input samples
         reacted_frac = target.loc[mask, ~target.columns.isin(input_samples)].divide(base[mask], axis=0)
         if remove_empty:
-            return reacted_frac[reacted_frac.sum(axis=1) > 0]
+            return reacted_frac.loc[reacted_frac.sum(axis=1) > 0]
         else:
             return reacted_frac
 
@@ -321,20 +321,16 @@ class ReactedFractionNormalizer(Transformer):
             Returns:
                 pd.DataFrame
         """
-        if target is None:
-            target = self.target
+        target = update_none(target, self.target)
         if target is None:
             raise ValueError('No valid name found')
-        if input_samples is None:
-            input_samples = self.input_samples
+        input_samples = update_none(input_samples, self.input_samples)
         if input_samples is None:
             raise ValueError('No input_samples found')
-        if reduce_method is None:
-            reduce_method = self.reduce_method
+        reduce_method = update_none(reduce_method, self.reduce_method)
         if not isinstance(target, pd.DataFrame):
             target = getattr(target, 'seq_table')
-        if remove_empty is None:
-            remove_empty = self.remove_empty
+        remove_empty = update_none(remove_empty, self.remove_empty)
 
         from .seq_data import SeqTable
         return SeqTable(self.func(target=target, input_samples=input_samples,

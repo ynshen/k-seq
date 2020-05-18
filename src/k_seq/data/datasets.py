@@ -31,16 +31,16 @@ def load_dataset(dataset, from_count_file=False, **kwargs):
 def byo_doped_rename_sample(name):
     """Rename results loaded from raw reads and samples as
 
-    A1/d-A1_S1 --> 1250uM-1
+    A1/d-A1_S1 --> 1250 μM-1
     ...
-    R/R0 --> input
+    R/R0 --> Unreacted
     """
 
     if len(name) > 2:
         name = name.split('_')[0].split('-')[-1]
 
     if 'R' in name:
-        return 'Input'
+        return 'Unreacted'
     else:
         concen_mapper = {
             'A': '1250',
@@ -49,7 +49,7 @@ def byo_doped_rename_sample(name):
             'D': '10',
             'E': '2'
         }
-        return "{} $\mu M$-{}".format(concen_mapper[name[0]], name[1])
+        return "{} $\\mu$ M-{}".format(concen_mapper[name[0]], name[1])
 
 
 def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=None, pickled_path=None,
@@ -138,16 +138,20 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         # temp note: DNA Amount normalizer is calculated on whichever seq_table it applies to
         from . import filters
         spike_in_filter = filters.SpikeInFilter(target=byo_doped)  # remove spike-in seqs
-        seq_length_filter = filters.SeqLengthFilter(target=byo_doped, min_len=21, max_len=21)  # remove non-21 nt seq
+        seq_length_filter = filters.SeqLengthFilter(target=None, min_len=21, max_len=21)  # remove non-21 nt seq
+        no_ambiguity_filter = filters.NoAmbiguityFilter(target=None)  # remove sequences with ambiguity nucleotides
 
         # filtered seq_table by removing spike-in within 2 edit distance and seqs not with 21 nt
-        byo_doped.table.filtered = seq_length_filter(target=spike_in_filter(target=byo_doped.table.original))
+        byo_doped.table.filtered = no_ambiguity_filter(
+            target=seq_length_filter(target=spike_in_filter(target=byo_doped.table.original))
+        )
         byo_doped.add_sample_total(
             total_amounts=dna_amount,
             unit='ng',
             full_table=byo_doped.table.filtered
         )
 
+        # add landscape to filter mutants
         from . import landscape
         pool_peaks = {
             'pk2': 'ATTACCCTGGTCATCGAGTGA',
@@ -157,6 +161,8 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
         }
         byo_doped.pool_peaks = [landscape.Peak(seqs=byo_doped.table.filtered, center_seq=seq,
                                                name=name, dist_type='hamming') for name, seq in pool_peaks.items()]
+        byo_doped.pool_peaks_merged = landscape.PeakCollection(peaks=byo_doped.pool_peaks)
+
         # Add replicates grouper
         byo_doped.grouper.add(byo={
             1250: ['A1', 'A2', 'A3'],
@@ -189,21 +195,6 @@ def load_byo_doped(from_count_file=False, count_file_path=None, doped_norm_path=
             byo_doped.table.reacted_frac_qpcr
         )
 
-        # filter up to double mutants
-        from k_seq.data import landscape
-
-        pool_peaks = {
-            'pk2.1': 'ATTACCCTGGTCATCGAGTGA',
-            'pk1A.1': 'CTACTTCAAACAATCGGTCTG',
-            'pk1B.1': 'CCACACTTCAAGCAATCGGTC',
-            'pk3.1': 'AAGTTTGCTAATAGTCGCAAG'
-        }
-        byo_doped.pool_peaks = [
-            landscape.Peak(seqs=byo_doped.table.reacted_frac_qpcr, center_seq=seq,
-                           name=name, dist_type='hamming') for name, seq in pool_peaks.items()
-        ]
-
-        byo_doped.pool_peaks_merged = landscape.PeakCollection(peaks=byo_doped.pool_peaks)
         peak_filter = filters.PeakFilter(max_dist=2,
                                          dist_to_center=byo_doped.pool_peaks_merged.dist_to_center)
         byo_doped.table.reacted_frac_qpcr_2mutants = peak_filter(byo_doped.table.reacted_frac_qpcr)
