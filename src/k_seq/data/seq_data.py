@@ -37,7 +37,7 @@ _doc = DocHelper(
 
 
 class SeqTable(pd.DataFrame):
-    """Extended ``pd.DataFrame`` with added property and functions for SeqData
+    """Extended ``pd.DataFrame`` with added property and functions for SeqTable
 
     Additional Attributes:
         unit (str): unit of entries in this seq_table
@@ -48,8 +48,6 @@ class SeqTable(pd.DataFrame):
     Additional Methods:
         about: print a summary of the seq_table
         analysis: accessor to SeqTableAnalyzer
-
-    TODO: issue in subclassing pd.DataFrame, considering move it as accessors
     """
 
     _metadata = ['unit', 'note', 'is_sparse', 'analysis']
@@ -60,7 +58,7 @@ class SeqTable(pd.DataFrame):
     """)
     def __init__(self, *args, **kwargs):
 
-        use_sparse = kwargs.pop('use_sparse', True)
+        use_sparse = kwargs.pop('use_sparse', False)
         unit = kwargs.pop('unit', None)
         note = kwargs.pop('note', None)
         sample_list = kwargs.pop('sample_list', None)
@@ -71,12 +69,9 @@ class SeqTable(pd.DataFrame):
             kwargs['index'] = seq_list
 
         if use_sparse:
-            kwargs['dtype'] = pd.SparseDtype(
-                np.int32 if (unit is not None and unit.lower() in ['count', 'counts', 'read', 'reads']) else np.float32,
-                fill_value=0
-            )
-        # else:
-        #     kwargs['dtype'] = np.int32 if unit.lower() in ['count', 'counts', 'read', 'reads'] else np.float32
+            # by default use np.float32 sparse
+            dtype = kwargs.pop('dtype', np.float32)
+            kwargs['dtype'] = pd.SparseDtype(dtype, fill_value=0)
 
         super().__init__(*args, **kwargs)
         self.unit = unit
