@@ -506,9 +506,9 @@ class FitResults:
         else:
             self.data = AttrScope(x_data=estimator.x_data.copy(),
                                   y_data=estimator.y_data.copy(),
-                                  sigma=estimator.sigma.copy(),
-                                  x_label=estimator.x_label,
-                                  y_label=estimator.y_label)
+                                  sigma=estimator.config.sigma.copy(),
+                                  x_label=estimator.config.x_label,
+                                  y_label=estimator.config.y_label)
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
         self.uncertainty = AttrScope(keys=['summary', 'records'])
         self.convergence = AttrScope(keys=['summary', 'records'])
