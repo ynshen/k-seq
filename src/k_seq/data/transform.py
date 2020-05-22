@@ -106,7 +106,11 @@ class SpikeInNormalizer(Transformer):
 
     def _update_norm_factors(self):
         """Update normalization factor for each sample"""
-        spike_in_counts = self.base_table.loc[self.spike_in_members, self.spike_in_amount.index].sum(axis=0)
+        sample_list = self.spike_in_amount.index
+        sample_list = list(self.base_table.columns[self.base_table.columns.isin(sample_list)])
+        seq_list = self.spike_in_members
+        seq_list = list(self.base_table.index[self.base_table.index.isin(seq_list)])
+        spike_in_counts = self.base_table.loc[seq_list, sample_list].sum(axis=0)
         self.norm_factor = self.spike_in_amount / spike_in_counts
 
     @property
@@ -120,12 +124,15 @@ class SpikeInNormalizer(Transformer):
         if isinstance(spike_in_amount, (list, np.ndarray)):
             # if unkey array, must be same length as base_table's columns
             if len(self.base_table.columns) != len(spike_in_amount):
-                logging.error('Length of spike_in_amount does not match sample number')
-                ValueError('Length of spike_in_amount does not match sample number')
+                logging.error('Length of spike_in_amount does not match sample number', ValueError)
             else:
                 self._spike_in_amount = pd.Series(data=spike_in_amount, index=self.base_table.columns)
         elif isinstance(spike_in_amount, dict):
             self._spike_in_amount = pd.Series(spike_in_amount)
+        elif isinstance(spike_in_amount, pd.Series):
+            self._spike_in_amount = spike_in_amount
+        else:
+            logging.error('Unknown spike_in_amount type, it should be list-like, pd.Series, or dict')
 
         if hasattr(self, 'spike_in_members'):
             self._update_norm_factors()
@@ -154,20 +161,24 @@ class SpikeInNormalizer(Transformer):
 
         if not isinstance(target, pd.DataFrame):
             logging.error('name needs to be pd.DataFrame')
-            raise TypeError('name needs to be pd.DataFrame')
 
-        sample_list = norm_factor.index
-        sample_not_in = list(target.columns[~target.columns.isin(sample_list)])
+        def sample_normalize(col):
+            return col.astype('float') * norm_factor[col.name]
 
-        for sample in sample_not_in:
-            logging.warning(f'Sample {sample} is not found in the normalizer, normalization is not performed')
+        sample_list = []
+        for sample in target.columns:
+            if sample in norm_factor.keys():
+                sample_list.append(sample)
+            else:
+                logging.warning(f'Sample {sample} is not in spike-in norm_factor, skip this sample')
 
-        return target.loc[:, sample_list] * norm_factor
+        return target[sample_list].apply(sample_normalize, axis=0)
 
     def apply(self, target):
         """Apply normalization to target"""
         from .seq_data import SeqTable
-        return SeqTable(self.func(target=target, norm_factor=self.norm_factor), unit=self.unit)
+        return SeqTable(self.func(target=target, norm_factor=self.norm_factor), unit=self.unit,
+                        use_sparse=True, dtype='float')
 
 
 _total_dna_doc = DocHelper(
@@ -259,7 +270,7 @@ class TotalAmountNormalizer(Transformer):
             if sample in norm_factor.keys():
                 sample_list.append(sample)
             else:
-                logging.warning(f'Sample {sample} is not in norm_factor, skip this sample')
+                logging.warning(f'Sample {sample} is not in total amount norm_factor, skip this sample')
 
         return target[sample_list].apply(sample_normalize, axis=0)
 
@@ -273,7 +284,8 @@ class TotalAmountNormalizer(Transformer):
     """)
     def apply(self, target):
         from .seq_data import SeqTable
-        return self.func(target=target, norm_factor=self.norm_factor)
+        return SeqTable(self.func(target=target, norm_factor=self.norm_factor), unit=self.unit,
+                        dtype='float', use_sparse=True)
     
 
 class ReactedFractionNormalizer(Transformer):
@@ -337,46 +349,3 @@ class ReactedFractionNormalizer(Transformer):
                                   reduce_method=reduce_method, remove_empty=remove_empty), unit='fraction')
 
 
-class BYOSelectedCuratedNormalizerByAbe(Transformer):
-    """This normalizer contains the quantification factor used by Abe"""
-
-    def __init__(self, q_factor=None, target=None):
-        super().__init__()
-        self.target = target
-        # import curated quantification factor by Abe
-        # q_facter is defined in this way: abs_amnt = q * counts / total_counts
-        self.q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
-        # TODO: check unit
-        # q_factor should be:
-        # seq_data.q_factors = {'0.0005,
-        #             0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133,
-        #             0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812, 0.062784812,
-        #             0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207, 0.159915207,
-        #             0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596, 0.53032596]
-
-    @staticmethod
-    def func(target, q_factor):
-        total_counts = target.sum(axis=0)
-        if isinstance(q_factor, pd.DataFrame):
-            q_factor = q_factor.iloc[:, 0]
-        q_factor = q_factor.reindex(total_counts.index)
-        return target / total_counts / q_factor
-
-    def apply(self, target=None, q_factor=None):
-        """Normalize counts using Abe's curated quantification factor
-            Args:
-                target (pd.DataFrame): this should be the original count seq_table from BYO-selected k-seq exp.
-                q_factor (pd.DataFrame or str): seq_table contains first col as q-factor with sample as index
-                    or path to stored csv file
-
-            Returns:
-                A normalized seq_table of absolute amount of sequences in each sample
-        """
-        if target is None:
-            target = self.target
-        if q_factor is None:
-            q_factor = self.q_factor
-        q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
-
-        from .seq_data import SeqTable
-        return SeqTable(self.func(target=target, q_factor=q_factor), unit='ng')

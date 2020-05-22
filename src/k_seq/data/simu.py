@@ -467,11 +467,24 @@ Parameter for each sequences were sampled from previous point estimate results:
 Returns:
 <<x, Y, param_table, truth, seq_table>>
 """)
-def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path, uniq_seq_num, depth=40,
+def simulate_w_byo_doped_condition_from_exp_results(dataset, results, uniq_seq_num,
+                                                    x_values=None, table_name=None, depth=40,
                                                     total_dna_error_rate=0.1, seed=23,
                                                     plot_dist=False, save_to=None):
+    # TODO: update simulation
 
-    from ..estimator.least_squares import load_estimation_results
+    from ..estimator import BatchFitResults
+
+    if isinstance(dataset, str):
+        from ..utility import file_tools
+        dataset = file_tools.read_pickle(dataset)
+    if x_values is None:
+        x_values = getattr(dataset, 'x_values')
+    if table_name is not None:
+        dataset =
+    if isinstance(results, str):
+        result_table = BatchFitResults.from_json(results)
+
     result_table = load_estimation_results(point_est_csv=point_est_csv, seqtable_path=seqtable_path)
     if 'ka' in result_table.columns:
         result_table = result_table.rename(columns={'ka': 'kA'})
@@ -520,158 +533,3 @@ def simulate_w_byo_doped_condition_from_exp_results(point_est_csv, seqtable_path
 
     return x, Y, dna_amount, truth, seq_table
 
-
-# TODO: Move reacted fraction simulator here
-
-# def reacted_frac_simulator(x_values, kinetic_model=None, percent_noise=0.2, uniq_seq_num=None,
-#                            param_sample_from_df=None, weights=None, replace=True,
-#                            conv_reps=1, allow_zero=False, seed=None, save_to=None, **param_generator):
-#     """Simulate reacted fraction of a pool of molecules (ribozymes), given substrate concentration, kinetic model
-#
-#     Args:
-#         x_values (list): list of substrate concentration
-#         kinetic_model (callable): kinetic model of the reaction
-#         percent_noise (float or list): percent variance of Gaussian noise, if list, should have same shape as x_values,
-#             default: 0.2
-#         param_sample_from_df (pd.DataFrame): optional to sample sequences from given seq_table
-#         weights (list or str): weights/col of weight for sampling from seq_table
-#         replace (bool): if sample with replacement
-#         conv_reps (int): number of replicates for each c, N
-#         allow_zero (bool): if allow reacted fraction to be zero after noise. If False, repeated sampling until a
-#             positive reacted fraction is achieved, else bottomed by zero
-#         seed (int): global random seed to use
-#         save_to (path): path to the folder to save simulated results
-#         **param_generator: keyword arguments of list, generator or callable returns generator to draw parameters
-#
-#     Returns:
-#         x (pd.Series): x_values with replication
-#         Y (pd.DataFrame): a seq_table of reacted fraction
-#         param_table (pd.DataFrame): a seq_table of parameter truth
-#     """
-#
-#     def add_noise(mean, noise, allow_zero=False):
-#         """Add Gaussian noise on given mean
-#         Note:
-#             here is absolute noise, to inject percent noise, assign noise = mean * pct_noise
-#
-#         Args:
-#             mean (float or list-like): mean values
-#             noise (float or list-list): noise level, variance of Gaussian noise,
-#                 if list-like should have same shape as mean
-#             allow_zero (bool): if allow zero in noised inject data, if False, repeated sampling until non-negative value
-#                 observed
-#
-#         Returns:
-#             data_w_noise (float or np.ndarray): data with injected noise, same shape as mean
-#         """
-#         import numpy as np
-#
-#         y = np.random.normal(loc=mean, scale=noise)
-#         if isinstance(mean, float):
-#             while y < 0 and not allow_zero:
-#                 y = np.random.normal(loc=y, scale=y_noise)
-#             return max(y, 0)
-#         else:
-#             while (y < 0).any() and not allow_zero:
-#                 y = np.random.normal(loc=y, scale=y_noise)
-#             y[y < 0] = 0
-#             return y
-#
-#     if kinetic_model is None:
-#         # default use BYO first-order compositional model
-#         from k_seq.model import kinetic
-#         kinetic_model = kinetic.BYOModel.react_frac
-#         print('No kinetic model provided, use BYOModel.amount_first_order')
-#
-#     if param_sample_from_df is None:
-#
-#         results = pd.DataFrame(
-#             data={**{'p0': list(generate_params(p0))},
-#                   **{param: generate_params(gen) for param, gen in param_generators.items()}}
-#         )
-#
-#         return  results
-#
-#         param_table = sample_from_ind_dist(
-#             seed=seed,
-#             **param_generator
-#         )
-#     else:
-#         param_table =
-#             df=param_sample_from_df,
-#             uniq_seq_num=uniq_seq_num,
-#             replace=replace,
-#             weights=weights,
-#             seed=seed
-#         )
-#
-#     param_table.index.name = 'seq'
-#
-#     x_true = np.array(x_true)
-#
-#
-#     if isinstance(params, list):
-#         y_true = model(x_true, *params.values())
-#     elif isinstance(params, dict):
-#         y_true = model(x_true, **params)
-#
-#     if type(percent_noise) is float or type(percent_noise) is int:
-#         y_noise = [percent_noise * y for y in y_true]
-#     else:
-#         y_noise = [tmp[0] * tmp[1] for tmp in zip(y_true, percent_noise)]
-#
-#     y_ = np.array([[add_noise(yt[0], yt[1], y_allow_zero) for yt in zip(y_true, y_noise)] for _ in range(replicates)])
-#     if average:
-#         return (x_true, np.mean(y_, axis=0))
-#     else:
-#         x_ = np.array([x_true for _ in range(replicates)])
-#         return (x_.reshape(x_.shape[0] * x_.shape[1]), y_.reshape(y_.shape[0] * y_.shape[1]))
-#
-#
-# def data_simulator_convergence_map(A_range, k_range, x, save_dir=None, percent_noise=0.0, _get_mask=func_default, replicates=5, A_res=100, k_res=100, A_log=False, k_log=True):
-#     """
-#
-#     :param A_range: param k_range:
-#     :param x: param save_dir:  (Default value = None)
-#     :param percent_noise: Default value = 0.0)
-#     :param _get_mask: Default value = func_default)
-#     :param replicates: Default value = 5)
-#     :param A_res: Default value = 100)
-#     :param k_res: Default value = 100)
-#     :param A_log: Default value = False)
-#     :param k_log: Default value = True)
-#     :param k_range:
-#     :param save_dir:  (Default value = None)
-#
-#     """
-#
-#     if A_log:
-#         A_values = np.logspace(np.log10(A_range[0]), np.log10(A_range[1]), A_res)
-#     else:
-#         A_values = np.linspace(A_range[0], A_range[1], A_res+1)[1:] # avoid A=0
-#     if k_log:
-#         k_values = np.logspace(np.log10(k_range[0]), np.log10(k_range[0]), k_res)
-#     else:
-#         k_values = np.linspace(k_range[0], k_range[1], k_res)
-#
-#     data_tensor = np.zeros((A_res, k_res, replicates, len(x)))
-#     for A_ix in range(A_res):
-#         for k_ix in range(k_res):
-#             for rep in range(replicates):
-#                 data_tensor[A_ix, k_ix, rep, :] = y_value_simulator(
-#                     params=[A_values[A_ix], k_values[k_ix]],
-#                     x_true=x,
-#                     _get_mask=_get_mask,
-#                     percent_noise=percent_noise,
-#                     y_allow_zero=False,
-#                     average=False
-#                 )[1]
-#     dataset_to_dump = {
-#         'x': x,
-#         'y_tensor': data_tensor
-#     }
-#     # if save_dir:
-#     #     util.dump_pickle(dataset_to_dump, save_dir,
-#     #                      log='Simulated dataset for convergence map of k ({}), A ({}), with x:{} and percent_noise:{}'.format(k_range, A_range, x, percent_noise),
-#     #                      overwrite=True)
-#     return dataset_to_dum
