@@ -485,8 +485,9 @@ def simulate_w_byo_doped_condition_from_exp_results(dataset, results, uniq_seq_n
     if isinstance(results, str):
         result_table = BatchFitResults.from_json(results)
 
-    result_table = load_estimation_results(point_est_csv=point_est_csv, seqtable_path=seqtable_path)
-    if 'ka' in result_table.columns:
+    # compose p0 to result table
+
+    if 'ka' in result_table.summary().columns:
         result_table = result_table.rename(columns={'ka': 'kA'})
     result_table = result_table[['k', 'A', 'p0', 'kA']]
 
