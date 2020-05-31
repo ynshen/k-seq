@@ -51,7 +51,6 @@ def from_count_file(kseq_data_config):
     dataset.add_sample_total(full_table=dataset.table.original,
                              total_amounts=total_rna['ng'],
                              unit='ng')
-    # TODO: add intended input RNA amount instead of measured ones
 
     # filter tables
     from k_seq.data.transform import ReactedFractionNormalizer
@@ -60,9 +59,16 @@ def from_count_file(kseq_data_config):
         dataset.sample_total(dataset.table.filtered)
     )
 
+    # AltQuant 1: separately normalized
     dataset.table.filtered_reacted_frac_separate_normed = ReactedFractionSeparateNormalizer(
         input_sample_mapper={sample: f"input_{sample.split('_')[-1]}" for sample in dataset.grouper.reacted.group}
     )(dataset.sample_total(dataset.table.filtered))
+
+    # AltQuant 2: input total is 500 ng
+    # TODO: add intended input RNA amount instead of measured ones
+    dataset.table.filtered_reacted_frac = ReactedFractionNormalizer(input_samples=dataset.grouper.input.group)(
+        dataset.sample_total(dataset.table.filtered)
+    )
 
     # filter up to double mutants
     from k_seq.data import landscape
