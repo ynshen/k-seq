@@ -65,13 +65,14 @@ Count tables:
     - no_failed: count seq_table with sample `2C`, `3D`, `3E`, `3F`, `4D`, `4F` removed (failed in sequencing)
     - nf_filtered: count seq_table with spike-in sequence (2 edit distance) and non-21 nt length sequence removed
 
-Tables based on curated quantification factor
+Tables based on abe's pipeline: use curated quantification factor
     - nf_reacted_frac_curated: reacted fraction of sequences (failed samples are removed, sequences only
       detected input or reacted samples are removed)
     - nf_filtered_seq_in_all_smpl_reacted_frac_curated: reacted fraction of sequences that were detected in all 
       available samples
 
-Tables based on standard pipeline
+Tables based on standard pipeline: sequences were quantified through spike-in, sample `2D`, `2E`, `2F` were also removed
+    as spike-in sequences were not found
     - nf_filtered_reacted_frac: reacted fraction with standard quantification methods (spike-in for reacted samples,
       total DNA amount for input samples)
     - nf_filtered_seq_in_all_smpl_reacted_frac: reacted fraction from standard pipeline, sequences were detected in all
@@ -108,6 +109,8 @@ def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=Non
             x_unit='mol',
             input_sample_name=['R0']
         )
+
+
         sample_filter = filters.SampleFilter(samples_to_remove=[
             '2C',
             '3D', '3E', '3F',
@@ -165,6 +168,9 @@ def load_byo_selected(from_count_file=False, count_file_path=None, norm_path=Non
         # normalized using spike-in and total DNA amount
         table_reacted_spike_in = byo_selected.spike_in.apply(target=byo_selected.table.nf_filtered)
         table_input_dna_amount = byo_selected.sample_total.apply(target=byo_selected.table.nf_filtered)
+        sample_filter = filters.SampleFilter(samples_to_remove=['2D', '2E', '2F'])
+        table_input_dna_amount = sample_filter(table_input_dna_amount)
+
         byo_selected.table.nf_filtered_reacted_frac = reacted_frac.apply(
             pd.concat([table_reacted_spike_in, table_input_dna_amount], axis=1)
         )
