@@ -65,9 +65,14 @@ def from_count_file(kseq_data_config):
     )(dataset.sample_total(dataset.table.filtered))
 
     # AltQuant 2: input total is 500 ng
-    # TODO: add intended input RNA amount instead of measured ones
-    dataset.table.filtered_reacted_frac = ReactedFractionNormalizer(input_samples=dataset.grouper.input.group)(
-        dataset.sample_total(dataset.table.filtered)
+    from copy import deepcopy
+    sample_total_altQuant = deepcopy(dataset.sample_total)
+    sample_total_altQuant.total_amounts = {
+        key: 500 if 'input' in key else amount for key, amount in dataset.sample_total.total_amounts.items()
+    }
+    dataset.sample_total_altQuant = sample_total_altQuant
+    dataset.table.filtered_reacted_frac_input_500 = ReactedFractionNormalizer(input_samples=dataset.grouper.input.group)(
+        dataset.sample_total_altQuant(dataset.table.filtered)
     )
 
     # filter up to double mutants
@@ -91,6 +96,9 @@ def from_count_file(kseq_data_config):
     dataset.table.filtered_reacted_frac_2mutant = peak_filter(dataset.table.filtered_reacted_frac)
     dataset.table.filtered_reacted_frac_separate_normed_2mutant = peak_filter(
         dataset.table.filtered_reacted_frac_separate_normed
+    )
+    dataset.table.filtered_reacted_frac_input_500_2mutant = peak_filter(
+        dataset.table.filtered_reacted_frac_input_500
     )
     return dataset
 
