@@ -481,7 +481,8 @@ def simulate_w_byo_doped_condition_from_exp_results(dataset, results, uniq_seq_n
     if x_values is None:
         x_values = getattr(dataset, 'x_values')
     if table_name is not None:
-        dataset =
+        pass
+        # dataset =
     if isinstance(results, str):
         result_table = BatchFitResults.from_json(results)
 
