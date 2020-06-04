@@ -148,5 +148,9 @@ class Bootstrap:
 
             stats = {key: format_stat(stat(records)) for key, stat in self.bs_stats.items()}
             summary = {**summary, **dict_flatten(stats)}
+        
+        def add_prefix(name):
+            """Prefix 'bs_' is added to bootstrapping results"""
+            return 'bs_' + name
 
-        return pd.Series(summary, name=self.estimator.name), records
+        return pd.Series(summary, name=self.estimator.name).rename(add_prefix), records

@@ -40,9 +40,10 @@ doc_helper = DocHelper(
     curve_fit_kwargs=('dict', 'other keyword parameters to pass to `scipy.optimize.curve_fit`'),
 )
 
-# add bootstrap related arguments
+# add replicates/bootstrap related arguments
 doc_helper.add(
     estimator=('Estimator', 'estimator for fitting'),
+    replicates=('list of list', 'List of list of sample names for each replicates'),
     bootstrap_num=('`int`', 'Number of bootstrap to perform, 0 means no bootstrap'),
     bs_record_num=('`int`', 'Number of bootstrap results to store. Negative number means store all results.'
                             'Not recommended due to memory consumption'),
@@ -101,6 +102,7 @@ class SingleFitter(Estimator):
     def __init__(self, x_data, y_data, model, name=None, x_label=None, y_label=None,
                  sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, curve_fit_kwargs=None,
+                 replicates=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', bs_stats=None, grouper=None, record_full=False,
                  conv_reps=0, conv_init_range=None, conv_stats=None,
                  save_to=None, overwrite=False, verbose=1):
@@ -108,6 +110,7 @@ class SingleFitter(Estimator):
         from ..utility.func_tools import AttrScope, get_func_params
         from .bootstrap import Bootstrap
         from .convergence import ConvergenceTester
+        from .replicates import Replicates
 
         super().__init__()
         if verbose == 0:
@@ -156,6 +159,10 @@ class SingleFitter(Estimator):
             self.config.bounds = (-np.inf, np.inf)
         else:
             self.config.bounds = bounds
+
+        if replicates is not None:
+            self.replicates = Replicates(estimator=self, replicates=replicates)
+        self.config.add(replicates=replicates)
 
         if bootstrap_num > 0 and len(self.x_data) > 1:
             if bs_record_num is None:
@@ -213,6 +220,9 @@ class SingleFitter(Estimator):
         x_data = update_none(x_data, self.x_data)
         y_data = update_none(y_data, self.y_data)
         sigma = update_none(sigma, self.config.sigma)
+        if len(x_data) != len(sigma):
+            sigma = None
+            logging.debug('Sigma is ignored as it has different length as x_data')
         if bounds == "unspecified":
             bounds = self.config.bounds
         if bounds is None:
@@ -237,9 +247,9 @@ class SingleFitter(Estimator):
         except RuntimeError:
             logging.warning(
                 f"RuntimeError on \n"
-                f'\tx = {self.x_data}\n'
-                f'\ty={self.y_data}\n'
-                f'\tsigma={self.config.sigma}'
+                f'\tx = {x_data}\n'
+                f'\ty={y_data}\n'
+                f'\tsigma={sigma}'
             )
             params = np.full(fill_value=np.nan, shape=len(parameters))
             pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
@@ -250,9 +260,9 @@ class SingleFitter(Estimator):
         except ValueError:
             logging.warning(
                 f"ValueError on \n"
-                f'\tx={self.x_data}\n'
-                f'\ty={self.y_data}\n'
-                f'\tsigma={self.config.sigma}'
+                f'\tx={x_data}\n'
+                f'\ty={y_data}\n'
+                f'\tsigma={sigma}'
             )
             params = np.full(fill_value=np.nan, shape=len(parameters))
             pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
@@ -263,9 +273,9 @@ class SingleFitter(Estimator):
         except:
             logging.warning(
                 f"Other error observed on\n"
-                f'\tx={self.x_data}\n'
-                f'\ty={self.y_data}\n'
-                f'\tsigma={self.config.sigma}'
+                f'\tx={x_data}\n'
+                f'\ty={y_data}\n'
+                f'\tsigma={sigma}'
             )
             params = np.full(fill_value=np.nan, shape=len(parameters))
             pcov = np.full(fill_value=np.nan, shape=(len(parameters), len(parameters)))
@@ -286,7 +296,7 @@ class SingleFitter(Estimator):
         logging.debug(f'Point estimation for {self.__repr__()} finished')
         return results
 
-    @doc_helper.compose("""Use bootstrap to estimation uncertainty
+    @doc_helper.compose("""Use bootstrap to estimate uncertainty
     Args:
         <<bs_method, bootstrap_num, grouper, bs_record_num, bs_stats, record_full>>
 
@@ -318,6 +328,24 @@ class SingleFitter(Estimator):
                       f"save {self.bootstrap.bs_record_num} records")
         return summary, results
 
+    @doc_helper.compose("""Use replicates to estimate uncertainty
+    Args:
+        <<replicates>>
+        
+    Return:
+        a pd.Dataframe of results from each replicates
+    """)
+    def run_replicates(self, replicates=None):
+        if replicates is None:
+            replicates = self.replicates
+        else:
+            from .replicates import Replicates
+            replicates = Replicates(estimator=self, replicates=replicates)
+
+        summary, results = replicates.run()
+        logging.debug("Uncertainty estimation from replicates")
+        return summary, results
+
     @doc_helper.compose("""Empirically estimate convergence by repeated fittings,
     Args:
         <<conv_reps, conv_init_range, conv_stats>>
@@ -340,10 +368,11 @@ class SingleFitter(Estimator):
 
         return self.converge_tester.run()
 
-    def fit(self, point_estimate=True, bootstrap=False, convergence_test=False, **kwargs):
+    def fit(self, point_estimate=True, replicates=False, bootstrap=False, convergence_test=False, **kwargs):
         """Run fitting, configuration are from the object
         Args:
             point_estimate (bool): if do point estimation, default True
+            replicates (bool): if use replicate for uncertainty estimation, default False
             bootstrap (bool): if do bootstrap, default False
             convergence_test (bool): if do convergence test, default False
         """
@@ -375,8 +404,18 @@ class SingleFitter(Estimator):
                 self.results.point_estimation.params = self.results.point_estimation.params.append(results['metrics'])
             self.results.point_estimation.pcov = results['pcov']
 
+        summary = pd.Series(name=self.name)
+
         if bootstrap and (len(self.x_data) >= 2):
-            self.results.uncertainty.summary, self.results.uncertainty.records = self.run_bootstrap(**kwargs)
+            bs_summary, self.results.uncertainty.bs_records = self.run_bootstrap(**kwargs)
+            summary = pd.concat([summary, bs_summary])
+
+        if replicates:
+            rep_summary, self.results.uncertainty.rep_results = self.run_replicates(**kwargs)
+            summary = pd.concat([summary, rep_summary])
+
+        if len(summary) > 0:
+            self.results.uncertainty.summary = summary
 
         if convergence_test:
             self.results.convergence.summary, self.results.convergence.records = self.convergence_test(**kwargs)
@@ -478,8 +517,9 @@ class FitResults:
              pcov (pd.DataFrame): covariance matrix for estimated parameter
 
          uncertainty (AttrScope): a scope stores uncertainty estimation results, includes
-             summary (pd.DataFrame): summary of each parameter or metric from records
-             records (pd.DataFrame): records for stored bootstrapping results
+             summary (pd.Series): summary of each parameter or metric from records
+             bs_records (pd.DataFrame): records for stored bootstrapping results
+             rep_results (pd.DataFrame): results from fitting of replicates
 
          convergence (AttrScope): a scope stores convergence test results, includes
              summary (pd.DataFrame): summary for each parameter or metric from records
@@ -510,13 +550,13 @@ class FitResults:
                                   x_label=estimator.config.x_label,
                                   y_label=estimator.config.y_label)
         self.point_estimation = AttrScope(keys=['params', 'pcov'])
-        self.uncertainty = AttrScope(keys=['summary', 'records'])
+        self.uncertainty = AttrScope(keys=['summary', 'bs_records', 'rep_results'])
         self.convergence = AttrScope(keys=['summary', 'records'])
 
     def to_series(self):
         """Convert point_estimation, uncertainty (if possible), and convergence (if possible) to a series include
         flattened info:
-        e.g. columns will include [param1, param2, param1_mean, param1_std, param1_2.5%, ..., param1_range]
+        e.g. columns will include [param1, param2, bs_param1_mean, bs_param1_std, bs_param1_2.5%, ..., param1_range]
         """
         from ..utility.func_tools import dict_flatten
 
@@ -525,11 +565,11 @@ class FitResults:
             res = res.append(self.point_estimation.params)
         if self.uncertainty.summary is not None:
             # uncertainty estimation results exists
-            res = res.append(pd.Series(dict_flatten(self.uncertainty.summary.to_dict())))
+            res = res.append(self.uncertainty.summary)
 
         if self.convergence.summary is not None:
             #  convergence test results exists
-            res = res.append(pd.Series(dict_flatten(self.convergence.summary.to_dict())))
+            res = res.append(self.convergence.summary)
 
         if self.estimator is not None:
             res.name = self.estimator.name
@@ -540,8 +580,9 @@ class FitResults:
             {
               point_estimation: { params: jsonfy(pd.Series)
                                   pcov: jsonfy(pd.DataFrame) }
-              uncertainty: { summary: jsonfy(pd.DataFrame)
-                             records: jsonfy(pd.DataFrame) }
+              uncertainty: { summary: jsonfy(pd.Series)
+                             bs_records: jsonfy(pd.DataFrame)
+                             rep_results: jsonfy(pd.Series) }
               convergence: { summary: jsonfy(pd.DataFrame)
                              records: jsonfy(pd.DataFrame) }
               data: {x_data: jsonfy(pd.Series)
@@ -565,7 +606,8 @@ class FitResults:
             },
             'uncertainty': {
                 'summary': jsonfy(self.uncertainty.summary),
-                'records': jsonfy(self.uncertainty.records)
+                'bs_records': jsonfy(self.uncertainty.bs_records),
+                'rep_results': jsonfy(self.uncertainty.rep_results)
             },
             'convergence': {
                 'summary': jsonfy(self.convergence.summary),
@@ -617,10 +659,16 @@ class FitResults:
                 result.uncertainty.summary = pd.read_json(json_data['uncertainty']['summary'], typ='series')
             if 'record' in json_data['uncertainty'].keys():
                 label = 'record'
-            else:
+            elif 'records' in json_data['uncertainty'].keys():
                 label = 'records'
+            elif 'bs_records' in json_data['uncertainty'].keys():
+                label = 'bs_records'
+            else:
+                logging.error("Unknown json tag for bootstrap records", ValueError)
             if json_data['uncertainty'][label] is not None:
-                result.uncertainty.records = pd.read_json(json_data['uncertainty'][label])
+                result.uncertainty.bs_records = pd.read_json(json_data['uncertainty'][label])
+            if json_data['uncertainty']['rep_results'] is not None:
+                result.uncertainty.rep_results = pd.read_json(json_data['uncertainty']['rep_results'])
         if 'convergence' in json_data.keys():
             if json_data['convergence']['summary'] is not None:
                 result.convergence.summary = pd.read_json(json_data['convergence']['summary'], typ='series')
@@ -670,7 +718,7 @@ class FitResults:
             params = get_func_params(model)[1:]
 
         if plot_on.lower() in ['bootstrap', 'bs']:
-            param = self.uncertainty.records[params]
+            param = self.uncertainty.bs_records[params]
             label = 'Bootstraps'
         elif plot_on.lower() in ['convergence', 'conv']:
             param = self.convergence.records[params]
@@ -712,7 +760,7 @@ class FitResults:
             param_name = get_func_params(model)[1:]
 
         if plot_on.lower() in ['bootstrap', 'bs']:
-            param = self.uncertainty.records[param_name]
+            param = self.uncertainty.bs_records[param_name]
             label = 'Bootstraps'
         elif plot_on.lower() in ['convergence', 'conv']:
             param = self.convergence.records[param_name]

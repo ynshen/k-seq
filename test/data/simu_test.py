@@ -88,7 +88,7 @@ def test_simulate_counts_return_correct():
         uniq_seq_num=10,
         x_values=[-1, 2e-6, 50e-6],
         total_reads=1000,
-        p0=[0.1, 0.5, 0.4, 0.6, 0.2],
+        p0_generator=[0.1, 0.5, 0.4, 0.6, 0.2],
         reps=3,
         k=[10, 5, 30],
         A=[0.8, 0.9]
@@ -115,7 +115,7 @@ def test_simulate_w_byo_doped_condition_from_param_dist_returns_correct_shape():
 
 # def test_simulate_w_byo_doped_condition_from_exp_results_can_return():
     # TODO: Need to avoid load data from csv files
-    # x, Y, dna_amount, truth, seq_table = simu.simulate_w_byo_doped_condition_from_exp_results(
+    # x, Y, dna_amount, truth, seq_table = simu.simulate_on_byo_doped_condition_from_exp_results(
     #     uniq_seq_num=20, depth=40, p0_loc=1, p0_scale=0.1, k_95=(0.1, 100),
     #     total_dna_error_rate=0.1, save_to=None, plot_dist=False
     # )

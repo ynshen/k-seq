@@ -11,9 +11,10 @@ from pathlib import Path
 __all__ = ['BatchFitter', 'BatchFitResults']
 
 
-def _work_fn(worker, point_estimate, bootstrap, convergence_test):
+def _work_fn(worker, point_estimate, bootstrap, convergence_test, replicates):
     """Utility work function to parallelize workers"""
-    worker.fit(point_estimate=point_estimate, bootstrap=bootstrap, convergence_test=convergence_test)
+    worker.fit(point_estimate=point_estimate, bootstrap=bootstrap,
+               convergence_test=convergence_test, replicates=replicates)
     logging.debug(f'\nFit sequence: {worker.name}')
     logging.debug(worker.x_data)
     logging.debug(worker.y_data)
@@ -34,7 +35,7 @@ Attributes:
     results (BatchFitResult): accessor to fitting results
     fit_params (AttrScope): collection of arguments pass to each single seq fitting, includes:
         <<x_data, model, bounds, init_guess, opt_method, exclude_zero, metrics, rnd_seed, curve_fit_kwargs, 8>>
-        <<bootstrap_num, bs_record_num, bs_method, bs_stats, grouper, record_full, 8>>
+        <<replicates, bootstrap_num, bs_record_num, bs_method, bs_stats, grouper, record_full, 8>>
         <<conv_reps, conv_init_range, conv_stats, 8>>
         <<overwrite, 8>>
 """)
@@ -61,9 +62,10 @@ class BatchFitter(Estimator):
                  x_label=None, y_label=None,
                  seq_to_fit=None, sigma=None, bounds=None, init_guess=None,
                  opt_method='trf', exclude_zero=False, metrics=None, rnd_seed=None, curve_fit_kwargs=None,
+                 replicates=None,
                  bootstrap_num=0, bs_record_num=0, bs_method='pct_res', bs_stats=None, grouper=None, record_full=False,
                  conv_reps=0, conv_init_range=None, conv_stats=None,
-                 note=None, large_dataset=False, result_path=None):
+                 note=None, large_dataset=False, verbose=1, result_path=None):
 
         from ..utility.func_tools import AttrScope, get_func_params
 
@@ -123,6 +125,7 @@ class BatchFitter(Estimator):
             metrics=metrics,
             rnd_seed=rnd_seed,
             curve_fit_kwargs=curve_fit_kwargs,
+            replicates=replicates,
             bootstrap_num=bootstrap_num,
             bs_record_num=bs_record_num,
             bs_method=bs_method,
@@ -132,6 +135,7 @@ class BatchFitter(Estimator):
             conv_reps=conv_reps,
             conv_init_range=conv_init_range,
             conv_stats=conv_stats,
+            verbose=verbose,
         )
         if result_path is None:
             self.results = BatchFitResults(estimator=self)
@@ -139,6 +143,7 @@ class BatchFitter(Estimator):
             self.results = BatchFitResults.load_result(result_path)
         self.large_dataset = large_dataset
         self.results.large_dataset = large_dataset
+        self.workers = None
 
         logging.info('BatchFitter created')
 
@@ -159,13 +164,14 @@ class BatchFitter(Estimator):
                 **self.fit_params.__dict__
             )
 
-    def fit(self, parallel_cores=1, point_estimate=True, bootstrap=False, convergence_test=False,
+    def fit(self, parallel_cores=1, point_estimate=True, replicates=False, bootstrap=False, convergence_test=False,
             stream_to=None, overwrite=False):
         """Run the estimation
         Args:
             parallel_cores (int): number of parallel cores to use. Default 1
             point_estimate (bool): if perform point estimation, default True
             bootstrap (bool): if perform bootstrap uncertainty estimation, default False
+            replicates (bool): if perform replicates for uncertainty estimation, default False
             convergence_test (bool): if perform convergence test, default False
             stream_to (str): Directly stream fitting results to disk if output path is given
                 will create a folder with name of seq/hash with pickled dict of fitting results
@@ -190,7 +196,7 @@ class BatchFitter(Estimator):
                 dump_json(obj=self._seq_to_hash, path=self.results.result_path.joinpath('seqs', 'seq_to_hash.json'))
 
             from functools import partial
-            work_fn = partial(_work_fn, point_estimate=point_estimate,
+            work_fn = partial(_work_fn, point_estimate=point_estimate, replicates=replicates,
                               bootstrap=bootstrap, convergence_test=convergence_test)
             worker_generator = self._worker_generator(stream_to=stream_to, overwrite=overwrite)
             if parallel_cores > 1:
@@ -203,10 +209,9 @@ class BatchFitter(Estimator):
                 logging.info('Fitting in a single thread...')
                 workers = [work_fn(worker) for worker in worker_generator]
 
-            self.workers = workers
-
+            print(workers[0].summary())
             self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
-            # record results
+            # record result
             if self.bootstrap:
                 if self.large_dataset:
                     self.results._bs_record = self._seq_to_hash
