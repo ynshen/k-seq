@@ -223,6 +223,7 @@ Args:
             results['p0'] = results['p0'] / results['p0'].sum()
         else:
             results['p0'] = np.repeat(1 / uniq_seq_num, repeats=uniq_seq_num)
+        results.index = np.arange(results.shape[0])
 
         return results
 
@@ -247,7 +248,7 @@ Returns:
     param_table (pd.DataFrame): seq_table list the parameters for simulated sequences
     seq_table (data.SeqData): a SeqData object to stores all the data
 """)
-def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
+def simulate_counts(uniq_seq_num, x_values, total_reads, p0_generator=None,
                     kinetic_model=None, count_model=None, total_amount_error=None,
                     param_sample_from_df=None, weights=None, replace=True,
                     reps=1, seed=None, note=None,
@@ -257,32 +258,39 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     if seed is not None:
         np.random.seed(seed)
 
+    # default models
+    # kinetic_model: BYO first-order model returns absolute amount
+    # count_model: multinomial
     if kinetic_model is None:
-        # default use BYO first-order model returns absolute amount
         from ..model import kinetic
         kinetic_model = kinetic.BYOModel.amount_first_order(broadcast=False)
         logging.info('No kinetic model provided, use BYOModel.amount_first_order')
     if count_model is None:
-        # default use multinomial
         from ..model import count
         count_model = count.multinomial
         logging.info('No count model provided, use multinomial distribution')
 
-    # compose sequence parameter from
+    # compose sequence parameter from (with priority high to low)
     # 1. p0
     # 2. param_generator
     # 3. param_sample_from_df
 
     param_table = pd.DataFrame(index=np.arange(uniq_seq_num))
-    if p0 is not None:
-        param_table['p0'] = PoolParamGenerator.sample_from_iid_dist(p0=p0,
+    logging.info(f'param_table created, param_table shape {param_table.shape}')
+    # if sample p0 from a generator
+    if p0_generator is not None:
+        param_table['p0'] = PoolParamGenerator.sample_from_iid_dist(p0=p0_generator,
                                                                     uniq_seq_num=uniq_seq_num)['p0']
+        logging.info(f'p0 added from distribution, param_table shape {param_table.shape}')
+    # if extra param_generator detected
     if param_generators != {}:
         temp_table = PoolParamGenerator.sample_from_iid_dist(uniq_seq_num=uniq_seq_num,
                                                              **param_generators)
         col_name = temp_table.columns[~temp_table.columns.isin(param_table.columns.values)]
-        param_table[col_name] = temp_table[col_name]
+        param_table = pd.concat([param_table, temp_table[col_name]], ignore_index=True, axis=1)
+        logging.info(f'{list(param_generators.keys())} added from distribution, param_table shape {param_table.shape}')
 
+    # if a param dataframe if provided
     if param_sample_from_df is not None:
         temp_table = PoolParamGenerator.sample_from_dataframe(
             df=param_sample_from_df,
@@ -290,8 +298,9 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
             replace=replace,
             weights=weights
         )
-        col_name = temp_table.index[~temp_table.index.isin(param_table.index)]
-        param_table[col_name] = temp_table[col_name]
+        col_name = temp_table.columns[~temp_table.columns.isin(param_table.columns.values)]
+        param_table = pd.concat([param_table, temp_table[col_name]], axis=1)
+        logging.info(f'{col_name} added from dataframe, param_table shape {param_table.shape}')
     param_table.index.name = 'seq'
 
     # get pool model
@@ -300,44 +309,46 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
                                 param_table=param_table)
     x = {}
     Y = {}
-    dna_amount = {}
+    total_amount = {}
 
     if is_numeric(total_reads):
         total_reads = np.repeat(total_reads, len(x_values))
     for sample_ix, (c, n) in enumerate(zip(x_values, total_reads)):
         if reps is None or reps == 1:
-            dna_amount[f"s{sample_ix}"], Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
+            total_amount[f"s{sample_ix}"], Y[f"s{sample_ix}"] = pool_model.predict(c=c, N=n)
             x[f"s{sample_ix}"] = {'c': c, 'n': n}
         else:
             for rep in range(reps):
-                dna_amount[f"s{sample_ix}-{rep}"], Y[f"s{sample_ix}-{rep}"] = pool_model.predict(c=c, N=n)
+                total_amount[f"s{sample_ix}-{rep}"], Y[f"s{sample_ix}-{rep}"] = pool_model.predict(c=c, N=n)
                 x[f"s{sample_ix}-{rep}"] = {'c': c, 'N': n}
     # return x, Y, total_amounts, param_table
     x = pd.DataFrame.from_dict(x, orient='columns')
     Y = pd.DataFrame.from_dict(Y, orient='columns')
-    dna_amount = pd.Series(dna_amount)
+    total_amount = pd.Series(total_amount)
 
     if total_amount_error is not None:
         if is_numeric(total_amount_error):
-            dna_amount += np.random.normal(loc=0, scale=total_amount_error, size=len(dna_amount))
+            total_amount += np.random.normal(loc=0, scale=total_amount_error, size=len(total_amount))
         elif callable(total_amount_error):
-            dna_amount = dna_amount.apply(total_amount_error)
+            total_amount = total_amount.apply(total_amount_error)
         else:
             logging.error('Unknown total_amount_error type', error_type=TypeError)
 
     x.index.name = 'param'
     Y.index.name = 'seq'
-    dna_amount.index.name = 'amount'
+    total_amount.index.name = 'amount'
 
+    # return x, Y, total_amount, param_table, None
     from .seq_data import SeqData
 
     input_samples = x.loc['c']
     input_samples = list(input_samples[input_samples < 0].index)
-    seq_table = SeqData(data=Y, x_values=x.loc['c'].to_dict(), note=note,
+
+    seq_table = SeqData(data=Y, x_values=x.loc['c'], note=note, data_unit='counts',
                         grouper={'input': input_samples,
-                                  'reacted': [sample for sample in x.columns if sample not in input_samples]})
-    seq_table.add_sample_total(total_amounts=dna_amount.to_dict(),
-                                       full_table=seq_table.table.original)
+                                 'reacted': [sample for sample in x.columns if sample not in input_samples]})
+    seq_table.add_sample_total(total_amounts=total_amount.to_dict(),
+                               full_table=seq_table.table.original)
     seq_table.table.abs_amnt = seq_table.sample_total.apply(target=seq_table.table.original)
 
     from .transform import ReactedFractionNormalizer
@@ -349,20 +360,21 @@ def simulate_counts(uniq_seq_num, x_values, total_reads, p0=None,
     seq_table.table.seq_in_all_smpl_reacted_frac = DetectedTimesFilter(
         min_detected_times=seq_table.table.reacted_frac.shape[1]
     )(seq_table.table.reacted_frac)
+    seq_table.truth = param_table
 
     if save_to is not None:
         from pathlib import Path
         save_path = Path(save_to)
         if save_path.suffix == '':
             save_path.mkdir(parents=True, exist_ok=True)
-            dna_amount.to_csv(f'{save_path}/dna_amount.csv')
+            total_amount.to_csv(f'{save_path}/dna_amount.csv')
             x.to_csv(f'{save_path}/x.csv')
             Y.to_csv(f'{save_path}/Y.csv')
             param_table.to_csv(f'{save_path}/truth.csv')
             seq_table.to_pickle(f"{save_path}/seq_table.pkl")
         else:
             logging.error('save_to should be a directory', error_type=TypeError)
-    return x, Y, dna_amount, param_table, seq_table
+    return x, Y, total_amount, param_table, seq_table
 
 
 def get_pct_gaussian_error(rate):
@@ -375,7 +387,7 @@ def get_pct_gaussian_error(rate):
     return pct_gaussian_error
 
 
-@simu_doc.compose("""Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
+@simu_doc.compose("""Deprecated. Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
     t: reaction time (90 min)
     alpha: degradation ratio of BYO (0.479)
     x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
@@ -418,7 +430,7 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
         uniq_seq_num=uniq_seq_num,
         x_values=c_list,
         total_reads=N_list,
-        p0=DistGenerators.compo_lognormal(loc=p0_loc, scale=p0_scale, size=uniq_seq_num),
+        p0_generator=DistGenerators.compo_lognormal(loc=p0_loc, scale=p0_scale, size=uniq_seq_num),
         k=DistGenerators.lognormal(c95=k_95, size=uniq_seq_num),
         A=DistGenerators.uniform(low=0, high=1, size=uniq_seq_num),
         total_amount_error=total_dna_error,
@@ -448,7 +460,7 @@ def simulate_w_byo_doped_condition_from_param_dist(uniq_seq_num, depth, p0_loc, 
     return x, Y, dna_amount, truth, seq_table
 
 
-@simu_doc.compose("""Simulate k-seq count dataset similar to the experimental condition of BYO-doped pool, that
+@simu_doc.compose("""Simulate k-seq count dataset based on the experimental condition of BYO-doped pool, that
     t: reaction time (90 min)
     alpha: degradation ratio of BYO (0.479)
     x_values: controlled BYO concentration points: 1 input pool with triple sequencing depth,
@@ -467,50 +479,61 @@ Parameter for each sequences were sampled from previous point estimate results:
 Returns:
 <<x, Y, param_table, truth, seq_table>>
 """)
-def simulate_w_byo_doped_condition_from_exp_results(dataset, results, uniq_seq_num,
-                                                    x_values=None, table_name=None, depth=40,
-                                                    total_dna_error_rate=0.1, seed=23,
-                                                    plot_dist=False, save_to=None):
-    # TODO: update simulation
-
-    from ..estimator import BatchFitResults
+def simulate_on_byo_doped_condition_from_exp_results(dataset, fitting_res, uniq_seq_num=None,
+                                                     x_values=None, total_reads=None, sequencing_depth=40,
+                                                     n_input=1, table_name='original',
+                                                     total_dna_error_rate=0.1, seed=23,
+                                                     plot_dist=False, save_to=None):
+    from pathlib import Path, PosixPath
 
     if isinstance(dataset, str):
         from ..utility import file_tools
         dataset = file_tools.read_pickle(dataset)
+
+    # parse fitting results
+    if isinstance(fitting_res, (str, Path, PosixPath)):
+        if Path(fitting_res).is_dir():
+            result_table = pd.read_csv(Path(fitting_res).joinpath('fit_summary.csv'), index_col=0)
+        elif Path(fitting_res).is_file():
+            result_table = pd.read_csv(Path(fitting_res), index_col=0)
+        else:
+            logging.error('Unknown path to fitting results', ValueError)
+    if 'ka' in result_table.columns:
+        result_table = result_table.rename(columns={'ka': 'kA'})
+
+    # add composition of initial pool (p0) to result table
+    count_table = getattr(dataset.table, table_name)
+    count_table = count_table.loc[result_table.index, dataset.grouper.input.group]
+    p0 = (count_table / count_table.sum(axis=0)).mean(axis=1)
+    result_table['p0'] = p0 / p0.sum()
+    result_table = result_table[['k', 'A', 'p0', 'kA']]
+    result_table = result_table[~result_table.isna().any(axis=1)]
+
     if x_values is None:
         x_values = getattr(dataset, 'x_values')
-    if table_name is not None:
-        pass
-        # dataset =
-    if isinstance(results, str):
-        result_table = BatchFitResults.from_json(results)
+    x_values = pd.concat([pd.Series(np.repeat(-1, n_input), index=[f'input_{ix + 1}' for ix in range(n_input)]),
+                         x_values])
 
-    # compose p0 to result table
+    if uniq_seq_num is None:
+        uniq_seq_num = result_table.shape[0]
 
-    if 'ka' in result_table.summary().columns:
-        result_table = result_table.rename(columns={'ka': 'kA'})
-    result_table = result_table[['k', 'A', 'p0', 'kA']]
-
-    c_list = [-1] + list(np.repeat(
-        np.expand_dims([2e-6, 10e-6, 50e-6, 250e-6, 1250e-6], -1), 3
-    ))
-
-    N_list = [uniq_seq_num * depth if c >= 0 else uniq_seq_num * depth * 3 for c in c_list]
+    if total_reads is None:
+        total_reads = [uniq_seq_num * sequencing_depth
+                       if c >= 0 else uniq_seq_num * sequencing_depth * 3 for c in x_values]
 
     if total_dna_error_rate is None:
-        total_dna_error = 0
+        total_amount_error = None
     else:
-        total_dna_error = get_pct_gaussian_error(total_dna_error_rate)
+        total_amount_error = get_pct_gaussian_error(total_dna_error_rate)
 
     x, Y, dna_amount, truth, seq_table = simulate_counts(
         uniq_seq_num=uniq_seq_num,
-        x_values=c_list,
-        total_reads=N_list,
+        x_values=x_values,
+        total_reads=total_reads,
         param_sample_from_df=result_table,
-        total_amount_error=total_dna_error,
+        total_amount_error=total_amount_error,
         weights=None,
-        replace=True,
+        replace=uniq_seq_num >= result_table.shape[0],
         reps=1,
         save_to=save_to,
         seed=seed
@@ -519,10 +542,10 @@ def simulate_w_byo_doped_condition_from_exp_results(dataset, results, uniq_seq_n
 
     if save_to is not None:
         config = {
-            'point_est_csv': point_est_csv,
-            'seqtable_path': seqtable_path,
+            'fitting_res': fitting_res,
+            'dataset': str(dataset),
             'uniq_seq_num': uniq_seq_num,
-            'depth': depth,
+            'depth': sequencing_depth,
             'total_dna_error_rate': total_dna_error_rate
         }
         from ..utility.file_tools import dump_json

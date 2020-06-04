@@ -73,7 +73,18 @@ class SeqTable(pd.DataFrame):
             dtype = kwargs.pop('dtype', np.float32)
             kwargs['dtype'] = pd.SparseDtype(dtype, fill_value=0)
 
-        super().__init__(*args, **kwargs)
+        if args == ():
+            data = kwargs.pop('data', None)
+        else:
+            data = kwargs.pop('data', args[0])
+        if isinstance(data, pd.DataFrame):
+            if ('index' not in kwargs.keys()) or ('index' in kwargs.keys() and kwargs['index'] is None):
+                kwargs['index'] = data.index
+            if ('columns' not in kwargs.keys()) or ('columns' in kwargs.keys() and kwargs['columns'] is None):
+                kwargs['columns'] = data.columns
+            data = data.values
+
+        super().__init__(data=data, **kwargs)
         self.unit = unit
         self.note = note
         self.is_sparse = use_sparse
