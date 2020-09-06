@@ -555,7 +555,7 @@ class BatchFitResults:
     def to_json(self, output_dir):
         """Save results in json format, with the structure of
          |output_dir/
-             |- summary.json
+             |- summary.csv
              |- seqs
                  |- seq1.json
                  |- seq2.json
@@ -568,7 +568,7 @@ class BatchFitResults:
         """
         check_dir(output_dir)
         check_dir(f'{output_dir}/seqs/')
-        self.summary.to_json(f'{output_dir}/summary.json')
+        self.summary.to_csv(f'{output_dir}/summary.csv')
         self.large_dataset = True
 
     @classmethod
@@ -577,7 +577,11 @@ class BatchFitResults:
 
         result = cls(estimator=estimator, model=model, x_data=x_data, y_dataframe=y_dataframe, sigma=sigma)
         path_to_folder = Path(path_to_folder)
-        result.summary = pd.read_json(path_to_folder.joinpath('summary.json'))
+        if path_to_folder.joinpath('summary.csv').exists():
+            result.summary = pd.read_csv(path_to_folder.joinpath('summary.csv'), index_col=0)
+        elif path_to_folder.joinpath('summary.json').exists():
+            result.summary = pd.read_json(path_to_folder.joinpath('summary.json'))
+
         if path_to_folder.joinpath('seqs').exists():
             seq_to_hash = read_json(path_to_folder.joinpath('seqs', 'seq_to_hash.json'))
         elif path_to_folder.joinpath('seqs.tar.gz').exists():
