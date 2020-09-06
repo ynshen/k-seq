@@ -558,3 +558,137 @@ def simulate_on_byo_doped_condition_from_exp_results(dataset, fitting_res, uniq_
 
     return x, Y, dna_amount, truth, seq_table
 
+
+@simu_doc.compose("""Class to load simulation result""")
+class SimulationResults:
+
+    def __init__(self, dataset_dir, result_dir):
+        """Survey estimation results
+        - load fitting results from `result_dir/fit_summary.csv`
+        - load truth and input count infor from `dataset_dir/truth.csv` and `input_counts`
+
+        Optional to include:
+        - input_counts: counts of sequences in the input pool
+        - mean_counts: mean counts in all samples (input and reacted)
+
+        Return:
+            results: table of estimated k, A, kA
+            truth: table of true k, A, p0, ka, and input_counts
+            seq_list: list of indices of sequences that were able to estimate
+        """
+
+        allowed_col = [
+            'k', 'A', 'kA',
+            'A_mean', 'k_mean', 'kA_mean',
+            'A_std', 'k_std', 'kA_std',
+            'A_2.5%', 'k_2.5%', 'kA_2.5%',
+            'A_50%', 'k_50%', 'kA_50%',
+            'A_97.5%', 'k_97.5%', 'kA_97.5%',
+            'bs_A_mean', 'bs_k_mean', 'bs_kA_mean',
+            'bs_A_std', 'bs_k_std', 'bs_kA_std',
+            'bs_A_2.5%', 'bs_k_2.5%', 'bs_kA_2.5%',
+            'bs_A_50%', 'bs_k_50%', 'bs_kA_50%',
+            'bs_A_97.5%', 'bs_k_97.5%', 'bs_kA_97.5%',
+            'rep_A_mean', 'rep_k_mean', 'rep_kA_mean',
+            'rep_A_std', 'rep_k_std', 'rep_kA_std'
+        ]
+
+        from pathlib import Path
+        from ..utility.file_tools import read_pickle
+
+        self.results = pd.read_csv(f'{result_dir}/fit_summary.csv', index_col=0)
+        self.cols = self.results.columns[self.results.columns.isin(allowed_col)].values
+        self.seq_list = self.results[~self.results[self.cols].isna().any(axis=1)].index.values
+        self._bs_prefix = 'bs_' if 'bs_kA_2.5%' in self.results.columns else ''
+
+        if Path(dataset_dir).is_file():
+            dataset = read_pickle(dataset_dir)
+        else:
+            dataset = read_pickle(dataset_dir + '/seq_table.pkl')
+
+        self.truth = dataset.truth
+        self.truth['input_counts'] = dataset.table.original.reindex(self.truth.index).s0
+        self.truth['mean_counts'] = dataset.table.original.reindex(self.truth.index).mean(axis=1)
+
+        logging.info(f'{self.truth.shape[0]} sequences simulated, '
+                     f'{self.results.shape[0]} fitted, '
+                     f'{len(self.seq_list)} has valid results')
+
+    def get_fold_range(self, param):
+        """Return the ratio of 97.5-percentile to 2.5-percentile"""
+        return self.results[self._bs_prefix + param + '97.5%'][self.seq_list] / \
+               self.results[self._bs_prefix + param + '2.5%'][self.seq_list]
+
+    def get_est_results(self, param, pred_type='point_est'):
+        """Return the estimation (pred) and truth of given parameter"""
+        if pred_type in ['pe', 'point_est', 'point est', 'point_estimation', 'point estimation']:
+            pred = self.results[param]
+        elif pred_type in ['mean', 'bs_mean', 'bootstrap_mean']:
+            pred = self.results[self._bs_prefix + param + '_mean']
+        elif pred_type in ['median', 'bs_median', 'bootstrap_median']:
+            pred = self.results[self._bs_prefix + param + '_50%']
+        elif pred_type in ['rep_mean', 'replicate_mean']:
+            pred = self.results[self._bs_prefix + param + '_mean']
+        else:
+            logging.error("Unknown pred_type, choose from 'point_est', 'bs_mean', 'bs_median', 'rep_mean'", ValueError)
+
+        truth = self.truth[param]
+        return pd.DataFrame({'pred': pred[self.seq_list], 'truth': truth[self.seq_list]})
+
+    def _get_bs_ci95_accuracy(self, param='kA'):
+        """Return a dataframe include if the bootstrap result (95-percentile) includes the true value"""
+
+        result = pd.concat([
+            self.results.reindex(self.seq_list)[[self._bs_prefix + param + '_2.5%', self._bs_prefix + param + '_97.5%']],
+            self.truth.reindex(self.seq_list)[[param, 'mean_counts', 'input_counts']].rename(
+                columns={param: param + '_truth'})
+        ], axis=1)
+
+        result['fold_range'] = result[self._bs_prefix + param + '_97.5%'] / result[self._bs_prefix + param + '_2.5%']
+        result['in_ci95'] = ((result[param + '_truth'] >= result[self._bs_prefix + param + '_2.5%']) &
+                             (result[param + '_truth'] <= result[self._bs_prefix + param + '_97.5%'])).astype('int')
+        return result
+
+    def _get_bs_sd_accuracy(self, param='kA', scale=1.96):
+        """Return a dataframe include if the standard deviation included from bootstrap includes the true value"""
+
+        result = pd.concat([
+            self.results.reindex(self.seq_list)[[self._bs_prefix + param + '_mean', 'bs_' + param + '_std']],
+            self.truth.reindex(self.seq_list)[[param, 'mean_counts', 'input_counts']].rename(
+                columns={param: param + '_truth'})
+        ], axis=1)
+
+        result['in_ci95'] = (
+                (result[param + '_truth'] >= result[self._bs_prefix + param + '_mean'] -
+                 scale * result[self._bs_prefix + param + '_std']) &
+                (result[param + '_truth'] <= result[self._bs_prefix + param + '_mean'] +
+                 scale * result[self._bs_prefix + param + '_std'])
+        ).astype('int')
+        return result
+
+    def _get_rep_sd_accuracy(self, param='kA', scale=1.96):
+        """Return a dataframe include if the standard deviation included from replicates includes the true value"""
+
+        result = pd.concat([
+            self.results.reindex(self.seq_list)[['rep_' + param + '_mean', 'rep_' + param + '_std']],
+            self.truth.reindex(self.seq_list)[[param, 'mean_counts', 'input_counts']].rename(
+                columns={param: param + '_truth'})
+        ], axis=1)
+
+        result['in_ci95'] = ((result[param + '_truth'] >= result['rep_' + param + '_mean'] -
+                              scale * result['rep_' + param + '_std']) &
+                             (result[param + '_truth'] <= result['rep_' + param + '_mean'] +
+                              scale * result['rep_' + param + '_std'])).astype('int')
+        return result
+
+    def get_uncertainty_accuracy(self, param, pred_type='bs_ci95'):
+        """Return the accuracy of uncertainty estimation if uncertainty range includes the truth"""
+        if pred_type in ['bs_ci95', 'bootstrap_ci95']:
+            return self._get_bs_ci95_accuracy(param=param)
+        elif pred_type in ['bs_sd', 'bootstrap_sd']:
+            return self._get_bs_sd_accuracy(param=param)
+        elif pred_type in ['rep_sd']:
+            return self._get_rep_sd_accuracy(param=param)
+        else:
+            logging.error("Unknown pred_type, choose from 'bs_ci95', 'bs_sd', 'rep_sd'")
+
