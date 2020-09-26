@@ -1,4 +1,4 @@
-"""Functions to prepare BYO doped-pool (a.k.a variant pool) dataset from count files, for Abe's k-seq experiments"""
+"""BYO doped-pool dataset from Abe's k-seq experiments"""
 
 from yutility import logging
 from ..utility.file_tools import read_pickle
@@ -12,21 +12,21 @@ import pandas as pd
 if 'BYO_DOPED_PKL' in os.environ:
     PKL_FILE = os.getenv('BYO_DOPED_PKL')
 elif 'PAPER_DATA_DIR' in os.environ:
-    PKL_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant/byo-variant.pkl'
+    PKL_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant.pkl'
 else:
     PKL_FILE = None
 
 if 'BYO_DOPED_COUNT_FILE' in os.environ:
     COUNT_FILE = os.getenv('BYO_DOPED_COUNT_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    COUNT_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant/counts'
+    COUNT_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant-counts'
 else:
     COUNT_FILE = None
 
 if 'BYO_DOPED_NORM_FILE' in os.environ:
     NORM_FILE = os.getenv('BYO_DOPED_NORM_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant/norm-factor.csv'
+    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant-counts/norm.csv'
 else:
     NORM_FILE = None
 
@@ -104,17 +104,17 @@ def load_byo_doped(from_count_file=False, count_file_path=COUNT_FILE, norm_path=
                  'quantified with spike-in sequence with 2 edit distance as radius or qPCR + Qubit'
         )
 
-        # Note: spike-in norm factor were calculated on original seq_table when a SpikeInNormalizer is created,
+        # temp note: spike-in norm factor were calculated on original seq_table when a SpikeInNormalizer is created,
         # notice the seq_table normalized on already excludes some (~10 %) sequence Abe used for qPRC quantification
-        # this is equivalent to using 1.11 of spike-in amount than intended. In any case, it should be canceled in
-        # the reacted fraction calculation
+        # this is equivalent to using 1.11 of spike-in amount than intended, however, it should not affect the reacted
+        # fraction we get
         byo_doped.add_spike_in(
             base_table=byo_doped.table.original,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
             spike_in_amount=np.concatenate((
-                np.repeat([2, 2, 1, 0.2, .04], repeats=3),  # spike-in amount in ng
-                np.array([10])), axis=0                     # NOTE: input pool sequenced is 3-times of actual initial pool
-            ) * 1.11,                                       # adjust by 10% used for qPCR/Qubit
+                np.repeat([2, 2, 1, 0.2, .04], repeats=3),
+                np.array([10])), axis=0  # input pool sequenced is 3-times of actual initial pool
+            ) * 1.11,
             radius=radius,
             dist_type='edit',
             unit='ng',
