@@ -667,7 +667,7 @@ class FitResults:
                 logging.error("Unknown json tag for bootstrap records", ValueError)
             if json_data['uncertainty'][label] is not None:
                 result.uncertainty.bs_records = pd.read_json(json_data['uncertainty'][label])
-            if json_data['uncertainty']['rep_results'] is not None:
+            if ('rep_results' in json_data['uncertainty'].keys()) and json_data['uncertainty']['rep_results'] is not None:
                 result.uncertainty.rep_results = pd.read_json(json_data['uncertainty']['rep_results'])
         if 'convergence' in json_data.keys():
             if json_data['convergence']['summary'] is not None:
@@ -701,7 +701,7 @@ class FitResults:
                             x_label=None, y_label=None,
                             legend=False, legend_loc='upper left',
                             fontsize=12,
-                            params=None, ax=None):
+                            params=None, ax=None, **kwargs):
         """plot fitting results for Aminoacylation ribozyme fitting curves
         obj should be a FitResults instance
         """
@@ -740,7 +740,7 @@ class FitResults:
             subsample=subsample,
             x_label=x_label, x_lim=x_lim,
             y_label=y_label, y_lim=y_lim,
-            legend=legend, legend_loc=legend_loc, fontsize=fontsize
+            legend=legend, legend_loc=legend_loc, fontsize=fontsize, **kwargs
         )
 
     def plot_loss_heatmap(self, model=None, plot_on='bootstrap',
@@ -748,7 +748,7 @@ class FitResults:
                           param1_range=(1e-2, 1e4), param2_range=(1e-3, 1),
                           legend=False, legend_loc='upper left',
                           colorbar=True, resolution=101, fontsize=12,
-                          param_name=None, add_lines=None, ax=None):
+                          param_name=None, add_lines=None, ax=None, **kwargs):
         """Plot the 2-D heatmap of loss function"""
 
         if model is None:
@@ -781,7 +781,7 @@ class FitResults:
             fixed_params=None, z_log=True,
             datapoint_color='#E45756', datapoint_label='data', datapoint_kwargs=None,
             legend=legend, legend_loc=legend_loc, colorbar=colorbar, fontsize=fontsize,
-            ax=ax
+            ax=ax, **kwargs
         )
 
         if add_lines is not None:
@@ -797,6 +797,6 @@ class FitResults:
                 ax.text(s=str(prod),
                         x=plot_tools.value_to_loc(prod / param2_range[1], range=param1_range,
                                                   resolution=resolution, log=True),
-                        y=resolution, va='bottom', ha='center', fontsize=fontsize)
+                        y=resolution, va='bottom', ha='center', fontsize=fontsize - 2)
             ax.set_xlim(*xlims)
             ax.set_ylim(*ylims)

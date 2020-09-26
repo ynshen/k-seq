@@ -423,7 +423,7 @@ class BatchFitResults:
         elif self.result_path.joinpath('seqs.tar.gz').exists():
             try:
                 result = FitResults.from_json(json_path=f'seqs/{seq_to_hash[seq]}.json',
-                                            tarfile=self.result_path.joinpath('seqs.tar.gz'))
+                                              tarfile=self.result_path.joinpath('seqs.tar.gz'))
             except:
                 result = FitResults.from_json(json_path=f'results/seqs/{seq_to_hash[seq]}.json',
                                               tarfile=self.result_path.joinpath('seqs.tar.gz'))
