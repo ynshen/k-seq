@@ -505,7 +505,7 @@ class FitResults:
 
          model (callable): model used in fitting
 
-         data (AttrScope): a scope stores the fitting dat
+         data (AttrScope): a scope stores the fitting data
              x_data (pd.Series):
              y_data (pd.Series):
              sigma (pd.Series):
@@ -740,7 +740,7 @@ class FitResults:
             subsample=subsample,
             x_label=x_label, x_lim=x_lim,
             y_label=y_label, y_lim=y_lim,
-            legend=legend, legend_loc=legend_loc, fontsize=fontsize, **kwargs
+            legend=legend, legend_loc=legend_loc, fontsize=fontsize
         )
 
     def plot_loss_heatmap(self, model=None, plot_on='bootstrap',

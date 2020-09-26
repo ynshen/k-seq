@@ -1,13 +1,12 @@
-"""functions to prepare BYO selected-pool dataset (a.k.a enriched pool) from count files,
-k-Seq experiment by Abe Pressman, see
+"""kSeq results from BYO-selected a.k.a enriched pool by Abe BYO aminoacylation ribozyme selection
 kSeq was applied on the output pool of Round 5 of selection, and reacted with 2, 10, 50, 250 uM of BYO
 """
 
 from yutility import logging
 from doc_helper import DocHelper
 from .transform import Transformer, ReactedFractionNormalizer
-from ..utility.file_tools import read_pickle, dump_pickle
-from .seq_data import SeqData, SeqTable
+from ..utility.file_tools import read_pickle
+from .seq_data import SeqData
 from . import filters
 import os
 import pandas as pd
@@ -18,14 +17,14 @@ doc = DocHelper()
 if 'BYO_SELECTED_PKL' in os.environ:
     PKL_FILE = os.getenv('BYO_SELECTED_PKL')
 elif 'PAPER_DATA_DIR' in os.environ:
-    PKL_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched/byo-enriched.pkl'
+    PKL_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched.pkl'
 else:
     PKL_FILE = None
 
 if 'BYO_SELECTED_COUNT_FILE' in os.environ:
     COUNT_FILE = os.getenv('BYO_SELECTED_COUNT_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    COUNT_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched/counts'
+    COUNT_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched-counts'
 else:
     COUNT_FILE = None
 
@@ -33,7 +32,7 @@ else:
 if 'BYO_SELECTED_NORM_FILE' in os.environ:
     NORM_FILE = os.getenv('BYO_SELECTED_NORM_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched/norm-factor.csv'
+    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched-counts/curated-norm.csv'
 else:
     NORM_FILE = None
 
@@ -97,11 +96,18 @@ Tables based on abe's pipeline: use curated quantification factor
       detected input or reacted samples are removed)
     - nf_filtered_seq_in_all_smpl_reacted_frac_curated: reacted fraction of sequences that were detected in all 
       available samples
+
+Tables based on standard pipeline: sequences were quantified through spike-in, sample `2D`, `2E`, `2F` were also removed
+    as spike-in sequences were not found
+    - nf_filtered_reacted_frac: reacted fraction with standard quantification methods (spike-in for reacted samples,
+      total DNA amount for input samples)
+    - nf_filtered_seq_in_all_smpl_reacted_frac: reacted fraction from standard pipeline, sequences were detected in all
+      available samples
     """
 
+
 @doc.compose(_byo_selected_description)
-def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
-                      norm_path=NORM_FILE, pickled_path=PKL_FILE, save_to=None):
+def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_path=NORM_FILE, pickled_path=PKL_FILE):
 
     if from_count_file:
         logging.info('Generate SeqData instance for BYO-enriched pool...')
@@ -127,7 +133,7 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
             '4D', '4F'
         ])
         # Remove failed experiments
-        byo_selected.table.no_failed = SeqTable(sample_filter(byo_selected.table.original), use_sparse=True, dtype=np.int)
+        byo_selected.table.no_failed = sample_filter(byo_selected.table.original)
         byo_selected.add_spike_in(
             base_table=byo_selected.table.no_failed,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
@@ -155,9 +161,9 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
         # Remove sequences are not 21 nt long or within 2 edit distance to the spike-in sequence
         spike_in_filter = filters.SpikeInFilter(target=byo_selected)  # remove spike-in seqs
         seq_length_filter = filters.SeqLengthFilter(target=byo_selected, min_len=21, max_len=21)
-        byo_selected.table.nf_filtered = SeqTable(seq_length_filter.get_filtered_table(
+        byo_selected.table.nf_filtered = seq_length_filter.get_filtered_table(
             spike_in_filter(byo_selected.table.no_failed)
-        ), use_sparse=True, dtype=int)
+        )
 
         reacted_frac = ReactedFractionNormalizer(input_samples=['R5'],
                                                  reduce_method='median',
@@ -173,11 +179,25 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
             spike_in_filter(nf_reacted_frac_curated)
         )
 
+        # Prepare sequences with general pipeline
+        # normalized using spike-in and total DNA amount
+        # table_reacted_spike_in = byo_selected.spike_in.apply(target=byo_selected.table.nf_filtered)
+        # table_input_dna_amount = byo_selected.sample_total.apply(target=byo_selected.table.nf_filtered)
+        # sample_filter = filters.SampleFilter(samples_to_remove=['2D', '2E', '2F'])
+        # table_input_dna_amount = sample_filter(table_input_dna_amount)
+        #
+        # byo_selected.table.nf_filtered_reacted_frac = reacted_frac.apply(
+        #     pd.concat([table_reacted_spike_in, table_input_dna_amount], axis=1)
+        # )
+
         # further filter out sequences that are not detected in all samples
         min_detected_times_filter = filters.DetectedTimesFilter(
-            min_detected_times=byo_selected.table.nf_filtered_reacted_frac_curated.shape[1]
+            min_detected_times=byo_selected.table.nf_filtered_reacted_frac.shape[1]
         )
 
+        # byo_selected.table.nf_filtered_seq_in_all_smpl_reacted_frac = min_detected_times_filter(
+        #     target=byo_selected.table.nf_filtered_reacted_frac
+        # )
         byo_selected.table.nf_filtered_seq_in_all_smpl_reacted_frac_curated = min_detected_times_filter(
             target=byo_selected.table.nf_filtered_reacted_frac_curated
         )
@@ -186,8 +206,5 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
         logging.info(f'Load BYO-selected pool data from pickled record from {PKL_FILE}')
         byo_selected = read_pickle(pickled_path)
         logging.info('Imported!')
-
-    if save_to is not None:
-        dump_pickle(byo_selected, save_to)
 
     return byo_selected
