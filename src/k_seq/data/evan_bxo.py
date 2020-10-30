@@ -33,6 +33,7 @@ def from_count_file(kseq_data_config):
     rna_amount_csv = kseq_data_config.pop('rna_amount', None)
     bxo_stock_csv = kseq_data_config.pop('bxo_stock_csv', None)
     bxo = kseq_data_config.pop('bxo', None)
+    all_inputs_ng = kseq_data_config.pop('all_inputs', None)
 
     logging.info('Surveying count files...')
     dataset = seq_data.SeqData.from_count_files(**kseq_data_config)
@@ -75,6 +76,14 @@ def from_count_file(kseq_data_config):
         dataset.sample_total_altQuant(dataset.table.filtered)
     )
 
+    # AltQuant 3: use average over ABCDEF
+    all_inputs_ng = pd.read_csv(all_inputs_ng, index_col=0)['ng']
+    altquant_3_table = dataset.table.filtered
+    altquant_3_table['input'] = all_inputs_ng.reindex(altquant_3_table.index)
+    altquant_3_table.drop(columns=dataset.grouper.input.group)
+    dataset.table.filtered_reacted_frac_all_input_median = ReactedFractionNormalizer(input_samples=['input'])(altquant_3_table)
+
+
     # filter up to double mutants
     from k_seq.data import landscape
 
@@ -100,6 +109,10 @@ def from_count_file(kseq_data_config):
     dataset.table.filtered_reacted_frac_input_500_2mutant = peak_filter(
         dataset.table.filtered_reacted_frac_input_500
     )
+    dataset.table.filtered_reacted_frac_all_input_median_2mutant = peak_filter(
+        dataset.table.filtered_reacted_frac_all_input_median
+    )
+
     return dataset
 
 
