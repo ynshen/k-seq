@@ -505,7 +505,7 @@ class FitResults:
 
          model (callable): model used in fitting
 
-         data (AttrScope): a scope stores the fitting data
+         data (AttrScope): a scope stores the fitting dat
              x_data (pd.Series):
              y_data (pd.Series):
              sigma (pd.Series):

@@ -7,7 +7,6 @@ def combination(n, k):
 
 
 def num_of_seq(d, length=21, letter_book_size=4):
-    """Expected number of """
     return int(combination(length, d) * (letter_book_size - 1) ** d)
 
 
@@ -27,6 +26,5 @@ def neighbor_effect_observation(xi, d, eta=0.09, L=21):
 
 
 def neighbor_effect_error(xi, d, eta=0.09, L=21):
-    """Fraction of reads from neighboring sequences due to sequencing error"""
     rho = neighbor_effect_observation(xi=xi, d=d, eta=eta, L=L)
     return 1 - ((1 - xi) ** L) / rho
