@@ -1,9 +1,11 @@
 """Modules for model identifiability analysis"""
 
+import os
 import pandas as pd
 import numpy as np
 from .least_squares import doc_helper
 from yutility import logging
+logging.set_level('info')
 from scipy import stats
 
 
@@ -165,14 +167,14 @@ class ParamMap:
         self.y_dataframe = self.parameters.apply(partial_model, axis=1)
 
         if const_err is not None:
-            self.y_values += np.random.normal(loc=0, scale=const_err,
-                                              size=self.y_values.shape)
+            self.y_dataframe += np.random.normal(loc=0, scale=const_err,
+                                                 size=self.y_dataframe.shape)
         if rel_err is not None:
-            self.y_values += np.random.normal(loc=0, scale=self.y_values * rel_err,
-                                              size=self.y_values.shape)
+            self.y_dataframe += np.random.normal(loc=0, scale=self.y_dataframe * rel_err,
+                                              size=self.y_dataframe.shape)
 
         if y_enforce_positive:
-            self.y_values[self.y_values < 0] = 0
+            self.y_dataframe[self.y_dataframe < 0] = 0
 
         logging.info('Simulation done.')
 
@@ -187,7 +189,7 @@ class ParamMap:
         if self.seed:
             np.random.seed(self.seed)
 
-        if self.y_values is None:
+        if self.y_dataframe is None:
             self.simulate_samples()
 
         from ..estimator.least_squares_batch import BatchFitter
@@ -199,6 +201,7 @@ class ParamMap:
         self.results = fitter.results
         self.results.summary.to_csv(self.save_to.joinpath('results.csv'))
         logging.info(f"Result saved to {self.save_to.joinpath('results.csv')}")
+        os.system(f"cd {self.save_to} && tar -czf seqs.tar.gz seqs && rm -r seqs")
 
     @classmethod
     def load_result(cls, result_path, model=None):
