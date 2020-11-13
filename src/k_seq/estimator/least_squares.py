@@ -505,7 +505,7 @@ class FitResults:
 
          model (callable): model used in fitting
 
-         data (AttrScope): a scope stores the fitting data
+         data (AttrScope): a scope stores the fitting dat
              x_data (pd.Series):
              y_data (pd.Series):
              sigma (pd.Series):
@@ -697,7 +697,7 @@ class FitResults:
         return result
 
     def plot_fitting_curves(self, model=None, plot_on='bootstrap', subsample=20,
-                            x_lim=(-0.00003, 0.0003), y_lim=None,
+                            x_lim=(-0.00003, 0.002), y_lim=None,
                             x_label=None, y_label=None,
                             legend=False, legend_loc='upper left',
                             fontsize=12,
@@ -748,7 +748,7 @@ class FitResults:
                           param1_range=(1e-2, 1e4), param2_range=(1e-3, 1),
                           legend=False, legend_loc='upper left',
                           colorbar=True, resolution=101, fontsize=12,
-                          param_name=None, add_lines=None, ax=None, **kwargs):
+                          param_name=None, add_lines=None, line_label=True, ax=None, **kwargs):
         """Plot the 2-D heatmap of loss function"""
 
         if model is None:
@@ -794,9 +794,10 @@ class FitResults:
                 ax.plot(plot_tools.value_to_loc(xs, range=param1_range, resolution=resolution, log=True),
                         plot_tools.value_to_loc(prod / xs, range=param2_range, resolution=resolution, log=True),
                         'w', alpha=0.8, ls='--')
-                ax.text(s=str(prod),
-                        x=plot_tools.value_to_loc(prod / param2_range[1], range=param1_range,
-                                                  resolution=resolution, log=True),
-                        y=resolution, va='bottom', ha='center', fontsize=fontsize - 2)
+                if line_label:
+                    ax.text(s=str(prod),
+                            x=plot_tools.value_to_loc(prod / param2_range[1], range=param1_range,
+                                                      resolution=resolution, log=True),
+                            y=resolution, va='bottom', ha='center', fontsize=fontsize - 2)
             ax.set_xlim(*xlims)
             ax.set_ylim(*ylims)
