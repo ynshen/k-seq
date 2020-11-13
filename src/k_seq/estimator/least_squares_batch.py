@@ -209,7 +209,7 @@ class BatchFitter(Estimator):
                 logging.info('Fitting in a single thread...')
                 workers = [work_fn(worker) for worker in worker_generator]
 
-            print(workers[0].summary())
+            # print(workers[0].summary())
             self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
             # record result
             if self.bootstrap:
