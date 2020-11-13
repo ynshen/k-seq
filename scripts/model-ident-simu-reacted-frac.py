@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts to generate reacted fraction simulate
+Scripts to generate reacted fraction simulated dataset and perform k-Seq for model identifiability analysis
 """
 
-from yutility import logging, Timer
+import sys
+import os
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).absolute().parent.parent.joinpath('src')))
+
+from yutility import logging, Timer
 import pandas as pd
 import numpy as np
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -63,11 +67,11 @@ def get_args():
     args = parser.parse_args()
     args.output = Path(args.output).absolute()
     check_dir(args.output)
-    logging.add_file_handler(args.output_dir / 'log.txt')
-    info(f'Result is saving to {args.output_dir}')
+    logging.add_file_handler(args.output / 'log.txt')
+    info(f'Result is saving to {args.output}')
 
     args.x_data = pd.Series(data=np.repeat(list(args.x_data), args.replicates),
-                              index=np.arange(len(args.x_data * args.replicates)) + 1)
+                            index=np.arange(len(args.x_data * args.replicates)) + 1, name='x_data')
     return args
 
 
@@ -81,21 +85,9 @@ def main():
     param1_log = True
     param2_name = 'A'
     param2_range = (1e-2, 1) if args.log_A else (0, 1)
-    param2_log = args.logA
+    param2_log = args.log_A
 
     info(f'Simulate dataset with {len(args.x_data)} sample points:\n{args.x_data}')
-
-    # if old_x:
-    #     logging.info('BYO concentration 1250 uM not included, we have 12 samples: [250, 50, 10, 2] * 3')
-    #     x_values = pd.Series(data=np.repeat([250, 50, 10, 2], 3) * 1e-6, index=np.arange(12) + 1)
-    # else:
-    #     if include_1250:
-    #         logging.info('BYO concentration 1250 uM included, we have 15 samples: [1250, 250, 50, 10, 2] * 3')
-    #         x_values = pd.Series(data=np.repeat([1250, 250, 50, 10, 2], 3) * 1e-6, index=np.arange(15) + 1)
-    #     else:
-    #         logging.info('BYO concentration 1250 uM not included, we have 16 samples: [250, 50, 10, 2] * 4')
-    #         x_values = pd.Series(data=np.repeat([250, 50, 10, 2], 4) * 1e-6, index=np.arange(16) + 1)
-
 
     fitting_kwargs = {'bounds': ((0, 0), (np.inf, 1)),
                       'metrics': {'kA': kA}}
@@ -112,6 +104,7 @@ def main():
 
     conv_map.simulate_samples(grid=True, rel_err=args.rel_err)
     conv_map.fit(parallel_cores=args.n_thread, overwrite=True)
+
 
 
 if __name__ == '__main__':
