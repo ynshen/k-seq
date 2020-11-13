@@ -1,8 +1,55 @@
+"""Modules for model identifiability analysis"""
 
 import pandas as pd
 import numpy as np
 from .least_squares import doc_helper
 from yutility import logging
+from scipy import stats
+
+
+# common for parameter correlation for model identifiability
+def remove_nan(df):
+    return df[~df.isna().any(axis=1)]
+
+
+def spearman(records):
+    records = remove_nan(records)
+    if records.shape[0] > 10:
+        return stats.spearmanr(records['k'], records['A']).correlation
+    else:
+        return np.nan
+
+
+def pearson(records):
+    records = remove_nan(records)
+    if records.shape[0] > 10:
+        return stats.pearsonr(records['k'], records['A'])[0]
+    else:
+        return np.nan
+
+
+def spearman_log(records):
+    records = remove_nan(records)
+    if records.shape[0] > 10:
+        return stats.spearmanr(np.log10(records['k']), np.log10(records['A'])).correlation
+    else:
+        return np.nan
+
+
+def pearson_log(records):
+    records = remove_nan(records)
+    if records.shape[0] > 10:
+        return stats.pearsonr(np.log10(records['k']), np.log10(records['A']))[0]
+    else:
+        return np.nan
+
+
+def kendall_log(records):
+    records = remove_nan(records)
+    if records.shape[0] > 10:
+        return stats.kendalltau(np.log10(records['k']), np.log10(records['A'])).correlation
+    else:
+        return np.nan
 
 
 def _parameter_gen(param_range, log, size):
@@ -20,12 +67,12 @@ def _parameter_gen(param_range, log, size):
     on the optional log scale
     
 """)
-class SeparabilityMap:
+class ParamMap:
 
     def __init__(self, model, sample_n, x_data, save_to,
                  param1_name, param1_range, param2_name, param2_range,
                  param1_log=False, param2_log=False, model_kwargs=None,
-                 bootstrap_num=1000, bs_record_num=50, bs_method='data', bs_stats=None, grouper=None, record_full=False,
+                 bootstrap_num=100, bs_record_num=50, bs_method='data', bs_stats=None, grouper=None, record_full=False,
                  conv_reps=20, conv_stats=None, conv_init_range=None,
                  fitting_kwargs=None, seed=23):
         from ..utility.func_tools import AttrScope
@@ -78,10 +125,10 @@ class SeparabilityMap:
             logging.info(f'Output dir {str(self.save_to)} created')
         dump_json(config, path=self.save_to.joinpath('config.json'))
 
-    def simulate_samples(self, grid=True, const_error=None, pct_error=None, y_enforce_positive=True):
+    def simulate_samples(self, grid=True, const_err=None, rel_err=None, y_enforce_positive=True):
         """Simulate a set of samples (param1 and param2)"""
 
-        logging.info(f"Simulating dataset with const_error: {const_error}, pct_error: {pct_error}, "
+        logging.info(f"Simulating dataset with const_error: {const_err}, pct_error: {rel_err}, "
                      f"y_enforce_positive: {y_enforce_positive}...")
 
         if self.seed is not None:
@@ -117,11 +164,11 @@ class SeparabilityMap:
 
         self.y_dataframe = self.parameters.apply(partial_model, axis=1)
 
-        if const_error is not None:
-            self.y_values += np.random.normal(loc=0, scale=const_error,
+        if const_err is not None:
+            self.y_values += np.random.normal(loc=0, scale=const_err,
                                               size=self.y_values.shape)
-        if pct_error is not None:
-            self.y_values += np.random.normal(loc=0, scale=self.y_values * pct_error,
+        if rel_err is not None:
+            self.y_values += np.random.normal(loc=0, scale=self.y_values * rel_err,
                                               size=self.y_values.shape)
 
         if y_enforce_positive:

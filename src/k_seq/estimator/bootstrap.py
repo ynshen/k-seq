@@ -8,7 +8,7 @@ import pandas as pd
 @doc_helper.compose("""Perform bootstrap for fitting uncertainty estimation
 
 Three types of bootstrap supported:
-  - `pct_res`: resample the percent residue, based on the assumption that variance are proportional to the mean
+  - `rel_res`: resample the percent residue, based on the assumption that variance are proportional to the mean
      (from data property)
   - `data`: directly resample data points
   - `stratified`: resample within groups, `grouper` is required
@@ -54,6 +54,7 @@ class Bootstrap:
         implemented_methods = {
             'pct_res': 'pct_res',
             'resample percent residues': 'pct_res',
+            'rel_res': 'pct_res',
             'resample data points': 'data',
             'data': 'data',
             'stratified': 'stratified',
@@ -98,7 +99,7 @@ class Bootstrap:
             yield self.estimator.x_data[ix_resample], self.estimator.y_data[ix_resample]
 
     def _bs_sample_generator(self):
-        if self.bs_method == 'pct_res':
+        if self.bs_method in ['pct_res', 'rel_res']:
             return self._percent_residue()
         elif self.bs_method == 'data':
             return self._data()
