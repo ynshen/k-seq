@@ -50,7 +50,7 @@ model-ident-simu-reacted-frac.py \
     --replicates 3 \
     --rel_err 0.0 \
     --log_A \
-    --output $OUTPUT/additional-relErr0 \
+    --output $OUTPUT/extended-relErr0 \
     --n_thread $N_THREAD \
     --n_bootstrap 100 \
     --n_converge 20 \
@@ -62,7 +62,7 @@ model-ident-simu-reacted-frac.py \
     --replicates 3 \
     --rel_err 0.5 \
     --log_A \
-    --output $OUTPUT/additional-relErr05 \
+    --output $OUTPUT/extended-relErr05 \
     --n_thread $N_THREAD \
     --n_bootstrap 100 \
     --n_converge 20 \
@@ -74,7 +74,7 @@ model-ident-simu-reacted-frac.py \
     --replicates 3 \
     --rel_err 1.0 \
     --log_A \
-    --output $OUTPUT/additional-relErr10 \
+    --output $OUTPUT/extended-relErr10 \
     --n_thread $N_THREAD \
     --n_bootstrap 100 \
     --n_converge 20 \
