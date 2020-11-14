@@ -211,6 +211,7 @@ class BatchFitter(Estimator):
 
             # print(workers[0].summary())
             self.results.summary = pd.DataFrame({worker.name: worker.summary() for worker in workers}).transpose()
+            self.results.summary.index.name = 'seq'
             # record result
             if self.bootstrap:
                 if self.large_dataset:
