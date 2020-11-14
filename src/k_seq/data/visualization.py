@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from IPython.display import HTML
 
 
 # -------------- Belows are SeqSample Visualizer ---------------
@@ -47,7 +46,7 @@ def length_dist_plot_single(sample, y_log=True, legend_off=False, title_off=Fals
     if not legend_off:
         ax.legend(frameon=False)
     if save_fig_to:
-        plt.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+        plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
     if show_fig:
         plt.show()
 
@@ -127,14 +126,14 @@ def sample_count_cut_off_plot_single(sample, thresholds=None, on_counts=False, i
         ax2.set_ylabel(label, fontsize=14)
 
     if save_fig_to:
-        plt.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+        plt.savefig(save_fig_to, bbox_inches='tight', dpi=300)
     if fig_show:
         plt.show()
 
 
 # --------------------- Belows are SeqSampleSet visualizers ----------------------
 
-def count_file_info_table(sample_set, return_table=False):
+def count_file_info_table(sample_set):
     """Generate an overview info seq_table for all samples in sample_set
     Print out HTML seq_table for sequencing samples, including spike-in info if applicable
 
@@ -180,10 +179,7 @@ def count_file_info_table(sample_set, return_table=False):
                 'unique sequences': lambda x: '{:,}'.format(x)
             }
         )
-    if return_table:
-        return table
-    else:
-        display(HTML(table_html))
+    return table
 
 
 
@@ -265,7 +261,7 @@ def sample_count_cut_off_plot_all(sample_set, black_list=None, thresholds=None, 
     fig.text(s=label, x=1, y=0.5, ha='left', va='top', fontsize=16, rotation=90)
     plt.tight_layout()
     if save_fig_to:
-        fig.savefig(save_fit_to, bbox_inches='tight', dpi=300)
+        fig.savefig(save_fig_to, bbox_inches='tight', dpi=300)
     plt.show()
 
 
