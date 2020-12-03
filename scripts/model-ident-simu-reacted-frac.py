@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 from argparse import ArgumentParser, RawTextHelpFormatter
 from k_seq.model.kinetic import BYOModel
-from k_seq.estimator.model_ident import ParamMap
+from k_seq.estimate.model_ident import ParamMap
 from k_seq.utility.file_tools import check_dir
 
 logging.set_level('info')
