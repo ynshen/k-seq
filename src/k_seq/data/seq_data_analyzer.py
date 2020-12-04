@@ -348,9 +348,6 @@ def sample_info(seq_data):
 # ############################# belows are to organize ##############################
 ########################################################################################################################
 
-
-
-
 def sample_spike_in_ratio_scatterplot(seq_table, black_list=None, ax=None, save_fig_to=None,
                                       figsize=None, label_mapper=None, scatter_kwargs=None):
     """Scatter plot of spike in ratio in the pool"""

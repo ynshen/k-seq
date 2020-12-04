@@ -54,6 +54,14 @@ def kendall_log(records):
         return np.nan
 
 
+def gamma(df):
+    """Get metric gamma = log_10{\sigma_k \mu_A} / {\sigma kA}"""
+    if isinstance(df, (pd.Series, pd.DataFrame)):
+        return np.log10(df['bs_k_std'] * df['bs_A_mean'] / df['bs_kA_std'])
+    else:
+        raise TypeError('Input should be a pd.Series or pd.DataFrame')
+
+
 def _parameter_gen(param_range, log, size):
     from ..data.simu import DistGenerators
 
@@ -62,6 +70,9 @@ def _parameter_gen(param_range, log, size):
                                             size=size)
     else:
         return DistGenerators.uniform(low=param_range[0], high=param_range[1], size=size)
+
+
+
 
 
 @doc_helper.compose("""Generate a 2d convergence map for randomly sampled data points from given parameter range

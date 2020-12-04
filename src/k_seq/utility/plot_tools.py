@@ -1,5 +1,5 @@
 """
-This module contains project level utility functions
+This module contains some common plotting functions
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -94,10 +94,12 @@ class color:
 
 
 def blue_header(header):
+    """Colored header to use in Jupyter Notebook"""
     print(color.BOLD + color.BLUE + header + color.END)
 
 
 def savefig(save_fig_to, dpi=300, alpha=0):
+    """Quick figure save"""
     if save_fig_to is not None:
         fig = plt.gcf()
         fig.patch.set_alpha(alpha)
@@ -105,6 +107,7 @@ def savefig(save_fig_to, dpi=300, alpha=0):
 
 
 def ax_none(ax, figsize=None):
+    """Generate an Axes if ax is None"""
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=figsize)
     return ax
@@ -113,6 +116,7 @@ def ax_none(ax, figsize=None):
 def regplot(x, y, ax=None, xlabel=None, ylabel=None, digit=4, equation_loc='best',
             xlog=False, ylog=False,
             kwargs_scatter=None, kwargs_line=None):
+    """X-Y scalar regression plot with model function"""
 
     ax = ax_none(ax, figsize=(6, 4))
     if kwargs_scatter is None: kwargs_scatter = {}
@@ -176,7 +180,7 @@ def barplot(series, ax, label=None, yticklabels=None, barplot_kwargs=None):
 
 
 def pairplot(data, vars_name=None, vars_lim=None, vars_log=None, figsize=(2, 2), **kwargs):
-    """Wrapper over seaborn.pairplot to visualize pairwise correlationw with log option"""
+    """Wrapper over seaborn.pairplot to visualize pairwise correlation with log option"""
     import numpy as np
     import seaborn as sns
 
