@@ -33,7 +33,7 @@ else:
 if 'BYO_SELECTED_NORM_FILE' in os.environ:
     NORM_FILE = os.getenv('BYO_SELECTED_NORM_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo_enriched/norm-factor.txt'
+    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-enriched/norm-factor.csv'
 else:
     NORM_FILE = None
 
@@ -44,12 +44,11 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
     def __init__(self, q_factor=None, target=None):
         super().__init__()
         self.target = target
-        # import quantification factor used by Abe
+        # import curated quantification factor by Abe
         # q_facter is defined in this way: abs_amnt = counts / ( total_counts * q)
         self.q_factor = pd.read_csv(q_factor, index_col=0) if isinstance(q_factor, str) else q_factor
         self.unit = 'ng'
 
-        # Note:
         # q_factor should be:
         # seq_data.q_factors = [0.0005,
         #                       0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133, 0.023823133,
@@ -86,20 +85,19 @@ class BYOSelectedCuratedNormalizerByAbe(Transformer):
 
 
 _byo_selected_description = """
-contains k-seq results for seqs from BYO AA selections, the full dataset contains following pre-computed seq_table to use
+contains k-seq results for seqs from BYO AA selections, this dataset contains following pre-computed seq_table to use
 
 Count tables:
     - original: original count table contains all sequences detected in any samples and all the samples
     - no_failed: count seq_table with sample `2C`, `3D`, `3E`, `3F`, `4D`, `4F` removed (failed in sequencing)
     - nf_filtered: count seq_table with spike-in sequence (2 edit distance) and non-21 nt length sequence removed
 
-Tables based on abe's pipeline:
-    - nf_filtered_reacted_frac: reacted fraction of sequences (failed samples are removed, sequences only
+Tables based on abe's pipeline: use curated quantification factor
+    - nf_reacted_frac_curated: reacted fraction of sequences (failed samples are removed, sequences only
       detected input or reacted samples are removed)
-    - nf_filtered_reacted_frac_seq_in_all: reacted fraction of sequences that were detected in all 
+    - nf_filtered_seq_in_all_smpl_reacted_frac_curated: reacted fraction of sequences that were detected in all 
       available samples
-"""
-
+    """
 
 @doc.compose(_byo_selected_description)
 def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_path=NORM_FILE, pickled_path=PKL_FILE):
@@ -166,12 +164,12 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_pa
         # Recover Abe's dataset
         # Reacted fraction was applied on non-filtered
         curated_normalizer = BYOSelectedCuratedNormalizerByAbe(target=byo_selected.table.no_failed, q_factor=norm_path)
-        # Note: in original code the normalization was applied to all seqs including spike-in
-        nf_reacted_frac = reacted_frac.apply(curated_normalizer.apply(
+        # Note: in original code the normalization was applied to all seqs including spike-in sequences
+        nf_reacted_frac_curated = reacted_frac.apply(curated_normalizer.apply(
             byo_selected.table.no_failed
         ))
-        byo_selected.table.nf_filtered_reacted_frac = seq_length_filter(
-            spike_in_filter(nf_reacted_frac)
+        byo_selected.table.nf_filtered_reacted_frac_curated = seq_length_filter(
+            spike_in_filter(nf_reacted_frac_curated)
         )
 
         # further filter out sequences that are not detected in all samples
@@ -179,8 +177,8 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_pa
             min_detected_times=byo_selected.table.nf_filtered_reacted_frac.shape[1]
         )
 
-        byo_selected.table.nf_filtered_reacted_frac_seq_in_all = min_detected_times_filter(
-            target=byo_selected.table.nf_filtered_reacted_frac
+        byo_selected.table.nf_filtered_seq_in_all_smpl_reacted_frac_curated = min_detected_times_filter(
+            target=byo_selected.table.nf_filtered_reacted_frac_curated
         )
         logging.info('Finished!')
     else:
