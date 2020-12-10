@@ -542,14 +542,14 @@ def simulate_on_byo_doped_condition_from_exp_results(dataset, fitting_res, uniq_
 
     if save_to is not None:
         config = {
-            'fitting_res': fitting_res,
+            'fitting_res': str(fitting_res),
             'dataset': str(dataset),
             'uniq_seq_num': uniq_seq_num,
             'depth': sequencing_depth,
             'total_dna_error_rate': total_dna_error_rate
         }
         from ..utility.file_tools import dump_json
-        dump_json(config, save_to + '/config.txt')
+        dump_json(config, Path(save_to) / 'config.txt')
 
     if plot_dist:
         from ..utility.plot_tools import pairplot
