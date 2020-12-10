@@ -1,4 +1,5 @@
-"""kSeq results from BYO-selected a.k.a enriched pool by Abe BYO aminoacylation ribozyme selection
+"""functions to prepare BYO selected-pool dataset (a.k.a enriched pool) from count files,
+k-Seq experiment by Abe Pressman, see
 kSeq was applied on the output pool of Round 5 of selection, and reacted with 2, 10, 50, 250 uM of BYO
 """
 
