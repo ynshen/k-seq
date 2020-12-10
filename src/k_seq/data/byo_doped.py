@@ -110,9 +110,9 @@ def load_byo_doped(from_count_file=False, count_file_path=COUNT_FILE, norm_path=
             base_table=byo_doped.table.original,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
             spike_in_amount=np.concatenate((
-                np.repeat([2, 2, 1, 0.2, .04], repeats=3),  # spike-in
-                np.array([10])), axis=0  # input pool sequenced is 3-times of actual initial pool
-            ) * 1.11,
+                np.repeat([2, 2, 1, 0.2, .04], repeats=3),  # spike-in amount in ng
+                np.array([10])), axis=0                     # NOTE: input pool sequenced is 3-times of actual initial pool
+            ) * 1.11,                                       # adjust by 10% used for qPCR/Qubit
             radius=radius,
             dist_type='edit',
             unit='ng',
