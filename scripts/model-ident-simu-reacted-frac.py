@@ -5,7 +5,6 @@ Scripts to generate reacted fraction simulated dataset and perform k-Seq for mod
 """
 
 import sys
-import os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).absolute().parent.parent.joinpath('src')))
 
@@ -41,14 +40,6 @@ def get_args():
                         help='A series of x values (e.g. concentration, time) for the simulated exp')
     parser.add_argument('--replicates', type=int, default=1,
                         help='Number of replicates fro each x_data')
-
-    # parser.add_argument('--include_1250', default=False, action='store_true', dest='include_1250',
-    #                     help='If include 1250 nM concentration, maximal 250 uM BYO concentration is used without this'
-    #                          'flag, and there are 4 replicates for each concentration to balance number of data points')
-    # parser.add_argument('--old_x', default=False, action='store_true', dest='old_x',
-    #                     help='If use the old x-series used in JACS paper, maximal 250 uM BYO concentration is '
-    #                          'used with triplicates for each concentration')
-
     parser.add_argument('--rel_err', '-e', type=float, default='0.',
                         help='Relative error to applied to simulated reacted fraction'),
     parser.add_argument('--output', '-o', type=str, default='model-ident-test',
@@ -104,7 +95,6 @@ def main():
 
     conv_map.simulate_samples(grid=True, rel_err=args.rel_err)
     conv_map.fit(parallel_cores=args.n_thread, overwrite=True)
-
 
 
 if __name__ == '__main__':
