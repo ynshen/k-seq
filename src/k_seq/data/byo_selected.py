@@ -174,7 +174,7 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_pa
 
         # further filter out sequences that are not detected in all samples
         min_detected_times_filter = filters.DetectedTimesFilter(
-            min_detected_times=byo_selected.table.nf_filtered_reacted_frac.shape[1]
+            min_detected_times=byo_selected.table.nf_filtered_reacted_frac_curated.shape[1]
         )
 
         byo_selected.table.nf_filtered_seq_in_all_smpl_reacted_frac_curated = min_detected_times_filter(
