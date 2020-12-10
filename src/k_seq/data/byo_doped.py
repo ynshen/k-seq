@@ -12,21 +12,21 @@ import pandas as pd
 if 'BYO_DOPED_PKL' in os.environ:
     PKL_FILE = os.getenv('BYO_DOPED_PKL')
 elif 'PAPER_DATA_DIR' in os.environ:
-    PKL_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant.pkl'
+    PKL_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant/byo-variant.pkl'
 else:
     PKL_FILE = None
 
 if 'BYO_DOPED_COUNT_FILE' in os.environ:
     COUNT_FILE = os.getenv('BYO_DOPED_COUNT_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    COUNT_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant-counts'
+    COUNT_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant/counts'
 else:
     COUNT_FILE = None
 
 if 'BYO_DOPED_NORM_FILE' in os.environ:
     NORM_FILE = os.getenv('BYO_DOPED_NORM_FILE')
 elif 'PAPER_DATA_DIR' in os.environ:
-    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant-counts/norm.csv'
+    NORM_FILE = os.getenv('PAPER_DATA_DIR') + '/data/byo-variant/norm-factor.csv'
 else:
     NORM_FILE = None
 
@@ -102,10 +102,10 @@ def load_byo_doped(from_count_file=False, count_file_path=COUNT_FILE, norm_path=
                  'quantified with spike-in sequence with 2 edit distance as radius or qPCR + Qubit'
         )
 
-        # temp note: spike-in norm factor were calculated on original seq_table when a SpikeInNormalizer is created,
+        # Note: spike-in norm factor were calculated on original seq_table when a SpikeInNormalizer is created,
         # notice the seq_table normalized on already excludes some (~10 %) sequence Abe used for qPRC quantification
-        # this is equivalent to using 1.11 of spike-in amount than intended, however, it should not affect the reacted
-        # fraction we get
+        # this is equivalent to using 1.11 of spike-in amount than intended. In any case, it should be canceled in
+        # the reacted fraction calculation
         byo_doped.add_spike_in(
             base_table=byo_doped.table.original,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
