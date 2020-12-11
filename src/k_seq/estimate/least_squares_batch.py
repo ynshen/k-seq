@@ -234,6 +234,7 @@ class BatchFitter(Estimator):
         if save_to is None:
             return self.results.summary
         else:
+            self.results.summary.index.name = 'seq'
             self.results.summary.to_csv(save_to)
 
     def _hash(self):
