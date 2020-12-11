@@ -1,11 +1,11 @@
 #!/bin/sh
 
-OUTPUT=/Users/yuning/Desktop/test-simu/
+OUTPUT=./react-frac-test
 N_SEQ=4
 N_THREAD=8
 
 # standard set: enriched pool x-data with 0.2 relative error
-model-ident-simu-reacted-frac.py \
+./simu-reacted-frac.py \
     --n_seq $N_SEQ \
     --x_data 0.000250 0.000050 0.000010 0.000002 \
     --replicates 3 \
@@ -18,7 +18,7 @@ model-ident-simu-reacted-frac.py \
     --seed 23
 
 # additional replicate: enriched pool x-data, 4 replicates, 0.2 relative error
-model-ident-simu-reacted-frac.py \
+./simu-reacted-frac.py \
     --n_seq $N_SEQ \
     --x_data 0.000250 0.000050 0.000010 0.000002 \
     --replicates 4 \
@@ -31,7 +31,7 @@ model-ident-simu-reacted-frac.py \
     --seed 23
 
 # extended set: + 1250 uM, 3 replicates, 0.2 relative error
-model-ident-simu-reacted-frac.py \
+./simu-reacted-frac.py \
     --n_seq $N_SEQ \
     --x_data 0.001250 0.000250 0.000050 0.000010 0.000002 \
     --replicates 3 \
@@ -44,7 +44,7 @@ model-ident-simu-reacted-frac.py \
     --seed 23
 
 # error effects
-model-ident-simu-reacted-frac.py \
+./simu-reacted-frac.py \
     --n_seq $N_SEQ \
     --x_data 0.001250 0.000250 0.000050 0.000010 0.000002 \
     --replicates 3 \
@@ -56,7 +56,7 @@ model-ident-simu-reacted-frac.py \
     --n_converge 20 \
     --seed 23
 
-model-ident-simu-reacted-frac.py \
+./simu-reacted-frac.py \
     --n_seq $N_SEQ \
     --x_data 0.001250 0.000250 0.000050 0.000010 0.000002 \
     --replicates 3 \
@@ -68,7 +68,7 @@ model-ident-simu-reacted-frac.py \
     --n_converge 20 \
     --seed 23
 
-model-ident-simu-reacted-frac.py \
+./simu-reacted-frac.py \
     --n_seq $N_SEQ \
     --x_data 0.001250 0.000250 0.000050 0.000010 0.000002 \
     --replicates 3 \
