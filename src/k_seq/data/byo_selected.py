@@ -6,7 +6,7 @@ kSeq was applied on the output pool of Round 5 of selection, and reacted with 2,
 from yutility import logging
 from doc_helper import DocHelper
 from .transform import Transformer, ReactedFractionNormalizer
-from ..utility.file_tools import read_pickle
+from ..utility.file_tools import read_pickle, dump_pickle
 from .seq_data import SeqData
 from . import filters
 import os
