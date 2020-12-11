@@ -100,7 +100,8 @@ Tables based on abe's pipeline: use curated quantification factor
     """
 
 @doc.compose(_byo_selected_description)
-def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_path=NORM_FILE, pickled_path=PKL_FILE):
+def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
+                      norm_path=NORM_FILE, pickled_path=PKL_FILE, save_to=None):
 
     if from_count_file:
         logging.info('Generate SeqData instance for BYO-enriched pool...')
@@ -185,5 +186,8 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE, norm_pa
         logging.info(f'Load BYO-selected pool data from pickled record from {PKL_FILE}')
         byo_selected = read_pickle(pickled_path)
         logging.info('Imported!')
+
+    if save_to is not None:
+        dump_pickle(byo_selected, save_to)
 
     return byo_selected
