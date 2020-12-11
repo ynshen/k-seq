@@ -120,6 +120,7 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
             x_unit='mol',
             input_sample_name=['R5']
         )
+        return byo_selected
 
         sample_filter = filters.SampleFilter(samples_to_remove=[
             '2C',
