@@ -61,7 +61,7 @@ py==1.8.1
 pycosat==0.6.3
 pycparser==2.18
 Pygments==2.5.2
-pyOpenSSL==17.2.0
+pyOpenSSL==17.5.0
 pyparsing==2.4.6
 pyrsistent==0.15.7
 PySocks==1.6.7
