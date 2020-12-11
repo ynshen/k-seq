@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
-OUTPUT=./react-frac-test
-N_SEQ=4
-N_THREAD=8
+OUTPUT=/path/to/output       # output path to store results
+N_SEQ=10201                  # number of sequences to simulate
+N_THREAD=8                   # number of threads to run in parallel
 
 # standard set: enriched pool x-data with 0.2 relative error
 ./simu-reacted-frac.py \

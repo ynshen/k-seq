@@ -114,7 +114,7 @@ def parse_args():
         prog="least-squares k-Seq fitting",
         description="""
         Least-squares fitting for first order kinetic model:
-            y = A * (1 - exp(-alpha * t * k * [BYO])) 
+            y = A * (1 - exp(-alpha * t * k * [BYO]))
         """,
         formatter_class=RawTextHelpFormatter
     )
@@ -145,7 +145,7 @@ def parse_args():
                         help='Number of bootstraps to perform, zero or negative means no bootstrap')
     parser.add_argument('--bs_record_num', type=int, default=-1,
                         help='Number of bootstrap results to save, save all if negative')
-    parser.add_argument('--bs_method', choices=['pct_res', 'data', 'stratified'], default='data',
+    parser.add_argument('--bs_method', choices=['pct_res', 'data', 'stratified'], default='pct_res',
                         help='Resample methods for bootstrapping')
     parser.add_argument('--stratified_grouper', default=None,
                         help='Name of grouper under `seq_data.grouper` for stratified bootstrapping')

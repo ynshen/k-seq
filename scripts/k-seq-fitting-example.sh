@@ -20,7 +20,7 @@
 # here is an example to fit the first 5 sequences in the `reacted_frac_qcr` table of `byo-variant.pkl` dataset
 #   with 100 bootstrap and 20 repeated fitting
 
-least-squares-estimate.py \
+k-seq-fitting.py \
     -i byo-variant.pkl \
     -t reacted_frac_qpcr \
     -o /path/to/output/folder \
@@ -29,6 +29,5 @@ least-squares-estimate.py \
     --fit_top_n 5 \
     --bootstrap_num 100 \
     --bs_record_num 20 \
-    --bs_method rel_res\
     --convergence_num 20 \
     --core_num 8

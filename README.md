@@ -1,26 +1,30 @@
-k-seq: kinetic model parameter estimation from DNA sequencing data for genetic encoded biomolecules 
+k-seq: analytics tools for kinetic sequencing data analysis
 ==============================
 
-This repo corresponds with the paper (TO ADD: bioRxiv link), see the paper for how we used `k-seq` package to analyze 
-the data from our kinetic measure with sequencing (_k_-Seq) experiments.
+**This is a frozen version for Nucleic Acids Research submission**
+see https://github.com/ichen-lab-ucsb/k-seq for most updated version and `k-seq`
+python package for the best use of this tool
 
-This is the frozen version used in the paper, 
-see current version of `k-seq` package: https://github.com/ichen-lab-ucsb/k-seq/tree/master
+See our [bioRxiv paper](https://www.biorxiv.org/content/10.1101/2020.12.02.407346v1)
+for how we used `k-seq` package to analyze the data from our kinetic sequencing (_k_-Seq) experiments.
+
 
 # Prerequisites
 ## Download code and data
-Code can be downloaded from GitHub repo: 
+
+**Code snapshot, data, and results are already included in this Dryad dataset**
+
+To download the updated version from GitHub repo:
 ```shell script
-https://github.com/ichen-lab-ucsb/k-seq.git
-## checkout to this paper version
-git checkout release/paper
+git clone https://github.com/ichen-lab-ucsb/k-seq.git
+## checkout to the branch including paper results
+git checkout release/0.4.2-paper
 ```
-Data and results can be downloaded from (TODO: Dryad link).
 
 
 ## Environment setup
 ### Option 1: Run with `conda`
-We recommend to use [Anaconda](https://anaconda.org/) to create a separate `k-seq` environment. 
+We recommend to use [Anaconda](https://anaconda.org/) to create a separate `k-seq` environment.
 Or a minimal installation: [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 To crate `k-seq` environment once `conda` in installed:
@@ -58,4 +62,25 @@ cd notebook
 
 # start jupyter server for notebooks
 jupyter notebook
+```
+
+NOTE: please double check the Jupyter Notebook is running the correct python kernel.
+To add k-seq conda environment as a IPython kernel, see https://ipython.readthedocs.io/en/latest/install/kernel_install.html
+
+# Run scripts
+
+Scripts in this repo has been rewired to call the k-seq package locally (version in `src/`).
+Change into the script directory to directly run a script
+
+Example:
+
+```shell script
+# go to scripts directory
+cd scripts
+
+# don't forget './' before the script
+./generate-byo-variant-dataset.py \
+    --count_file_dir ../../data/byo-variant/counts \
+    --norm_file ../../data/byo-variant/norm-factor.txt \
+    --output /your/output/dir
 ```
