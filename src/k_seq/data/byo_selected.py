@@ -127,7 +127,7 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
             '4D', '4F'
         ])
         # Remove failed experiments
-        byo_selected.table.no_failed = SeqTable(sample_filter(byo_selected.table.original), use_sparse=True)
+        byo_selected.table.no_failed = SeqTable(sample_filter(byo_selected.table.original), use_sparse=True, dtype=np.int)
         byo_selected.add_spike_in(
             base_table=byo_selected.table.no_failed,
             spike_in_seq='AAAAACAAAAACAAAAACAAA',
@@ -157,7 +157,7 @@ def load_byo_selected(from_count_file=False, count_file_path=COUNT_FILE,
         seq_length_filter = filters.SeqLengthFilter(target=byo_selected, min_len=21, max_len=21)
         byo_selected.table.nf_filtered = SeqTable(seq_length_filter.get_filtered_table(
             spike_in_filter(byo_selected.table.no_failed)
-        ), use_sparse=True)
+        ), use_sparse=True, dtype=int)
 
         reacted_frac = ReactedFractionNormalizer(input_samples=['R5'],
                                                  reduce_method='median',
