@@ -28,9 +28,9 @@ if __name__ == '__main__':
     parser.add_argument('--norm_file', type=str, required=True,
                         help='Normalization file from total DNA quantification')
     parser.add_argument('--output', type=str, required=True,
-                        help='Folder to save `byo-variant.pkl`')
+                        help='Folder to save `byo-enriched.pkl`')
     args = parser.parse_args()
     args.output = Path(args.output).absolute()
     check_dir(args.output)
-    args.output = args.output / 'byo-variant.pkl'
+    args.output = args.output / 'byo-enriched.pkl'
     main()
