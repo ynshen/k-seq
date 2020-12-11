@@ -16,6 +16,12 @@ def kA(params):
     return params[0] * params[1]
 
 
+# triplicates set used in simulation study
+simu_replicates = [['s1', 's4', 's7', 's10', 's13'],
+                   ['s2', 's5', 's8', 's11', 's14'],
+                   ['s3', 's6', 's9', 's12', 's15']]
+
+
 def read_table(seq_data, table_name, fit_top_n=None, inverse_weight=False):
     """import SeqTable to fit from SeqData
 
@@ -54,7 +60,7 @@ def read_table(seq_data, table_name, fit_top_n=None, inverse_weight=False):
 
 def main(seq_data, table_name, fit_top_n=None, exclude_zero=False, inverse_weight=False,
          bootstrap_num=None, bs_record_num=None, bs_method='data', stratified_grouper=None,
-         convergence_num=0,
+         convergence_num=0, simu_triplicates=False,
          core_num=1, large_data=False, output_dir=None,
          overwrite=False, note=None, rnd_seed=23):
     """Main function for fitting"""
@@ -78,6 +84,7 @@ def main(seq_data, table_name, fit_top_n=None, exclude_zero=False, inverse_weigh
     logging.info(f'large_data: {large_data}')
     logging.info(f'convergence: {convergence_num > 0}')
     logging.info(f'bootstrap: {bootstrap_num > 0}')
+    logging.info(f"simu_triplicates: {simu_triplicates}")
 
     batch_fitter = BatchFitter(
         y_dataframe=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
@@ -87,13 +94,14 @@ def main(seq_data, table_name, fit_top_n=None, exclude_zero=False, inverse_weigh
         conv_reps=convergence_num,
         conv_init_range=((0, 10), (0, 1)),
         conv_stats={},
+        replicates=simu_replicates if simu_triplicates else None,
         large_dataset=True,
         note=note,
         rnd_seed=rnd_seed
     )
     stream_to = output_dir if large_data else None
     batch_fitter.fit(parallel_cores=core_num, point_estimate=True,
-                     bootstrap=bootstrap_num > 0, convergence_test=convergence_num > 0,
+                     bootstrap=bootstrap_num > 0, convergence_test=convergence_num > 0, replicates=simu_triplicates,
                      stream_to=stream_to, overwrite=overwrite)
 
     batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
@@ -145,6 +153,10 @@ def parse_args():
     # Convergence, repeated fitting
     parser.add_argument('--convergence_num', type=int, default=0,
                         help='Number of repeated fitting on whole data for convergence test')
+
+    # simu triplicates
+    parser.add_argument('--simu_triplicates', action='store_true',
+                        help='Add triplicates as uncertainty estimation when fitting for simu-count.pkl')
 
     # fitting variations
     parser.add_argument('--exclude_zero', dest='exclude_zero', default=False, action='store_true',
