@@ -42,7 +42,7 @@ def read_table():
     if args.seq_list is not None:
         info(f'Look up seq in {args.seq_list}')
         with open(args.seq_list, 'r') as handle:
-            seq_list = handle.readlines(handle)
+            seq_list = handle.readlines()
         found = work_table.index.isin(seq_list)
         info(f"{np.sum(found)}/{len(seq_list)} found")
         work_table = work_table.loc[found]
