@@ -137,8 +137,8 @@ def parse_args():
                         help="If overwrite results when streaming")
     parser.add_argument('--core_num', '-c', type=int,
                         help='Number of threads to use in parallel')
-    parser.add_argument('--pkg_path', type=str, default=None,
-                        help='If use local k-seq package')
+    # parser.add_argument('--pkg_path', type=str, default=None,
+    #                     help='If use local k-seq package')
     parser.add_argument('--note', type=str, default='',
                         help='Extra note for fitting')
 
@@ -173,9 +173,9 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    pkg_path = args.pop('pkg_path', None)
-    if pkg_path and pkg_path not in sys.path:
-        sys.path.insert(0, pkg_path)
+    # pkg_path = args.pkg_path
+    # if pkg_path is not None and pkg_path not in sys.path:
+    #     sys.path.insert(0, pkg_path)
 
     logging.add_console_handler()
     logging.add_file_handler(f"{args['output_dir']}/app.log")
