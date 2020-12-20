@@ -97,7 +97,7 @@ def main():
         conv_stats={},
         large_dataset=True,
         note=args.note,
-        rnd_seed=args.rnd_seed
+        rnd_seed=args.seed
     )
     stream_to = args.output_dir if args.large_data else None
     batch_fitter.fit(parallel_cores=args.core_num, point_estimate=True,
@@ -161,6 +161,9 @@ def parse_args():
                         help='If exclude zero data in fitting')
     parser.add_argument('--inverse_weight', dest='inverse_weight', default=False, action='store_true',
                         help='Use counts (with pseudo counts 0.5) as the sigma in fitting')
+
+    parser.add_argument('--seed', type=int, default=23,
+                        help='Random seed')
 
     args = parser.parse_args()
     check_dir(args.output_dir)
