@@ -178,9 +178,9 @@ if __name__ == '__main__':
     #     sys.path.insert(0, pkg_path)
 
     logging.add_console_handler()
-    logging.add_file_handler(f"{args['output_dir']}/app.log")
+    logging.add_file_handler(args.output_dir/"LOG")
     logging.set_level('info')
-    logging.info(f"Log stream to {args['output_dir']}/app.log")
+    logging.info(f"Log stream to {args.output_dir/'LOG'})")
     info = logging.info
     with Timer():
         main()
