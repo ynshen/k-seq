@@ -7,7 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).absolute().parent.parent.joinpath('src')))
 
 from argparse import ArgumentParser, RawTextHelpFormatter
-from yutility import logging
+from yutility import logging, Timer
+from k_seq.utility.file_tools import dump_json, check_dir
 import numpy as np
 
 
@@ -16,7 +17,7 @@ def kA(params):
     return params[0] * params[1]
 
 
-def read_table(seq_data, table_name, fit_top_n=None, inverse_weight=False):
+def read_table():
     """import SeqTable to fit from SeqData
 
     Args:
@@ -34,70 +35,77 @@ def read_table(seq_data, table_name, fit_top_n=None, inverse_weight=False):
     from k_seq.utility.file_tools import read_pickle
 
     # input is seq_table
-    seq_data = read_pickle(seq_data)
-    work_table = getattr(seq_data.table, table_name)
+    seq_data = read_pickle(args.seq_data)
+    info(f'Load SeqData from {args.seq_data}')
+    work_table = getattr(seq_data.table, args.table_name)
+    info(f'Use table: {args.table_name}')
+    if args.seq_list is not None:
+        info(f'Look up seq in {args.seq_list}')
+        with open(args.seq_list, 'r') as handle:
+            seq_list = handle.readlines(handle)
+        found = work_table.index.isin(seq_list)
+        info(f"{np.sum(found)}/{len(seq_list)} found")
+        work_table = work_table.loc[found]
+
     work_table = work_table.loc[work_table.sum(axis=1).sort_values(ascending=False).index]
     x_data = seq_data.x_values[work_table.columns]
 
-    if fit_top_n is not None and fit_top_n > 0:
-        work_table = work_table.iloc[:fit_top_n]
+    if args.fit_top_n is not None and 0 < args.fit_top_n < len(work_table):
+        info(f'Fit top {args.fit_top_n} seq')
+        work_table = work_table.iloc[:args.fit_top_n]
 
-    if inverse_weight is True:
+    if args.inverse_weight is True:
         count_table = seq_data.table.original
         sigma = count_table.loc[work_table.index, work_table.columns]
         sigma = sigma + 0.5
     else:
         sigma = None
 
-    return work_table, x_data, sigma
+    return work_table, x_data, sigma, seq_data
 
 
-def main(seq_data, table_name, fit_top_n=None, exclude_zero=False, inverse_weight=False,
-         bootstrap_num=None, bs_record_num=None, bs_method='data', stratified_grouper=None,
-         convergence_num=0,
-         core_num=1, large_data=False, output_dir=None,
-         overwrite=False, note=None, rnd_seed=23):
+def main():
     """Main function for fitting"""
 
     from k_seq.estimate import BatchFitter
     from k_seq.model.kinetic import BYOModel
 
-    work_table, x_data, sigma = read_table(seq_data=seq_data, table_name=table_name,
-                                           fit_top_n=fit_top_n, inverse_weight=inverse_weight)
-    if bs_method.lower() == 'stratified':
+    work_table, x_data, sigma, seq_data = read_table()
+    if args.bs_method.lower() == 'stratified':
         try:
-            grouper = getattr(seq_data.grouper, stratified_grouper).group
+            grouper = getattr(seq_data.grouper, args.stratified_grouper).group
         except:
             logging.error('Can not find grouper for stratified bootstrapping', error_type=ValueError)
+            sys.exit(1)
     else:
         grouper = None
 
-    logging.info(f'exclude_zero: {exclude_zero}')
-    logging.info(f'inverse_weight: {inverse_weight}')
-    logging.info(f'fit_top_n: {fit_top_n}')
-    logging.info(f'large_data: {large_data}')
-    logging.info(f'convergence: {convergence_num > 0}')
-    logging.info(f'bootstrap: {bootstrap_num > 0}')
+    logging.info(f'exclude_zero: {args.exclude_zero}')
+    logging.info(f'inverse_weight: {args.inverse_weight}')
+    logging.info(f'fit_top_n: {args.fit_top_n}')
+    logging.info(f'large_data: {args.large_data}')
+    logging.info(f'convergence: {args.convergence_num > 0}')
+    logging.info(f'bootstrap: {args.bootstrap_num > 0}')
 
     batch_fitter = BatchFitter(
         y_dataframe=work_table, x_data=x_data, sigma=sigma, bounds=[[0, 0], [np.inf, 1]], metrics={'kA': kA},
-        model=BYOModel.reacted_frac(broadcast=False), exclude_zero=exclude_zero, grouper=grouper,
-        bootstrap_num=bootstrap_num, bs_record_num=bs_record_num, bs_method=bs_method,
+        model=BYOModel.reacted_frac(broadcast=False), exclude_zero=args.exclude_zero, grouper=grouper,
+        bootstrap_num=args.bootstrap_num, bs_record_num=args.bs_record_num, bs_method=args.bs_method,
         bs_stats={},
-        conv_reps=convergence_num,
+        conv_reps=args.convergence_num,
         conv_init_range=((0, 10), (0, 1)),
         conv_stats={},
         large_dataset=True,
-        note=note,
-        rnd_seed=rnd_seed
+        note=args.note,
+        rnd_seed=args.rnd_seed
     )
-    stream_to = output_dir if large_data else None
-    batch_fitter.fit(parallel_cores=core_num, point_estimate=True,
-                     bootstrap=bootstrap_num > 0, convergence_test=convergence_num > 0,
-                     stream_to=stream_to, overwrite=overwrite)
+    stream_to = args.output_dir if args.large_data else None
+    batch_fitter.fit(parallel_cores=args.core_num, point_estimate=True,
+                     bootstrap=args.bootstrap_num > 0, convergence_test=args.convergence_num > 0,
+                     stream_to=stream_to, overwrite=args.overwrite)
 
-    batch_fitter.summary(save_to=f'{output_dir}/fit_summary.csv')
-    batch_fitter.save_model(output_dir=output_dir, results=True, bs_record=False, tables=True)
+    batch_fitter.summary(save_to=f'{args.output_dir}/fit_summary.csv')
+    batch_fitter.save_model(output_dir=args.output_dir, results=True, bs_record=False, tables=True)
 
 
 def parse_args():
@@ -115,7 +123,9 @@ def parse_args():
     parser.add_argument('--seq_data', '-i', type=str, required=True,
                         help='Path to pickled seq_data object')
     parser.add_argument('--table_name', '-t', type=str, required=True,
-                        help="""Name of reacted fraction table to use""")
+                        help="Name of reacted fraction table to use")
+    parser.add_argument('--seq_list', type=str,
+                        help='List of sequences to fit')
     parser.add_argument('--fit_top_n', '-n', type=int, default=-1,
                         help='Select top n sequences to fit, fit all seq if n is negative')
     parser.add_argument('--output_dir', '-o', type=str, required=True)
@@ -139,7 +149,7 @@ def parse_args():
                         help='Number of bootstrap results to save, save all if negative')
     parser.add_argument('--bs_method', choices=['pct_res', 'data', 'stratified'], default='data',
                         help='Resample methods for bootstrapping')
-    parser.add_argument('--stratified_grouper', default=None,
+    parser.add_argument('--stratified_grouper', type=str, default=None,
                         help='Name of grouper under `seq_data.grouper` for stratified bootstrapping')
 
     # Convergence, repeated fitting
@@ -152,7 +162,12 @@ def parse_args():
     parser.add_argument('--inverse_weight', dest='inverse_weight', default=False, action='store_true',
                         help='Use counts (with pseudo counts 0.5) as the sigma in fitting')
 
-    return vars(parser.parse_args())
+    args = parser.parse_args()
+    check_dir(args.output_dir)
+    dump_json(obj=vars(args), path=f"{args.output_dir}/config.json")
+    args.output_dir = Path(args.output_dir)
+
+    return args
 
 
 if __name__ == '__main__':
@@ -162,13 +177,10 @@ if __name__ == '__main__':
     if pkg_path and pkg_path not in sys.path:
         sys.path.insert(0, pkg_path)
 
-    from k_seq.utility.file_tools import dump_json, check_dir
-    check_dir(args['output_dir'])
-    dump_json(obj=args, path=f"{args['output_dir']}/config.json")
     logging.add_console_handler()
     logging.add_file_handler(f"{args['output_dir']}/app.log")
     logging.set_level('info')
     logging.info(f"Log stream to {args['output_dir']}/app.log")
-    from yutility import Timer
+    info = logging.info
     with Timer():
-        sys.exit(main(**args))
+        main()
