@@ -44,7 +44,6 @@ def read_table():
         info(f'Look up seq in {args.seq_list}')
         with open(args.seq_list, 'r') as handle:
             seq_list = handle.read().split('\n')
-        print(seq_list[:3])
         found = work_table.index.isin(seq_list)
         info(f"{np.sum(found)}/{len(seq_list)} found")
         work_table = work_table.loc[found]
