@@ -10,6 +10,7 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from yutility import logging, Timer
 from k_seq.utility.file_tools import dump_json, check_dir
 import numpy as np
+import os
 
 
 def kA(params):
@@ -108,6 +109,10 @@ def main():
     batch_fitter.summary(save_to=f'{args.output_dir}/fit_summary.csv')
     batch_fitter.save_model(output_dir=args.output_dir, results=True, bs_record=False, tables=True)
 
+    # zip seq info
+    os.system(f"cd {str(args.output_dir)} && tar -czv seq.tar.gz seqs && rm -r seqs")
+
+
 
 def parse_args():
     """Parse arguments"""
@@ -169,7 +174,7 @@ def parse_args():
     args = parser.parse_args()
     check_dir(args.output_dir)
     dump_json(obj=vars(args), path=f"{args.output_dir}/config.json")
-    args.output_dir = Path(args.output_dir)
+    args.output_dir = Path(args.output_dir).resolve()
 
     return args
 
