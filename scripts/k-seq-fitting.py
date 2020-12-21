@@ -110,7 +110,7 @@ def main():
     batch_fitter.save_model(output_dir=args.output_dir, results=True, bs_record=False, tables=True)
 
     # zip seq info
-    os.system(f"cd {str(args.output_dir)} && tar -czv seq.tar.gz seqs && rm -r seqs")
+    os.system(f"cd {str(args.output_dir)} && tar -czf seq.tar.gz seqs && rm -r seqs")
 
 
 
