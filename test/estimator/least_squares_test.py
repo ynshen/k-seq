@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def test_SingleFitter_can_run_all():
-    from k_seq.estimator import SingleFitter
+    from k_seq.estimate import SingleFitter
 
     def model(x, k, b):
         return k * x + b
@@ -48,7 +48,7 @@ def normality_shapiro_test(records):
 
 
 def get_BatchFitter(large_dataset=False, result_path=None):
-    from k_seq.estimator import BatchFitter
+    from k_seq.estimate import BatchFitter
     from k_seq.data import datasets
     from k_seq.model import kinetic
 

@@ -143,7 +143,7 @@ class SeparabilityMap:
         if self.y_values is None:
             self.simulate_samples()
 
-        from ..estimator.least_squares_batch import BatchFitter
+        from ..estimate.least_squares_batch import BatchFitter
         fitter = BatchFitter(y_dataframe=self.y_dataframe, x_data=self.x_data, model=self.model,
                              large_dataset=True, **self.batchfitter_kwargs)
         fitter.fit(convergence_test=self.batchfitter_kwargs['conv_reps'] > 0,
