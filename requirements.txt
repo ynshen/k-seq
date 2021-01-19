@@ -4,14 +4,14 @@ asn1crypto==0.22.0
 attrs==19.3.0
 Babel==2.8.0
 backcall==0.1.0
-bleach==3.1.0
+bleach==3.1.4
 certifi==2019.11.28
 cffi==1.10.0
 chardet==3.0.4
 conda==4.8.2
 conda-package-handling==1.6.0
 coverage==5.0
-cryptography==2.0.3
+cryptography==3.2
 cycler==0.10.0
 decorator==4.4.1
 defusedxml==0.6.0
@@ -43,7 +43,7 @@ more-itertools==8.2.0
 multiprocess==0.70.9
 nbconvert==5.6.1
 nbformat==5.0.4
-notebook==6.0.3
+notebook==6.1.5
 numpy==1.18.1
 packaging==20.1
 pandas==1.0.0
@@ -61,7 +61,7 @@ py==1.8.1
 pycosat==0.6.3
 pycparser==2.18
 Pygments==2.5.2
-pyOpenSSL==17.2.0
+pyOpenSSL==17.5.0
 pyparsing==2.4.6
 pyrsistent==0.15.7
 PySocks==1.6.7
@@ -96,7 +96,7 @@ tornado==6.0.3
 tqdm==4.42.0
 traitlets==4.3.3
 twine==3.1.1
-urllib3==1.22
+urllib3==1.24.2
 wcwidth==0.1.8
 webencodings==0.5.1
 widgetsnbextension==3.5.1
