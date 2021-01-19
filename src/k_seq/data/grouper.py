@@ -1,10 +1,11 @@
-"""Grouper slice seq_table into pre-defined groups. E.g. input samples, reacted samples, different concentrations
+"""Groupers slice seq_table into groups. E.g. input samples, reacted samples, different concentrations
 """
 
 from .seq_data import slice_table
 from ..utility.func_tools import AttrScope
 from yutility import logging
 import pandas as pd
+import numpy as np
 
 
 def get_group(table, group, axis=1, remove_empty=False):
@@ -47,8 +48,6 @@ class Grouper(object):
             target (pd.DataFrame): optional, target seq_table
             axis (0 or 1): axis to apply the grouper
         """
-        import numpy as np
-        import pandas as pd
 
         if isinstance(group, (list, np.ndarray, pd.Series, str)):
             self.type = 0

@@ -26,6 +26,7 @@ setup(
     packages=find_packages(where='src'),
     python_requires='>=3.5',
     install_requires=[
+        'tqdm',
         'pandas',
         'numpy',
         'scipy',
