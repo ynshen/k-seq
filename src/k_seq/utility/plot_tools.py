@@ -1,6 +1,7 @@
 """
 This module contains project level utility functions
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

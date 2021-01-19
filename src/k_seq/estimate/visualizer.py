@@ -1,5 +1,12 @@
+"""Analysis for estimation results
+TODO:
+  - clean up code
+  - convert to analysis.py
+"""
+
+
 def parse_fitting_results(fitting_res, model=None, seq_ix=None, seq_name=None, num_bootstrap_records=0):
-    from .least_squares import BatchFitter, SingleFitter
+    from . import BatchFitter, SingleFitter
     from ..data.seq_data import SeqData
 
     def extract_info_from_SingleFitting(single_res):
