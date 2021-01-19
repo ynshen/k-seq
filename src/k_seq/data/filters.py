@@ -1,4 +1,5 @@
 """This module contains filters to apply on SeqData
+TODO: simplify code
 TODO: write test cases for filters
 """
 

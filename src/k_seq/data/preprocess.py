@@ -1,6 +1,6 @@
 """Parse, convert, characterize count files generated from Chen lab's customized scripts
 
-TODO: add Sam and Celia's code reference here
+TODO: add FASTQ file to count data add Sam and Celia's code reference here
 """
 
 from yutility import logging
@@ -29,6 +29,41 @@ def _load_single_source(count_files, file_list=None, pattern_filter=None, name_t
             samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
 
     return samples
+
+
+def read_count_file(file_path, as_dict=False, number_only=False):
+    """Read a single count file generated from Chen lab's customized scripts
+    
+    {}
+
+    Args:
+        file_path (str): full directory to the count file
+        as_dict (bool): return a dictionary instead of a `pd.DataFrame`
+        number_only (bool): only return number of unique seqs and total counts if True
+
+    Returns:
+        unique_seqs (int): number of unique sequences in the count file
+        total_counts (int): number of total reads in the count file
+        sequence_counts (pd.DataFrame): with ``sequence`` as index and ``counts`` as the first column
+    """.format(_count_file_format)
+
+    with open(file_path, 'r') as file:
+        unique_seqs = int([elem for elem in next(file).strip().split()][-1])
+        total_counts = int([elem for elem in next(file).strip().split()][-1])
+        if number_only:
+            sequence_counts = None
+            as_dict = True
+        else:
+            next(file)
+            sequence_counts = {}
+            for line in file:
+                seq = line.strip().split()
+                sequence_counts[seq[0]] = int(seq[1])
+
+    if as_dict:
+        return unique_seqs, total_counts, sequence_counts
+    else:
+        return unique_seqs, total_counts, pd.DataFrame.from_dict(sequence_counts, orient='index', columns=['counts'])
 
 
 @_doc.compose(f"""Create a ``SeqData`` instance from count files.
@@ -119,36 +154,4 @@ _count_file_format = """Count file format:
 """
 
 
-def read_count_file(file_path, as_dict=False, number_only=False):
-    """Read a single count file generated from Chen lab's customized scripts
-    
-    {}
 
-    Args:
-        file_path (str): full directory to the count file
-        as_dict (bool): return a dictionary instead of a `pd.DataFrame`
-        number_only (bool): only return number of unique seqs and total counts if True
-
-    Returns:
-        unique_seqs (int): number of unique sequences in the count file
-        total_counts (int): number of total reads in the count file
-        sequence_counts (pd.DataFrame): with ``sequence`` as index and ``counts`` as the first column
-    """.format(_count_file_format)
-
-    with open(file_path, 'r') as file:
-        unique_seqs = int([elem for elem in next(file).strip().split()][-1])
-        total_counts = int([elem for elem in next(file).strip().split()][-1])
-        if number_only:
-            sequence_counts = None
-            as_dict = True
-        else:
-            next(file)
-            sequence_counts = {}
-            for line in file:
-                seq = line.strip().split()
-                sequence_counts[seq[0]] = int(seq[1])
-
-    if as_dict:
-        return unique_seqs, total_counts, sequence_counts
-    else:
-        return unique_seqs, total_counts, pd.DataFrame.from_dict(sequence_counts, orient='index', columns=['counts'])

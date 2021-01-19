@@ -1,8 +1,4 @@
-"""Module model the counts
-
-Notes:
-    kinetic models were currently implemented as callable function. It might migrate to `Model` subclass for
-      storing parameters, set required parameters, etc
+"""Model the sequencing process to generate counts
 """
 
 import numpy as np

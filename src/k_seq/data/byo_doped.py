@@ -1,4 +1,5 @@
-"""BYO doped-pool dataset from Abe's k-seq experiments"""
+"""Private
+BYO doped-pool dataset from Abe's k-seq experiments"""
 
 from yutility import logging
 
