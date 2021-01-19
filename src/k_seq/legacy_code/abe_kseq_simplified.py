@@ -9,11 +9,12 @@ This script was reorganized by Yuning Shen
 import numpy as np
 from scipy.optimize import curve_fit
 import time
-import util
+from k_seq.utility.file_tools import dump_pickle
+
 
 def readSeqs(loc, fileType='counts', cutOff=3, norm2=1, whiteList={}):
-    #fileType: 'counts' refers to a list of sequences followed by count numbers, with three lines of header information
 
+    # fileType: 'counts' refers to a list of sequences followed by count numbers, with three lines of header information
     allSeqCounts = {}
     initTime = time.time()
     print('Import sequences from %s...' %loc, end=" ")
@@ -40,7 +41,8 @@ def readSeqs(loc, fileType='counts', cutOff=3, norm2=1, whiteList={}):
 
     print('finished in %i sec' %(time.time()-initTime))
     return (allSeqCounts, uniques, totals)
-    #a list of all sequences we want to search over, and their appearance
+    # a list of all sequences we want to search over, and their appearance
+
 
 def alignCounts(masterCounts, roundCounts, rnd, maxRnds, initialize=False):
 
@@ -55,6 +57,7 @@ def alignCounts(masterCounts, roundCounts, rnd, maxRnds, initialize=False):
                 seq[1][rnd] += roundCounts[seq[0]]
 
     return masterCounts
+
 
 def readAll(firstLoc, otherLoc, firstMin, otherMin, normList=[]):
 
@@ -78,6 +81,7 @@ def readAll(firstLoc, otherLoc, firstMin, otherMin, normList=[]):
 
     return (masterCounts, masterUniques, masterTotals)
 
+
 def filter_seqs(tempCounts):
     print("%i candidate sequences detected" %(len(tempCounts)))
     validRnds = []
@@ -86,11 +90,10 @@ def filter_seqs(tempCounts):
     mask = [True if i in validRnds else False for i in range(25)]
     validSeqs = [seq for seq in tempCounts if not(np.sum(np.array(seq[1])[mask])==0)]
     print("%i valid sequences found" %(len(validSeqs)))
-    util.dump_pickle(data=validSeqs,
-                      dirc='/mnt/storage/projects/ribozyme_predict/k_seq/abe_validSeqs.pkl',
-                      log='The %i valid sequences (being detected at least once in valid k-seq samples) generated from Abe\'s code, (%i seqs filtered by previous abe_validSeqs.pkl for unvalid samples). A list of sequences with [seq, [normalized counts in each samples, starting from input]]' %(len(validSeqs), len(tempCounts)),
-                      overwrite=True)
+    dump_pickle(obj=validSeqs,
+                path='/mnt/storage/projects/ribozyme_predict/k_seq/abe_validSeqs.pkl')
     return validSeqs
+
 
 def printCounts(outLoc, counts, uniqs, tots, firstLoc, separator=',', fitAvg=[], compact=False):
     # main function for estimator
@@ -190,10 +193,8 @@ def printCounts(outLoc, counts, uniqs, tots, firstLoc, separator=',', fitAvg=[],
                     fittingRes['stddev'] = [np.nan]
             lineOut += '\n'
             outFile.write(lineOut)
-    util.dump_pickle(data=fittingRes,
-                      dirc='/mnt/storage/projects/ribozyme_predict/k_seq/abe_fittingRes.pkl',
-                      log='Fitting results from Abe\'s code',
-                      overwrite=True)
+    dump_pickle(obj=fittingRes,
+                path='/mnt/storage/projects/ribozyme_predict/k_seq/abe_fittingRes.pkl')
 
 
 testList = ['counts-1A.txt','counts-1B.txt','counts-1C.txt','counts-1D.txt','counts-1E.txt','counts-1F.txt',
@@ -218,4 +219,5 @@ root = '/mnt/storage/projects/ribozyme_predict/count-file/'
 (tempCounts, un, to) = readAll(root + 'R5c-counts.txt', [root + dirc for dirc in testList], 1, 1, normList=testNorm)
 validSeq = filter_seqs(tempCounts)
 # validSeq = util.load_pickle(dirc='/mnt/storage/projects/ribozyme_predict/k_seq/abe_validSeqs.pkl')
-printCounts(outLoc='allseqs-name-fit.csv', counts=validSeq, uniqs=un, tots=to, firstLoc='R5c-counts.txt', fitAvg=testAvg, compact=2)
+printCounts(outLoc='allseqs-name-fit.csv', counts=validSeq, uniqs=un, tots=to, firstLoc='R5c-counts.txt',
+            fitAvg=testAvg, compact=2)
