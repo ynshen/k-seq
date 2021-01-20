@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# This is pipeline.protocol.v3 for joining sequence reads and extracting primers
-# by Sam Verbanic and Celia Blanco
-# See EasyDIVER: https://github.com/ichen-lab-ucsb/EasyDIVER for published version
+# This is pipeline.protocol.v3 for joining sequence reads, extracting primers, pooling samples, and counting unique
+#   sequences by Sam Verbanic and Celia Blanco
+# See EasyDIVER: https://github.com/ichen-lab-ucsb/EasyDIVER for updated version
 # contact: samuel.verbanic@lifesci.ucsb.edu or cblanco@chem.ucsb.edu
 
 # this version is updated by Yuning Shen (yuningshen@ucsb.edu):
@@ -92,7 +92,7 @@ fi
 
 if [ -z "$outopt" ];
   then
-    outdir=$hdir/pipeline.output
+    outdir=$hdir/pipeline-output
     mkdir "$outdir"
 		echo "-----No output directory supplied. New output directory is: $outdir"
   else
