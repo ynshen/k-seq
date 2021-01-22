@@ -1,4 +1,5 @@
-"""Functions to prepare BYO doped-pool (a.k.a variant pool) dataset from count files, for Abe's k-seq experiments"""
+"""Private
+Functions to prepare BYO doped-pool (a.k.a variant pool) dataset from count files, for Abe's k-seq experiments"""
 
 from yutility import logging
 from ..utility.file_tools import read_pickle
@@ -74,7 +75,6 @@ def load_byo_doped(from_count_file=False, count_file_path=COUNT_FILE, norm_path=
     """
 
     if from_count_file:
-        ax.tick_params(labelsize=fontsize)
 
         logging.info('Generate SeqData instance for BYO-doped pool...')
         logging.info(f'Importing from {count_file_path}...this could take a couple of minutes...')
