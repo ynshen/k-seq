@@ -1,4 +1,5 @@
-"""Pipeline for generating datasets for k-seq project
+"""Private
+Pipeline for generating datasets for k-seq project
 Available datasets:
   - BYO doped pool: byo-doped
   - BYO selection pool: byo-selected

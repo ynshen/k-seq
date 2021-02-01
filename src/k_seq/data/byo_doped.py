@@ -1,4 +1,5 @@
-"""Functions to prepare BYO doped-pool (a.k.a variant pool) dataset from count files, for Abe's k-seq experiments"""
+"""Private
+Functions to prepare BYO doped-pool (a.k.a variant pool) dataset from count files, for Abe's k-seq experiments"""
 
 from yutility import logging
 from ..utility.file_tools import read_pickle
