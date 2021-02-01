@@ -74,7 +74,6 @@ def load_byo_doped(from_count_file=False, count_file_path=COUNT_FILE, norm_path=
     """
 
     if from_count_file:
-        ax.tick_params(labelsize=fontsize)
 
         logging.info('Generate SeqData instance for BYO-doped pool...')
         logging.info(f'Importing from {count_file_path}...this could take a couple of minutes...')
@@ -114,7 +113,7 @@ def load_byo_doped(from_count_file=False, count_file_path=COUNT_FILE, norm_path=
             spike_in_amount=np.concatenate((
                 np.repeat([2, 2, 1, 0.2, .04], repeats=3),  # spike-in amount in ng
                 np.array([10])), axis=0                     # NOTE: input pool sequenced is 3-times of actual initial pool
-            ) * 1.11,                                       # adjust by 10% used for qPCR/Qubit
+            ) * 1.11,                                       # adjust for the 10% RNA used for qPCR/Qubit measurement
             radius=radius,
             dist_type='edit',
             unit='ng',

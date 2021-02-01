@@ -594,6 +594,9 @@ class BatchFitResults:
                     seq_to_hash = json.load(tf.extractfile('seqs/seq_to_hash.json'))
                 except:
                     seq_to_hash = json.load(tf.extractfile('results/seqs/seq_to_hash.json'))
+        else:
+            logging.warning("'seqs' folder or 'seqs.tar.gz' not found - no individual sequence fitting results loaded")
+            seq_to_hash = None
 
         result._bs_record = seq_to_hash
         result._conv_record = seq_to_hash
