@@ -1,5 +1,5 @@
 *****************
-``k_seq`` package
+`k-seq` package content
 *****************
 
 
@@ -8,7 +8,7 @@ Modules
 
 
 
-``k_seq.data``
+data
 ===================
 
 k\_seq.data.count\_data module
@@ -109,7 +109,7 @@ k\_seq.data.visualizer module
 
 
 
-``k_seq.model``
+model
 ====================
 
 k\_seq.model.count module
@@ -138,7 +138,7 @@ k\_seq.model.pool module
 
 
 
-``k_seq.estimator``
+estimate
 ========================
 
 
@@ -182,4 +182,6 @@ k\_seq.estimator.visualizer module
    :undoc-members:
    :show-inheritance:
 
+utility
+=======================
 

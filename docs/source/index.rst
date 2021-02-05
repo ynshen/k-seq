@@ -3,9 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-k-seq: high throughput estimation of genetically encoded biomolecules
-=================================
+k-seq: a package for kinetic measurements with high throughput seqeucning
+==========================================
 
+
+Table of content
+--------
 .. toctree::
    :maxdepth: 2
 
