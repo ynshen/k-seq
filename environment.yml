@@ -1,7 +1,16 @@
 name: k-seq
 channels:
   - defaults
+  - bioconda
+  - anaconda
 dependencies:
+  # dependencies for EasyDIVERS
+  - pandaseq=2.11
+  - libtool=2.4.6
+  - seqkit=0.15.0
+  - bbmap=38.87
+  - grep=3.4
+  # dependencies for k-seq
   - ipykernel=5.3.4
   - ipython=7.19.0
   - jupyter=1.0.0
@@ -14,6 +23,10 @@ dependencies:
   - scipy=1.5.2
   - seaborn=0.11.0
   - tqdm=4.51.0
+  # dependencies for documentation
+  - sphinx=1.8.5
+  - sphinx_rtd_theme=0.4.3
+  - sphinxcontrib-napoleon=0.7
   - pip:
     - doc-helper==1.1.1
     - python-levenshtein==0.12.0
