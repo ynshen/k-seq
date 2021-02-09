@@ -2,7 +2,7 @@
 for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
 TODO:
-  - write output function for each class as JSON file
+  - write output function for each class as JSON file and readable foler
 """
 import numpy as np
 import pandas as pd
@@ -389,7 +389,7 @@ class SeqData(object):
 
     """)
     def from_count_files(**kwargs):
-        from .count_file import load_Seqtable_from_count_files
+        from .preprocess import load_Seqtable_from_count_files
         return load_Seqtable_from_count_files(**kwargs)
 
 

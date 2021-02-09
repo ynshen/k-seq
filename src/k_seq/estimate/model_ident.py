@@ -17,6 +17,14 @@ def _parameter_gen(param_range, log, size):
         return DistGenerators.uniform(low=param_range[0], high=param_range[1], size=size)
 
 
+def gamma(df):
+    """Get metric gamma = log_10{\sigma_k \mu_A} / {\sigma kA}"""
+    if isinstance(df, (pd.Series, pd.DataFrame)):
+        return np.log10(df['bs_k_std'] * df['bs_A_mean'] / df['bs_kA_std'])
+    else:
+        raise TypeError('Input should be a pd.Series or pd.DataFrame')
+
+
 @doc_helper.compose("""Generate a 2d convergence map for randomly sampled data points from given parameter range
     it simulates sample_n sequence samples with random params selected from the range of (param1_range, param2_range),
     on the optional log scale
