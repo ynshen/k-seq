@@ -530,8 +530,6 @@ class BatchFitResults:
              bs_record (bool): if output bs_record, default True
              conv_record (bool): if output conv_record, default True
         """
-
-
         check_dir(Path(output_dir).parent)
         data_to_dump = {'summary': self.summary}
         if bs_record:
