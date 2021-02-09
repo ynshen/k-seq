@@ -596,7 +596,7 @@ class SimulationResults:
         from pathlib import Path
         from ..utility.file_tools import read_pickle
 
-        self.results = pd.read_csv(f'{result_dir}/fit_summary.csv', index_col=0)
+        self.results = pd.read_csv(f'{result_dir}/summary.csv', index_col=0)
         self.cols = self.results.columns[self.results.columns.isin(allowed_col)].values
         self.seq_list = self.results[~self.results[self.cols].isna().any(axis=1)].index.values
         self._bs_prefix = 'bs_' if 'bs_kA_2.5%' in self.results.columns else ''
