@@ -1,5 +1,5 @@
 """Setup.py for k-seq
-See: https://github.com/ynshen/Landscape
+See: https://github.com/ynshen/k-seq
 """
 
 # Always prefer setuptools over distutils
@@ -14,10 +14,10 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='k-seq',   # this is the name registered on pypi
-    version='0.4.2a',
-    description='Kinetic sequencing analysis by Chen lab at University of California, Santa Barbara',
+    version='0.4.2',
+    description='Kinetic sequencing analysis by Chen lab at University of California, Los Angeles',
     long_description=long_description,
-    long_description_content_type='text/markdown', # to use markdown, make sure wheel, setuptools, twine are up to date
+    long_description_content_type='text/markdown',  # to use markdown, make sure wheel, setuptools, twine are up to date
     url='https://github.com/ynshen/k-seq',
     author='Yuning Shen',
     author_email='ynshen23@gmail.com',
@@ -35,7 +35,8 @@ setup(
         'seaborn',
         'doc-helper',
         'seq-landscape',
-        'yutility'
+        'yutility',
+        'tqdm'
     ],
     classifiers=[
         'License :: OSI Approved :: MIT License'

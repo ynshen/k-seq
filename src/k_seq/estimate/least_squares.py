@@ -740,7 +740,7 @@ class FitResults:
             subsample=subsample,
             x_label=x_label, x_lim=x_lim,
             y_label=y_label, y_lim=y_lim,
-            legend=legend, legend_loc=legend_loc, fontsize=fontsize
+            legend=legend, legend_loc=legend_loc, fontsize=fontsize, **kwargs
         )
 
     def plot_loss_heatmap(self, model=None, plot_on='bootstrap',

@@ -1,6 +1,6 @@
-"""Visualization for single fit results"""
-
-
+"""Visualization for single fit results
+TODO: code clean up
+"""
 
 
 def get_single_fitter(seq, exp):

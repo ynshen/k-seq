@@ -1,40 +1,44 @@
-k-seq: kinetic model parameter estimation from DNA sequencing data for genetic encoded biomolecules 
+k-seq: analytics tools for kinetic sequencing data analysis
 ==============================
 
-This repo corresponds with the paper (TO ADD: bioRxiv link), see the paper for how we used `k-seq` package to analyze 
-the data from our kinetic measure with sequencing (_k_-Seq) experiments.
+**This is a frozen version for Nucleic Acids Research submission**
+see https://github.com/ichen-lab-ucsb/k-seq for most updated version and `k-seq`
+python package for the best use of this tool
 
-This is the frozen version used in the paper, 
-see current version of `k-seq` package: https://github.com/ichen-lab-ucsb/k-seq/tree/master
+See our [bioRxiv paper](https://www.biorxiv.org/content/10.1101/2020.12.02.407346v1)
+for how we used `k-seq` package to analyze the data from our kinetic sequencing (_k_-Seq) experiments.
 
-## Prerequisites
-### Download code and data
-Code can be downloaded from GitHub repo: 
+
+# Prerequisites
+## Download code and data
+
+**Code snapshot, data, and results are already included in this Dryad dataset**
+
+To download the updated version from GitHub repo:
 ```shell script
-https://github.com/ichen-lab-ucsb/k-seq.git
-## checkout to this paper version
-git checkout release/paper
+git clone https://github.com/ichen-lab-ucsb/k-seq.git
+## checkout to the branch including paper results
+git checkout release/0.4.2-paper
 ```
-Data and results can be downloaded from (TODO: Dryad link).
 
 
-### Environment setup
-#### Option 1: Run with `conda`
-We recommend to use [Anaconda](https://anaconda.org/) to create a separate `k-seq` environment. 
+## Environment setup
+### Option 1: Run with `conda`
+We recommend to use [Anaconda](https://anaconda.org/) to create a separate `k-seq` environment.
 Or a minimal installation: [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 To crate `k-seq` environment once `conda` in installed:
 
 ```shell script
 # change directory to downloaded repo
-cd /to/k-seq-git-repo
+cd /path/to/k-seq-git-repo
 # create a k-seq environment
 conda create -f environment.yml
 # activate k-seq environment
 conda activate k-seq
 ```
 
-#### Option 2: Run with local python environment
+### Option 2: Run with local python environment
 This is NOT recommended unless you already use other python environment manager (e.g. pyenv, virtualenv)
 
 In your python environment, install `k-seq` dependencies
@@ -42,54 +46,41 @@ In your python environment, install `k-seq` dependencies
 pip install -r requirements.txt
 ```
 
-## Paper results
+# Paper results
 
-To repeat analysis and regenerate figures used in the paper, use `paper/`
-To repeat the analysis and generate results in the paper
+To repeat analysis and regenerate figures used in the paper, see `notebooks/k-seq-paper-figure.ipynb`
+ and `notebooks/k-seq-paper-figure-SI.ipynb`
+
 
 ```shell script
-# clone current version of repo
+# in the correct python environment, for conda
+conda activate k-seq
 
-git clone 
+# under correct directory
+cd /path/to/k-seq-git-repo
+cd notebook
 
+# start jupyter server for notebooks
+jupyter notebook
 ```
 
+NOTE: please double check the Jupyter Notebook is running the correct python kernel.
+To add k-seq conda environment as a IPython kernel, see https://ipython.readthedocs.io/en/latest/install/kernel_install.html
 
-*This is the temporary installation for `k-seq` package before publication, we will upload to pypi so it could be installed through `pip install k-seq`* 
+# Run scripts
 
-Step 1: Clone the this git repo to your local
+Scripts in this repo has been rewired to call the k-seq package locally (version in `src/`).
+Change into the script directory to directly run a script
 
-```bash
-> cd /dir/to/save/repo
-> git clone https://github.com/ichen-lab-ucsb/k-seq.git
+Example:
 
+```shell script
+# go to scripts directory
+cd scripts
+
+# don't forget './' before the script
+./generate-byo-variant-dataset.py \
+    --count_file_dir ../../data/byo-variant/counts \
+    --norm_file ../../data/byo-variant/norm-factor.txt \
+    --output /your/output/dir
 ```
-
-Step 2: run installation code
-
-```bash
-> cd /dir/to/save/repo/k-seq/
-> sh ./install.sh
-```
-
-There might be a prop to uninstall the old `k-seq` package, if installed.
-
-#### To varify the installation of package
-```bash
-> python -c "import k-seq"
-# No error shows
-```
-
-## Getting started examples
-
-#### [Getting started](https://github.com/ynshen/k-seq/tree/master/examples/)
-
-#### [Getting started notebook to run interactively: `/examples/getting_started.ipynb`](https://github.com/ynshen/k-seq/blob/master/examples/getting_started.ipynb)
-
-## See [documentation website](https://ynshen.github.io/k-seq/) for usage
-
-## TODO
-- Clean up archived old code and notebooks
-
-### Issue report:
-https://github.com/ynshen/k-seq/issues

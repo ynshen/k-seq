@@ -353,11 +353,11 @@ class SeqData(object):
         """More generalized JSON file
         TODO: add to_json and from_json
         """
-        pass
+        raise NotImplemented('Saving as json file is not implemented yet')
 
     def from_json(self):
         """TODO: add json"""
-        pass
+        raise NotImplemented('Loading from json file is not implemented yet')
 
     def to_pickle(self, path):
         import pickle
@@ -393,52 +393,3 @@ class SeqData(object):
         return load_Seqtable_from_count_files(**kwargs)
 
 
-
-
-#     # TODO: consider add accessor to fitting
-#     # def add_fitting(seq_data, model, seq_to_fit=None, weights=None, bounds=None,
-#     #                 bootstrap_depth=0, bs_return_size=None,
-#     #                 resample_pct_res=False, missing_data_as_zero=False, random_init=True, metrics=None):
-#     #     """
-#     #     Add a `k_seq.estimator.BatchFitting` instance to SeqData for estimator
-#     #     Args:
-#     #         model (`callable`): the model to fit
-#     #         seq_to_fit (list of `str`): optional. All the sequences will be fit if None
-#     #         weights (list of `float`): optional. If assign different weights in the estimator for sample points.
-#     #         bounds (k by 2 list of `float`): optional. If set bounds for each parameters to fit
-#     #         bootstrap_depth (`int`): optional. Number of bootstrap to perform. No bootstrap if None
-#     #         bs_return_size (`int`): optional. If only keep part of the bootstrap results for memory
-#     #         resample_pct_res (`bool`):
-#     #         missing_data_as_zero (`bool`): If treat missing value as zero. Default False
-#     #         random_init (`bool`): If use random initialization between [0, 1] in optimization for each parameter, default True
-#     #         metrics (`dict` of `callable`): optional. If calculate other metrics from estimated parameter. Has form
-#     #           {
-#     #             metric_name: callable_to_cal_metric_from_pd.Series
-#     #         }
-#     #
-#     #     """
-#     #     from ..estimator.least_square import BatchFitting
-#     #     if seq_to_fit is None:
-#     #         seq_to_fit = None
-#     #     if weights is None:
-#     #         weights = None
-#     #     if bounds is None:
-#     #         bounds = None
-#     #     if bs_return_size is None:
-#     #         bs_return_size = None
-#     #     if metrics is None:
-#     #         metrics = None
-#     #     seq_data.fitting = BatchFitting.from_SeqTable(
-#     #         seq_table=seq_data,
-#     #         model=model,
-#     #         seq_to_fit=seq_to_fit,
-#     #         weights=weights,
-#     #         bounds=bounds,
-#     #         bootstrap_depth=bootstrap_depth,
-#     #         bs_return_size=bs_return_size,
-#     #         resample_pct_res=resample_pct_res,
-#     #         missing_data_as_zero=missing_data_as_zero,
-#     #         random_init=random_init,
-#     #         metrics=metrics
-#     #     )
-#     #     seq_data.logger.info('BatchFitting estimator added')

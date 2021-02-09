@@ -5,53 +5,6 @@ import pandas as pd
 import numpy as np
 from .least_squares import doc_helper
 from yutility import logging
-logging.set_level('info')
-from scipy import stats
-
-
-# common for parameter correlation for model identifiability
-def remove_nan(df):
-    return df[~df.isna().any(axis=1)]
-
-
-def spearman(records):
-    records = remove_nan(records)
-    if records.shape[0] > 10:
-        return stats.spearmanr(records['k'], records['A']).correlation
-    else:
-        return np.nan
-
-
-def pearson(records):
-    records = remove_nan(records)
-    if records.shape[0] > 10:
-        return stats.pearsonr(records['k'], records['A'])[0]
-    else:
-        return np.nan
-
-
-def spearman_log(records):
-    records = remove_nan(records)
-    if records.shape[0] > 10:
-        return stats.spearmanr(np.log10(records['k']), np.log10(records['A'])).correlation
-    else:
-        return np.nan
-
-
-def pearson_log(records):
-    records = remove_nan(records)
-    if records.shape[0] > 10:
-        return stats.pearsonr(np.log10(records['k']), np.log10(records['A']))[0]
-    else:
-        return np.nan
-
-
-def kendall_log(records):
-    records = remove_nan(records)
-    if records.shape[0] > 10:
-        return stats.kendalltau(np.log10(records['k']), np.log10(records['A'])).correlation
-    else:
-        return np.nan
 
 
 def _parameter_gen(param_range, log, size):
