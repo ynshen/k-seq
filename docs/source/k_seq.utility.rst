@@ -1,4 +1,4 @@
-``k_seq.utility`` package
+k_seq.utility
 ======================
 .. toctree::
    :maxdepth: 4

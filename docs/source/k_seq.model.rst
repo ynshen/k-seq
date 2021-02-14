@@ -1,14 +1,10 @@
-``k_seq.model`` package
+k_seq.model: kinetics and pool models
 ====================
-.. toctree::
-   :maxdepth: 4
+.. automodule:: k_seq.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-   getting_started
-
-   k_seq
-
-Submodules
-----------
 
 k\_seq.model.count module
 -------------------------
@@ -30,15 +26,6 @@ k\_seq.model.pool module
 ------------------------
 
 .. automodule:: k_seq.model.pool
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: k_seq.model
    :members:
    :undoc-members:
    :show-inheritance:

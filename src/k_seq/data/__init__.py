@@ -9,3 +9,4 @@
 
 from . import visualization, simu
 import landscape
+from .seq_data import SeqData, SeqTable

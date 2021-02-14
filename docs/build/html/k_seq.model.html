@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k_seq.model package &mdash; k-seq 0.4.0 documentation</title>
+  <title>k_seq.model: kinetics and pool models &mdash; k-seq 0.4.0 documentation</title>
   
 
   
@@ -25,7 +25,6 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -36,7 +35,9 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/my_theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="k_seq.estimator: least squares fitting with bootstrapping" href="k_seq.estimate.html" />
+    <link rel="prev" title="k_seq.data: data preprocessing" href="k_seq.data.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -80,10 +81,21 @@
               
             
             
-              <ul>
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k_seq</span></code> package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package content</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html">k_seq.data: data preprocessing</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">k_seq.model: kinetics and pool models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.model.count">k_seq.model.count module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.model.kinetic">k_seq.model.kinetic module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.model.pool">k_seq.model.pool module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.estimate.html">k_seq.estimator: least squares fitting with bootstrapping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.utility.html">k_seq.utility</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -129,7 +141,9 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
-      <li><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code> package</li>
+          <li><a href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package content</a> &raquo;</li>
+        
+      <li>k_seq.model: kinetics and pool models</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -148,175 +162,200 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="k-seq-model-package">
-<h1><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code> package<a class="headerlink" href="#k-seq-model-package" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+  <div class="section" id="k-seq-model-kinetics-and-pool-models">
+<h1>k_seq.model: kinetics and pool models<a class="headerlink" href="#k-seq-model-kinetics-and-pool-models" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-k_seq.model"></span><dl class="py class">
+<dt id="k_seq.model.ModelBase">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.</code><code class="sig-name descname">ModelBase</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>base structure for a model
+A model contains following aspects:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>model param estimation: need data, _get_mask, params, seed,</p></li>
+<li><p>random variable generator, need params, seed, _get_mask</p></li>
 </ul>
-</div>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-k_seq.model.count">
-<span id="k-seq-model-count-module"></span><h2>k_seq.model.count module<a class="headerlink" href="#module-k_seq.model.count" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="k_seq.model.count.MultiNomial">
-<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">MultiNomial</code><span class="sig-paren">(</span><em class="sig-param">y=None</em>, <em class="sig-param">p=None</em>, <em class="sig-param">N=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#k_seq.model.ModelBase" title="k_seq.model.ModelBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.model.ModelBase</span></code></a></p>
-<p>todo: many redundant function, clean it up, estimator should be removed</p>
-<dl class="method">
-<dt id="k_seq.model.count.MultiNomial.X">
-<em class="property">property </em><code class="sig-name descname">X</code><a class="headerlink" href="#k_seq.model.count.MultiNomial.X" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.count.MultiNomial.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">y=None</em>, <em class="sig-param">p=None</em>, <em class="sig-param">N=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><p>MultiNomial model of pool counts
-if y is given, it is saved as data
-if p and N are given, they are used for simulation</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.count.MultiNomial.func">
-<em class="property">static </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">N</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial.func" title="Permalink to this definition">¶</a></dt>
+</div></blockquote>
+<dl class="py method">
+<dt id="k_seq.model.ModelBase.func">
+<em class="property">abstract </em><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase.func" title="Permalink to this definition">¶</a></dt>
 <dd><p>model function: params –&gt; prediction</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="k_seq.model.count.MultiNomial.p">
-<em class="property">property </em><code class="sig-name descname">p</code><a class="headerlink" href="#k_seq.model.count.MultiNomial.p" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.count.MultiNomial.params">
-<em class="property">property </em><code class="sig-name descname">params</code><a class="headerlink" href="#k_seq.model.count.MultiNomial.params" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.count.MultiNomial.predict">
-<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">N=None</em>, <em class="sig-param">p=None</em>, <em class="sig-param">size=1</em>, <em class="sig-param">seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.MultiNomial.predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Method as prediction model, single observation</p>
+<dl class="py method">
+<dt id="k_seq.model.ModelBase.predict">
+<em class="property">abstract </em><code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to predict model output</p>
 </dd></dl>
 
 </dd></dl>
 
-<dl class="function">
-<dt id="k_seq.model.count.count_nbin">
-<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">count_nbin</code><span class="sig-paren">(</span><em class="sig-param">mu</em>, <em class="sig-param">s</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.count_nbin" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.model.count.count_pois">
-<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">count_pois</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">N</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.count_pois" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.model.count.zero_inflated_pois">
-<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">zero_inflated_pois</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">N</em>, <em class="sig-param">alpha</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.zero_inflated_pois" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<div class="section" id="module-k_seq.model.count">
+<span id="k-seq-model-count-module"></span><h2>k_seq.model.count module<a class="headerlink" href="#module-k_seq.model.count" title="Permalink to this headline">¶</a></h2>
+<p>Model the sequencing process to generate counts</p>
+<dl class="py function">
+<dt id="k_seq.model.count.multinomial">
+<code class="sig-prename descclassname">k_seq.model.count.</code><code class="sig-name descname">multinomial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="n">N</span></em>, <em class="sig-param"><span class="n">seed</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.count.multinomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multinomial distribution for a given probability p and total number of draws</p>
+</dd></dl>
 
 </div>
 <div class="section" id="module-k_seq.model.kinetic">
 <span id="k-seq-model-kinetic-module"></span><h2>k_seq.model.kinetic module<a class="headerlink" href="#module-k_seq.model.kinetic" title="Permalink to this headline">¶</a></h2>
-<p>A collection of commonly used kinetic models used in the project</p>
-<dl class="class">
+<p>A collection of commonly used kinetic models</p>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>kinetic models were currently implemented as callable function. It might migrate to <cite>Model</cite> subclass for</dt><dd><p>storing parameters, set required parameters, etc</p>
+</dd>
+</dl>
+<p>TODO: fix broadcast problem: including broadcast as argument changed the signature for the model function</p>
+<dl class="py class">
 <dt id="k_seq.model.kinetic.BYOModel">
 <em class="property">class </em><code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">BYOModel</code><a class="headerlink" href="#k_seq.model.kinetic.BYOModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>A collection of BYO kinetic models (static functions)</p>
-<dl class="simple">
-<dt>where some values are fixed:</dt><dd><p>exp time (t): 90 min
+<p>A collection of BYO kinetic models
+where some values are fixed:</p>
+<blockquote>
+<div><p>exp time (t): 90 min
 BYO degradation factor ($lpha$): 0.479</p>
-</dd>
-<dt>functions:</dt><dd><ul class="simple">
-<li><p>composition_first_order</p></li>
-<li></li>
+</div></blockquote>
+<dl class="simple">
+<dt>models:</dt><dd><ul class="simple">
+<li><p>reacted_frac(broadcast=False)</p></li>
+<li><p>amount_first_order(broadcast=False)</p></li>
+<li><p>composition_first_order(c, p0, k, A)</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>p0</strong> – initial pool composition, needed if using actual composition</p></li>
-<li><p><strong>c</strong> – controlled variable, in our case, BYO concentration</p></li>
-<li><p><strong>k</strong> – kinetic coefficient</p></li>
-<li><p><strong>A</strong> – fraction of reactive molecules</p></li>
-<li><p><strong>bias</strong> – if include slope in the model for baseline passing rate</p></li>
+<li><p><strong>p0</strong> (<em>1-D list-like</em>) – Amount or composition of sequences in the input pool</p></li>
+<li><p><strong>c</strong> (<em>float</em><em> or </em><em>1-D list-like</em>) – Concentration of substrates, return input pool if negative</p></li>
+<li><p><strong>k</strong> (<em>float</em><em> or </em><em>1-D list-like</em>) – Kinetic coefficient for each sequence in first-order kinetics, with length as number of sequences</p></li>
+<li><p><strong>A</strong> (<em>float</em><em> or </em><em>1-D list-like</em>) – Asymptotic conversion for each sequence in first-order kinetics, with length as number of sequences</p></li>
+</ul>
+</dd>
+</dl>
+<p>return:
+concentration/composition at the name (time, concentration) point</p>
+<dl class="py method">
+<dt id="k_seq.model.kinetic.BYOModel.amount_first_order">
+<em class="property">static </em><code class="sig-name descname">amount_first_order</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">broadcast</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.amount_first_order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get model for absolute amount of reacted pool, if c is negative, return 0
+Notice: broadcast should be False if multiple p0 is used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>broadcast</strong> (<em>bool</em>) – if True, apply broadcast for k and A, outer product between A and k are calculated;if False, k and A have to be same length and apply elementwise production. Default False.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>p0 (1-D list-like): Amount or composition of sequences in the input pool</dt><dd><p>c (float or 1-D list-like): Concentration of substrates, return input pool if negative
+k (float or 1-D list-like): Kinetic coefficient for each sequence in first-order kinetics, with length as number of sequences
+A (float or 1-D list-like): Asymptotic conversion for each sequence in first-order kinetics, with length as number of sequences</p>
+</dd>
+<dt>which returns:</dt><dd><p>Absolute amount of each sequence in each sample
+float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>a callable with arguments</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.model.kinetic.BYOModel.composition_first_order">
+<em class="property">static </em><code class="sig-name descname">composition_first_order</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">p0</span></em>, <em class="sig-param"><span class="n">k</span></em>, <em class="sig-param"><span class="n">A</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.composition_first_order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function of pool composition w.r.t. BYO concentration (c)
+if x &lt; 0, output is p0</p>
+<blockquote>
+<div><p>broadcast is not supported that is k and A should have same length</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>c</strong> (<em>float</em><em> or </em><em>1-D list-like</em>) – Concentration of substrates, return input pool if negative</p></li>
+<li><p><strong>p0</strong> (<em>1-D list-like</em>) – Amount or composition of sequences in the input pool</p></li>
+<li><p><strong>k</strong> (<em>float</em><em> or </em><em>1-D list-like</em>) – Kinetic coefficient for each sequence in first-order kinetics, with length as number of sequences</p></li>
+<li><p><strong>A</strong> (<em>float</em><em> or </em><em>1-D list-like</em>) – Asymptotic conversion for each sequence in first-order kinetics, with length as number of sequences</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>concentration/composition at the target (time, concentration) point</p>
-</dd>
-</dl>
-<dl class="method">
-<dt id="k_seq.model.kinetic.BYOModel.amount_first_order">
-<em class="property">static </em><code class="sig-name descname">amount_first_order</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">p0</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.amount_first_order" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.kinetic.BYOModel.composition_first_order">
-<em class="property">static </em><code class="sig-name descname">composition_first_order</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">p0</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.composition_first_order" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.kinetic.BYOModel.composition_first_order_w_bias">
-<em class="property">static </em><code class="sig-name descname">composition_first_order_w_bias</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">p0</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em>, <em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.composition_first_order_w_bias" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function of pool composition w.r.t. BYO concentration (x)
-TODO: kinetics with bias is not updated yet
-if x &lt; 0, output is p0</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>c</strong> – concentration</p></li>
-<li><p><strong>p0</strong> – initial pool composition</p></li>
-<li><p><strong>k</strong> – kinetic coefficient</p></li>
-<li><p><strong>A</strong> – maximal conversion ratio</p></li>
-<li><p><strong>b</strong> – slope</p></li>
-</ul>
+<dd class="field-even"><p>Pool composition for sequences in each sample
+float, 1-D or 2-D np.ndarray with shape (len(k), sample_num)</p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="k_seq.model.kinetic.BYOModel.reacted_frac">
-<em class="property">static </em><code class="sig-name descname">reacted_frac</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.reacted_frac" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property">static </em><code class="sig-name descname">reacted_frac</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">broadcast</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.BYOModel.reacted_frac" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get model for Reacted fraction for each seq in a pool
+:param broadcast: if True, apply broadcast for k and A, outer product between A and k are calculated;if False, k and A have to be same length and apply elementwise production. Default False.
+:type broadcast: bool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>c (float or 1-D list-like): Concentration of substrates, return input pool if negative</dt><dd><p>k (float or 1-D list-like): Kinetic coefficient for each sequence in first-order kinetics, with length as number of sequences
+A (float or 1-D list-like): Asymptotic conversion for each sequence in first-order kinetics, with length as number of sequences</p>
+</dd>
+<dt>which returns:</dt><dd><p>Reacted fraction for each sequence in each sample
+float, 1-D or 2-D np.ndarray with shape (uniq_seq_num, sample_num)</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>a callable with arguments</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
-<dl class="function">
-<dt id="k_seq.model.kinetic.check_scaler">
-<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">check_scaler</code><span class="sig-paren">(</span><em class="sig-param">value</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.check_scaler" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt id="k_seq.model.kinetic.check_scalar">
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">check_scalar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.check_scalar" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if value is a scalar or is the single value in a vector/matrix/tensor</p>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="k_seq.model.kinetic.first_order">
-<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">first_order</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em>, <em class="sig-param">alpha</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.first_order" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">first_order</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">k</span></em>, <em class="sig-param"><span class="n">A</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">t</span></em>, <em class="sig-param"><span class="n">broadcast</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.first_order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base first-order kinetic model, returns reacted fraction of input seqs given parameters</p>
+<p>broadcast are available on A, k, c and a full return tensor will have shape (A, k, c)
+if any of these 3 parameters is scalar, the dimension is automatically squeezed while maintaining the order</p>
+<p>Note: for c_i &lt; 0, returns ones as it is input pool</p>
+<p>Args:
+c (float or 1-D list-like): Concentration of substrates, return input pool if negative</p>
+<blockquote>
+<div><p>k (float or 1-D list-like): Kinetic coefficient for each sequence in first-order kinetics, with length as number of sequences
+A (float or 1-D list-like): Asymptotic conversion for each sequence in first-order kinetics, with length as number of sequences
+alpha (float): degradation coefficient for substrates
+t (float): Reaction time in the experiments
+broadcast (bool): if True, apply broadcast for k and A, outer product between A and k are calculated;if False, k and A have to be same length and apply elementwise production. Default False.</p>
+</div></blockquote>
+</dd></dl>
 
-<dl class="function">
-<dt id="k_seq.model.kinetic.first_order_w_bias">
-<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">first_order_w_bias</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">k</em>, <em class="sig-param">A</em>, <em class="sig-param">alpha</em>, <em class="sig-param">t</em>, <em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.first_order_w_bias" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="k_seq.model.kinetic.to_scaler">
-<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">to_scaler</code><span class="sig-paren">(</span><em class="sig-param">value</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.to_scaler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Try to convert a value to scaler, if possible</p>
+<dl class="py function">
+<dt id="k_seq.model.kinetic.to_scalar">
+<code class="sig-prename descclassname">k_seq.model.kinetic.</code><code class="sig-name descname">to_scalar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.kinetic.to_scalar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to convert a value to scalar, if possible</p>
 </dd></dl>
 
 </div>
 <div class="section" id="module-k_seq.model.pool">
 <span id="k-seq-model-pool-module"></span><h2>k_seq.model.pool module<a class="headerlink" href="#module-k_seq.model.pool" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
+<p>Model for a sequence pool with constituent change from reaction</p>
+<dl class="py class">
 <dt id="k_seq.model.pool.PoolModel">
-<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.pool.</code><code class="sig-name descname">PoolModel</code><span class="sig-paren">(</span><em class="sig-param">count_model</em>, <em class="sig-param">kinetic_model=None</em>, <em class="sig-param">param_table=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.pool.</code><code class="sig-name descname">PoolModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">count_model</span></em>, <em class="sig-param"><span class="n">kinetic_model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">param_table</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">note</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#k_seq.model.ModelBase" title="k_seq.model.ModelBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.model.ModelBase</span></code></a></p>
-<p>Model of a kinetic pool</p>
-<dl class="attribute">
+<p>Model of a kinetic pool,</p>
+<dl class="py attribute">
 <dt id="k_seq.model.pool.PoolModel.kinetic_model">
 <code class="sig-name descname">kinetic_model</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.kinetic_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>input initial pool with parameter and return a reacted pool composition</p>
@@ -327,7 +366,7 @@ if x &lt; 0, output is p0</p>
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="k_seq.model.pool.PoolModel.count_model">
 <code class="sig-name descname">count_model</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.count_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>input pool composition and return a list of counts given total counts or params</p>
@@ -338,7 +377,7 @@ if x &lt; 0, output is p0</p>
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="k_seq.model.pool.PoolModel.kinetic_params">
 <code class="sig-name descname">kinetic_params</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.kinetic_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>list of parameter names for kinetic model</p>
@@ -349,7 +388,7 @@ if x &lt; 0, output is p0</p>
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="k_seq.model.pool.PoolModel.count_params">
 <code class="sig-name descname">count_params</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.count_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>list of parameter names for count model</p>
@@ -360,7 +399,7 @@ if x &lt; 0, output is p0</p>
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="k_seq.model.pool.PoolModel.note">
 <code class="sig-name descname">note</code><a class="headerlink" href="#k_seq.model.pool.PoolModel.note" title="Permalink to this definition">¶</a></dt>
 <dd><p>note for the model</p>
@@ -371,10 +410,10 @@ if x &lt; 0, output is p0</p>
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="k_seq.model.pool.PoolModel.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">count_model</em>, <em class="sig-param">kinetic_model=None</em>, <em class="sig-param">param_table=None</em>, <em class="sig-param">note=None</em>, <em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Construct a pool model with given kinetic models and count_model
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">count_model</span></em>, <em class="sig-param"><span class="n">kinetic_model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">param_table</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">note</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a pool model with given kinetic models and count_model
 :param count_model: model for sequencing counts
 :type count_model: <cite>ModelBase</cite> or <cite>callable</cite>
 :param kinetic_model: model for pool kinetics, no react if not given
@@ -382,14 +421,14 @@ if x &lt; 0, output is p0</p>
 :param **params:</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="k_seq.model.pool.PoolModel.func">
-<code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.func" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.func" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw counts from given parameters</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>reacted amount if not normalized
-counts</p>
+counts for each sequence</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>output sum from kinetic model</p>
@@ -397,56 +436,12 @@ counts</p>
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="k_seq.model.pool.PoolModel.predict">
-<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper over func, can accept parameters to overwrite current ones if exist</p>
+<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.pool.PoolModel.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper over _get_mask, can accept parameters to overwrite current ones if exist</p>
 </dd></dl>
 
-</dd></dl>
-
-</div>
-<div class="section" id="module-k_seq.model">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-k_seq.model" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="k_seq.model.ModelBase">
-<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.</code><code class="sig-name descname">ModelBase</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>base structure for a model
-A model contains following aspects:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>model param estimation: need data, func, params, seed,</p></li>
-<li><p>random variable generator, need params, seed, func</p></li>
-</ul>
-</div></blockquote>
-<p>TODO: simplify ModelBase</p>
-<dl class="method">
-<dt id="k_seq.model.ModelBase.func">
-<code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase.func" title="Permalink to this definition">¶</a></dt>
-<dd><p>model function: params –&gt; prediction</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.ModelBase.nloglikelihood">
-<code class="sig-name descname">nloglikelihood</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase.nloglikelihood" title="Permalink to this definition">¶</a></dt>
-<dd><p>negative log-likelihood value for each observation, parameter –&gt; nloglikelihood</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="k_seq.model.ModelBase.predict">
-<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">**params</em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.model.ModelBase.predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to predict model output</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="k_seq.model.ResultBase">
-<em class="property">class </em><code class="sig-prename descclassname">k_seq.model.</code><code class="sig-name descname">ResultBase</code><a class="headerlink" href="#k_seq.model.ResultBase" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>base structure for a model estimation results
-For now, use Results model in <cite>statsmodel</cite></p>
 </dd></dl>
 
 </div>
@@ -457,6 +452,15 @@ For now, use Results model in <cite>statsmodel</cite></p>
            
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="k_seq.estimate.html" class="btn btn-neutral float-right" title="k_seq.estimator: least squares fitting with bootstrapping" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="k_seq.data.html" class="btn btn-neutral float-left" title="k_seq.data: data preprocessing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>
