@@ -1,6 +1,5 @@
 """
 This module contains the methods used for k-seq dataset analysis
-TODO: combine with seq_data_analyzer as analysis.py
 """
 
 import numpy as np
