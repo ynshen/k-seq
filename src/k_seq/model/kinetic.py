@@ -4,7 +4,6 @@ Notes:
     kinetic models were currently implemented as callable function. It might migrate to `Model` subclass for
       storing parameters, set required parameters, etc
 
-TODO: fix broadcast problem: including broadcast as argument changed the signature for the model function
 """
 
 import numpy as np

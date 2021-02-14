@@ -1,7 +1,4 @@
 """This module contains filters to apply on SeqData
-TODO: add yutility and landscape back
-TODO: simplify code
-TODO: write test cases for filters
 """
 
 from .seq_data import slice_table
@@ -192,40 +189,6 @@ class CustomizedFilter(Filter):
 
     def get_mask(self, target=None, **kwargs):
         return self._get_mask(target, **kwargs)
-
-
-# class FilterPipe(Filter):
-#     """Applies a collection of filters to the object in sequence, Not implemented yet
-#     """
-#
-#     def __init__(self, filters, target=None, axis=0):
-#         if not isinstance(filters, (list, tuple)):
-#             logging.error("`filters` should be a list of Filter instance")
-#         super().__init__()
-#         self.filters = filters
-#         self.axis = axis
-#         self.target = target
-#
-#     def _get_mask_piped(self, target, axis=None):
-#         import numpy as np
-#
-#         axis = update_none(axis, self.axis)
-#         mask = pd.Series(np.repeat(True, target.shape[axis]), index=target.index if axis == 0 else target.column)
-#         for filter in self.filters:
-#             mask = mask & filter.get_mask(target=target, axis=axis)
-#         return mask
-#
-#     @staticmethod
-#     def _get_mask(target, axis, **kwargs):
-#         logging.error('not `_get_mask` but `_get_mask_piped` is implemented for FilterPipe',
-#                       error_type=NotImplementedError)
-#
-#     def get_mask(self, target=None, axis=None, *args, **kwargs):
-#         if target is None:
-#             return self.mask
-#         else:
-#             axis = update_none(axis, self.axis)
-#             return self._get_mask_piped(target=target, axis=axis)
 
 
 class SampleFilter(Filter):

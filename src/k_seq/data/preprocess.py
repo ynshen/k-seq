@@ -41,9 +41,6 @@ def fastq_to_count(fastq_root, output_path='pipeline-output', threads=os.cpu_cou
         join_first (bool): if join before trimming in pandaSeq. Suitable for heavily overlapped paired-end reads.
             Default True.
 
-    Example:
-         TODO: add an example
-
     """
     from ..utility.func_tools import run_subprocess
     cmd = ['fastq-to-counts.sh', '-i', str(fastq_root), '-o', str(output_path), '-T', str(threads)]

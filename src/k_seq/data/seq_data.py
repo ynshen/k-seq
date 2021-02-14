@@ -1,8 +1,6 @@
 """Submodule of `SeqData`, a rich functions class of seq_table for sequencing manipulation This module contains methods
 for data pre-processing from count files to ``CountFile`` for estimator
 For absolute quantification, it accepts absolute amount (e.g. measured by qPCR) or reacted fraction
-TODO:
-  - write output function for each class as JSON file and readable foler
 """
 import numpy as np
 import pandas as pd
@@ -350,13 +348,11 @@ class SeqData(object):
                                       unit=unit))
 
     def to_json(self):
-        """More generalized JSON file
-        TODO: add to_json and from_json
-        """
+        """Save as generalized text files"""
         raise NotImplemented('Saving as json file is not implemented yet')
 
     def from_json(self):
-        """TODO: add json"""
+        """Load from files"""
         raise NotImplemented('Loading from json file is not implemented yet')
 
     def to_pickle(self, path):

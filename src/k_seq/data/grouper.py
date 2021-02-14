@@ -1,6 +1,4 @@
-"""Groupers slice seq_table into groups. E.g. input samples, reacted samples, different concentrations
-TODO: simplify code
-"""
+"""Groupers slice seq_table into groups. E.g. input samples, reacted samples, different concentrations """
 
 from .seq_data import slice_table
 from ..utility.func_tools import AttrScope
@@ -83,7 +81,6 @@ class Grouper(object):
         type 1 seq_table will just return the subtable"""
         return self.get_table(group=group)
 
-    # TODO: simplify the code
     def get_table(self, group=None, target=None, axis=None, remove_zero=False):
         """Return a sub-seq_table from target given group"""
         if target is None:
