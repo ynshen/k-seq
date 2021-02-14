@@ -1,8 +1,5 @@
 """Least-squares fitting for a batch of sequences"""
 
-# TODO: apply positive hash
-# TODO: apply .tar.gz subfolders
-
 from yutility import logging
 from .least_squares import SingleFitter, FitResults, doc_helper
 from ._estimator import Estimator
