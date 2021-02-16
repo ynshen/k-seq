@@ -37,7 +37,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Getting Started Tutorial" href="getting_started.html" />
-    <link rel="prev" title="k-seq: a package for kinetic measurements with high throughput seqeucning" href="index.html" /> 
+    <link rel="prev" title="k-seq: a package for kinetic measurements with high throughput sequencing" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -83,11 +83,12 @@
             
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#install-from-pip">Install from pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#option-1-create-a-new-conda-environment">Option 1: create a new <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#option-2-install-through-pip">Option 2: install through <code class="docutils literal notranslate"><span class="pre">pip</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><cite>k-seq</cite> package content</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a></li>
 </ul>
 
             
@@ -154,9 +155,27 @@
             
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="install-from-pip">
-<h2>Install from pip<a class="headerlink" href="#install-from-pip" title="Permalink to this headline">¶</a></h2>
-<p>should include installation from both parts</p>
+<div class="section" id="option-1-create-a-new-conda-environment">
+<h2>Option 1: create a new <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment<a class="headerlink" href="#option-1-create-a-new-conda-environment" title="Permalink to this headline">¶</a></h2>
+<p>We recommend to use <a class="reference external" href="https://anaconda.org/">Anaconda</a> to create a separate <cite>k-seq</cite> environment.
+Or a minimal installation: <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>.</p>
+<p>To crate <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> environment once <cite>conda</cite> in installed:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># change directory to downloaded repo</span>
+<span class="nb">cd</span> /to/k-seq-git-repo
+<span class="c1"># create a k-seq environment</span>
+conda create -f environment.yml
+<span class="c1"># activate k-seq environment</span>
+conda activate k-seq
+</pre></div>
+</div>
+</div>
+<div class="section" id="option-2-install-through-pip">
+<h2>Option 2: install through <code class="docutils literal notranslate"><span class="pre">pip</span></code><a class="headerlink" href="#option-2-install-through-pip" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> can also install through <code class="docutils literal notranslate"><span class="pre">pip</span></code> (<a class="reference external" href="https://pypi.org/project/k-seq/">https://pypi.org/project/k-seq/</a>)</p>
+<p>In your python environment, install <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> and dependencies</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install k-seq
+</pre></div>
+</div>
 </div>
 </div>
 
@@ -171,7 +190,7 @@
         <a href="getting_started.html" class="btn btn-neutral float-right" title="Getting Started Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="index.html" class="btn btn-neutral float-left" title="k-seq: a package for kinetic measurements with high throughput seqeucning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral float-left" title="k-seq: a package for kinetic measurements with high throughput sequencing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

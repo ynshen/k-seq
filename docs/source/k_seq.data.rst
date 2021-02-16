@@ -1,5 +1,5 @@
-k_seq.data: data preprocessing
-=============================
+``k_seq.data``: data preprocessing
+===================================
 
 .. automodule:: k_seq.data
    :members:
@@ -7,29 +7,32 @@ k_seq.data: data preprocessing
    :show-inheritance:
 
 
-k\_seq.data.count\_data
+k\_seq.data.preprocess
 ------------------------------
 
-.. automodule:: k_seq.data.count_data
+.. automodule:: k_seq.data.preprocess
    :members:
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.count\_file
-------------------------------
 
-.. automodule:: k_seq.data.count_file
-   :members:
-   :undoc-members:
-   :show-inheritance:
+k\_seq.data.seq\_data
+-----------------------------
 
-k\_seq.data.datasets
----------------------------
+.. automodule:: k_seq.data.seq_data
+  :members:
+  :undoc-members:
+  :show-inheritance:
 
-.. automodule:: k_seq.data.datasets
-   :members:
-   :undoc-members:
-   :show-inheritance:
+
+k\_seq.data.seq\_data\_analyzer
+-----------------------------
+
+.. automodule:: k_seq.data.seq_data_analyzer
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
 
 k\_seq.data.filters module
 --------------------------
@@ -39,6 +42,16 @@ k\_seq.data.filters module
    :undoc-members:
    :show-inheritance:
 
+
+ k\_seq.data.transform module
+ ----------------------------
+
+ .. automodule:: k_seq.data.transform
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 k\_seq.data.grouper module
 --------------------------
 
@@ -47,28 +60,19 @@ k\_seq.data.grouper module
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.io module
----------------------
+.. k\_seq.data.landscape module
+.. ----------------------------
+..
+.. .. automodule:: k_seq.data.landscape
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
-.. automodule:: k_seq.data.io
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
-k\_seq.data.landscape module
-----------------------------
+k\_seq.data.variant\_pool module
+-----------------------
 
-.. automodule:: k_seq.data.landscape
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. k_seq.data.seq_data
-
-k\_seq.data.seq\_data
------------------------------
-
-.. automodule:: k_seq.data.seq_data
+.. automodule:: k_seq.data.variant_pool
    :members:
    :undoc-members:
    :show-inheritance:
@@ -82,18 +86,11 @@ k\_seq.data.simu module
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.transform module
-----------------------------
 
-.. automodule:: k_seq.data.transform
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-k\_seq.data.visualizer module
+k\_seq.data.visualzation module
 -----------------------------
 
-.. automodule:: k_seq.data.visualizer
+.. automodule:: k_seq.data.visualzation
    :members:
    :undoc-members:
    :show-inheritance:

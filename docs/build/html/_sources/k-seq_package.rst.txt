@@ -1,8 +1,8 @@
 *****************
-``k-seq`` package content
+``k-seq`` package
 *****************
 
-``k-seq`` package contains following modules
+``k-seq`` package contains following modules:
 
 .. toctree::
    :maxdepth: 1

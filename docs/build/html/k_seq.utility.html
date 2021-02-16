@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k_seq.utility &mdash; k-seq 0.4.0 documentation</title>
+  <title>k_seq.utility: miscellaneous utility functions &mdash; k-seq 0.4.0 documentation</title>
   
 
   
@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="_static/my_theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="k_seq.estimator: least squares fitting with bootstrapping" href="k_seq.estimate.html" /> 
+    <link rel="prev" title="k_seq.estimate: least squares fitting" href="k_seq.estimate.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -83,19 +83,14 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package content</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html">k_seq.data: data preprocessing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="k_seq.model.html">k_seq.model: kinetics and pool models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="k_seq.estimate.html">k_seq.estimator: least squares fitting with bootstrapping</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">k_seq.utility</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#k-seq-utility-doc-helper-module">k_seq.utility.doc_helper module</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html"><code class="docutils literal notranslate"><span class="pre">k_seq.data</span></code>: data preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.model.html"><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code>: kinetics and pool models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.estimate.html"><code class="docutils literal notranslate"><span class="pre">k_seq.estimate</span></code>: least squares fitting</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#module-k_seq.utility.file_tools">k_seq.utility.file_tools module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-k_seq.utility.func_tools">k_seq.utility.func_tools module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.utility.log">k_seq.utility.log module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-k_seq.utility.plot_tools">k_seq.utility.plot_tools module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.utility">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -145,9 +140,9 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
-          <li><a href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package content</a> &raquo;</li>
+          <li><a href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a> &raquo;</li>
         
-      <li>k_seq.utility</li>
+      <li><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -166,30 +161,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="k-seq-utility">
-<h1>k_seq.utility<a class="headerlink" href="#k-seq-utility" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#data-preprocessing">Data preprocessing</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="getting_started.html#join-paired-end-reads-using-easydiver">Join paired-end reads using <code class="docutils literal notranslate"><span class="pre">EasyDIVER</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="getting_started.html#load-count-files">Load count files</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#sequence-quantification">Sequence quantification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#model-fitting-with-bootstrapping">Model fitting with bootstrapping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#additional-analysis">Additional analysis</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="k-seq-utility-doc-helper-module">
-<h2>k_seq.utility.doc_helper module<a class="headerlink" href="#k-seq-utility-doc-helper-module" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-k_seq.utility.file_tools">
+  <div class="section" id="k-seq-utility-miscellaneous-utility-functions">
+<h1><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions<a class="headerlink" href="#k-seq-utility-miscellaneous-utility-functions" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-k_seq.utility"></span><div class="section" id="module-k_seq.utility.file_tools">
 <span id="k-seq-utility-file-tools-module"></span><h2>k_seq.utility.file_tools module<a class="headerlink" href="#module-k_seq.utility.file_tools" title="Permalink to this headline">¶</a></h2>
 <dl class="py function">
 <dt id="k_seq.utility.file_tools.check_dir">
@@ -411,10 +385,6 @@ only file name will be returned; if file_root contains multiple strings, full pa
 </dd></dl>
 
 </div>
-<div class="section" id="module-k_seq.utility.log">
-<span id="k-seq-utility-log-module"></span><h2>k_seq.utility.log module<a class="headerlink" href="#module-k_seq.utility.log" title="Permalink to this headline">¶</a></h2>
-<p>Utility function for control logging</p>
-</div>
 <div class="section" id="module-k_seq.utility.plot_tools">
 <span id="k-seq-utility-plot-tools-module"></span><h2>k_seq.utility.plot_tools module<a class="headerlink" href="#module-k_seq.utility.plot_tools" title="Permalink to this headline">¶</a></h2>
 <p>This module contains project level utility functions</p>
@@ -617,9 +587,6 @@ implemented with x as the innest dimension</p></li>
 </dd></dl>
 
 </div>
-<div class="section" id="module-k_seq.utility">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-k_seq.utility" title="Permalink to this headline">¶</a></h2>
-</div>
 </div>
 
 
@@ -631,7 +598,7 @@ implemented with x as the innest dimension</p></li>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
       
-        <a href="k_seq.estimate.html" class="btn btn-neutral float-left" title="k_seq.estimator: least squares fitting with bootstrapping" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="k_seq.estimate.html" class="btn btn-neutral float-left" title="k_seq.estimate: least squares fitting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

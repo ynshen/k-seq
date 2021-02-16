@@ -1,4 +1,4 @@
-k_seq.model: kinetics and pool models
+``k_seq.model``: kinetics and pool models
 ====================
 .. automodule:: k_seq.model
    :members:

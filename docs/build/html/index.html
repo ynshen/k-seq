@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k-seq: a package for kinetic measurements with high throughput seqeucning &mdash; k-seq 0.4.0 documentation</title>
+  <title>k-seq: a package for kinetic measurements with high throughput sequencing &mdash; k-seq 0.4.0 documentation</title>
   
 
   
@@ -83,7 +83,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package content</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a></li>
 </ul>
 
             
@@ -129,7 +129,7 @@
     
       <li><a href="#">Docs</a> &raquo;</li>
         
-      <li>k-seq: a package for kinetic measurements with high throughput seqeucning</li>
+      <li><code class="docutils literal notranslate"><span class="pre">k-seq</span></code>: a package for kinetic measurements with high throughput sequencing</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -148,14 +148,21 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="k-seq-a-package-for-kinetic-measurements-with-high-throughput-seqeucning">
-<h1>k-seq: a package for kinetic measurements with high throughput seqeucning<a class="headerlink" href="#k-seq-a-package-for-kinetic-measurements-with-high-throughput-seqeucning" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="k-seq-a-package-for-kinetic-measurements-with-high-throughput-sequencing">
+<h1><code class="docutils literal notranslate"><span class="pre">k-seq</span></code>: a package for kinetic measurements with high throughput sequencing<a class="headerlink" href="#k-seq-a-package-for-kinetic-measurements-with-high-throughput-sequencing" title="Permalink to this headline">¶</a></h1>
+<p>Welcome to the documentation for <code class="docutils literal notranslate"><span class="pre">k-seq</span></code>, a python package to analyze the data from kinetic measurement using
+high throughput sequencing. It contains the function to process the FASTQ reads to a count table, preprocess
+count table, quantify the extend of reaction, and fitting the data into kinetic model with bootstrapping to quantify
+the uncertainty.</p>
+<p>Please check <a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> to set up the environment to run <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package. For quick start, check
+<a class="reference internal" href="getting_started.html"><span class="doc">Getting Started Tutorial</span></a>.</p>
 <div class="section" id="table-of-content">
 <h2>Table of content<a class="headerlink" href="#table-of-content" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#install-from-pip">Install from pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#option-1-create-a-new-conda-environment">Option 1: create a new <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#option-2-install-through-pip">Option 2: install through <code class="docutils literal notranslate"><span class="pre">pip</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a><ul>
@@ -165,22 +172,23 @@
 <li class="toctree-l2"><a class="reference internal" href="getting_started.html#additional-analysis">Additional analysis</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package content</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html">k_seq.data: data preprocessing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="k_seq.model.html">k_seq.model: kinetics and pool models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="k_seq.estimate.html">k_seq.estimator: least squares fitting with bootstrapping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="k_seq.utility.html">k_seq.utility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html"><code class="docutils literal notranslate"><span class="pre">k_seq.data</span></code>: data preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.model.html"><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code>: kinetics and pool models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.estimate.html"><code class="docutils literal notranslate"><span class="pre">k_seq.estimate</span></code>: least squares fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.utility.html"><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions</a></li>
 </ul>
 </li>
 </ul>
 </div>
 </div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="api-reference">
+<h2>API reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
+<li><p><a class="reference internal" href="k-seq_package.html"><span class="doc">k-seq package</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 </ul>
+</div>
 </div>
 
 
