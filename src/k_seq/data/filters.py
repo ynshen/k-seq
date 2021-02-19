@@ -1,4 +1,5 @@
 """This module contains filters to apply on SeqData
+TODO: add yutility and landscape back
 TODO: simplify code
 TODO: write test cases for filters
 """
@@ -9,13 +10,16 @@ import numpy as np
 from abc import ABC, abstractmethod
 from yutility import logging
 from ..utility.func_tools import update_none
+from . import axis_mapper
 
 
 class Filter(ABC):
     """Template class for filters
 
-    ``Filters`` filter a ``target`` seq_table by index or column to another seq_table, similar to ``Transformer``, but by
-        design do not change the content in the seq_table. To write a filter, one should:
+    ``Filters`` subset a ``target`` table (SeqTable or pd.DataFrame) by index or column to another table without changing
+    the content of the table. See below for some prebuilt filters.
+
+    To write (subclass) a customized filter:
 
         - indicate default ``axis`` in ``__init__`` and store as an attribute, indicating which axis you are filtering,
         0 for index (row), 1 for columns
@@ -28,14 +32,16 @@ class Filter(ABC):
         it should only need to take a ``target`` argument, or without argument, returns ``seq_data.mask`` corresponding to
         ``seq_data.target``
 
-    Note: please assign ``target`` at the end of __init__ as assigning ``target`` will do filtering and update
+    Note:
+        Some of the filters are expensive to calculate on large tables and we cache the mask for these filters.
+        please assign ``target`` at the end of __init__ as assigning ``target`` will do filtering and update
         ``self.mask``
     """
 
     def __init__(self, target=None, axis=0):
         """A filter should contains at least axis info for filtering
         """
-        self.axis = axis
+        self.axis = axis_mapper(axis)
         self.mask = None
         self.target = target
 
@@ -58,7 +64,7 @@ class Filter(ABC):
         """
         if target is None:
             return self.mask
-        axis = update_none(axis, self.axis)
+        axis = axis_mapper(update_none(axis, self.axis))
         return self._get_mask(target, axis, **kwargs)
 
     @classmethod
@@ -188,44 +194,44 @@ class CustomizedFilter(Filter):
         return self._get_mask(target, **kwargs)
 
 
-class FilterPipe(Filter):
-    """Applies a collection of filters to the object in sequence, Not implemented yet
-    """
-
-    def __init__(self, filters, target=None, axis=0):
-        if not isinstance(filters, (list, tuple)):
-            logging.error("`filters` should be a list of Filter instance")
-        super().__init__()
-        self.filters = filters
-        self.axis = axis
-        self.target = target
-
-    def _get_mask_piped(self, target, axis=None):
-        import numpy as np
-
-        axis = update_none(axis, self.axis)
-        mask = pd.Series(np.repeat(True, target.shape[axis]), index=target.index if axis == 0 else target.column)
-        for filter in self.filters:
-            mask = mask & filter.get_mask(target=target, axis=axis)
-        return mask
-
-    @staticmethod
-    def _get_mask(target, axis, **kwargs):
-        logging.error('not `_get_mask` but `_get_mask_piped` is implemented for FilterPipe',
-                      error_type=NotImplementedError)
-
-    def get_mask(self, target=None, axis=None, *args, **kwargs):
-        if target is None:
-            return self.mask
-        else:
-            axis = update_none(axis, self.axis)
-            return self._get_mask_piped(target=target, axis=axis)
+# class FilterPipe(Filter):
+#     """Applies a collection of filters to the object in sequence, Not implemented yet
+#     """
+#
+#     def __init__(self, filters, target=None, axis=0):
+#         if not isinstance(filters, (list, tuple)):
+#             logging.error("`filters` should be a list of Filter instance")
+#         super().__init__()
+#         self.filters = filters
+#         self.axis = axis
+#         self.target = target
+#
+#     def _get_mask_piped(self, target, axis=None):
+#         import numpy as np
+#
+#         axis = update_none(axis, self.axis)
+#         mask = pd.Series(np.repeat(True, target.shape[axis]), index=target.index if axis == 0 else target.column)
+#         for filter in self.filters:
+#             mask = mask & filter.get_mask(target=target, axis=axis)
+#         return mask
+#
+#     @staticmethod
+#     def _get_mask(target, axis, **kwargs):
+#         logging.error('not `_get_mask` but `_get_mask_piped` is implemented for FilterPipe',
+#                       error_type=NotImplementedError)
+#
+#     def get_mask(self, target=None, axis=None, *args, **kwargs):
+#         if target is None:
+#             return self.mask
+#         else:
+#             axis = update_none(axis, self.axis)
+#             return self._get_mask_piped(target=target, axis=axis)
 
 
 class SampleFilter(Filter):
-    """Filter samples based on index name"""
+    """Filter samples based on name"""
 
-    def __init__(self, target=None, samples_to_keep=None, samples_to_remove=None, axis=1):
+    def __init__(self, samples_to_keep=None, samples_to_remove=None, axis=1):
         super().__init__()
         self.samples_to_keep = samples_to_keep
         self.samples_to_remove = samples_to_remove
@@ -361,7 +367,7 @@ class SeqLengthFilter(Filter):
 class NoAmbiguityFilter(Filter):
     """Filter out sequence with ambiguity nucleotides: N"""
 
-    def __init__(self, target, axis=0):
+    def __init__(self, target=None, axis=0):
 
         super().__init__(target, axis)
 

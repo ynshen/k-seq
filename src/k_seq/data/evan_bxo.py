@@ -1,4 +1,5 @@
-"""Code for Evan's multi-substrates BXO k-seq experiments"""
+"""Private
+Code for Evan's multi-substrates BXO k-seq experiments"""
 
 from yutility import logging
 import pandas as pd
