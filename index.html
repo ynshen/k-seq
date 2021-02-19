@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k-seq: kinetic sequencing data analysis &mdash; k-seq 0.1 documentation</title>
+  <title>k-seq: a package for kinetic measurements with high throughput sequencing &mdash; k-seq 0.4.0 documentation</title>
   
 
   
@@ -20,21 +20,11 @@
   <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'./',
-              VERSION:'0.1',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -43,9 +33,10 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/my_theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="k_seq.data" href="api/k_seq.data.html" /> 
+    <link rel="next" title="Installation" href="installation.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -68,10 +59,6 @@
           
             
             
-              <div class="version">
-                0.1
-              </div>
-            
           
 
           
@@ -93,11 +80,10 @@
               
             
             
-              <p class="caption"><span class="caption-text">Package Content</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="api/k_seq.data.html">k_seq.data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/k_seq.fitting.html">k_seq.fitting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/k_seq.utility.html">k_seq.utility</a></li>
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a></li>
 </ul>
 
             
@@ -143,12 +129,14 @@
     
       <li><a href="#">Docs</a> &raquo;</li>
         
-      <li>k-seq: kinetic sequencing data analysis</li>
+      <li><code class="docutils literal notranslate"><span class="pre">k-seq</span></code>: a package for kinetic measurements with high throughput sequencing</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
         
       </li>
     
@@ -160,88 +148,52 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="k-seq-kinetic-sequencing-data-analysis">
-<h1>k-seq: kinetic sequencing data analysis<a class="headerlink" href="#k-seq-kinetic-sequencing-data-analysis" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
-<p>This is the developing package for <code class="docutils literal"><span class="pre">k-seq</span></code> with limited functions.
-To use this package, please clone the repo to <code class="docutils literal"><span class="pre">/your/local/dir/k-seq</span></code> by</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clone</span> <span class="n">git</span><span class="nd">@github</span><span class="o">.</span><span class="n">com</span><span class="p">:</span><span class="n">ynshen</span><span class="o">/</span><span class="n">k</span><span class="o">-</span><span class="n">seq</span><span class="o">.</span><span class="n">git</span> <span class="o">/</span><span class="n">your</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="n">dirctory</span><span class="o">/</span>
-</pre></div>
-</div>
-<p>You will be asked for your github.com credentials. <strong>Only Collaborator can download the package during the develop.</strong></p>
-<p>Add the package directory on top of the python <code class="docutils literal"><span class="pre">sys.path</span></code> to import package for each script or python session.
-Example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;/your/local/dirctory/k-seq/src/&#39;</span><span class="p">)</span>
-<span class="kn">import</span> <span class="nn">k_seq.data.io</span> <span class="kn">as</span> <span class="nn">io</span>
-</pre></div>
-</div>
-<p>To update to newer version of <code class="docutils literal"><span class="pre">k-seq</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">git</span> <span class="n">pull</span>
-</pre></div>
-</div>
-<p>As the repo is updated very frequently during the develop, always <code class="docutils literal"><span class="pre">pull</span></code> before use it.</p>
-<p>Please let me know if there is any bug.</p>
-<p>Documentation for each module and functions please see below.</p>
-<p>[More introduction of project coming up]</p>
-<div class="admonition-todo admonition" id="index-0">
-<p class="first admonition-title">Todo</p>
-<ul class="last simple">
-<li>Add content on package source file documents</li>
-<li>Add stand-alone CLI scripts for core functions (e.g. <code class="docutils literal"><span class="pre">convert_count_to_seq_table.py</span></code>)</li>
-<li>Package the source file to install k-seq from <code class="docutils literal"><span class="pre">pip</span> <span class="pre">k-seq</span></code></li>
-</ul>
-</div>
-</div>
-<div class="section" id="module-k_seq">
-<span id="api"></span><h2>API<a class="headerlink" href="#module-k_seq" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal"><span class="pre">k-seq</span></code> package includes the API access to integrate <code class="docutils literal"><span class="pre">k-seq</span></code> functions into your customized scripts. Please see
-Package Content for details</p>
-<div class="admonition-todo admonition" id="index-1">
-<p class="first admonition-title">Todo</p>
-<ul class="last">
-<li><p class="first">Add content to package intro above</p>
-</li>
-<li><p class="first">Rewrite docstrings of Class and functions into Google Style</p>
-<dl class="docutils">
-<dt>Google style docstring example:</dt>
-<dd><p class="first last"><a class="reference external" href="https://www.sphinx-doc.org/en/1.5/ext/example_google.html">https://www.sphinx-doc.org/en/1.5/ext/example_google.html</a></p>
-</dd>
-</dl>
-</li>
-<li><p class="first">Add remained analysis functions into packages</p>
-</li>
-</ul>
-</div>
+  <div class="section" id="k-seq-a-package-for-kinetic-measurements-with-high-throughput-sequencing">
+<h1><code class="docutils literal notranslate"><span class="pre">k-seq</span></code>: a package for kinetic measurements with high throughput sequencing<a class="headerlink" href="#k-seq-a-package-for-kinetic-measurements-with-high-throughput-sequencing" title="Permalink to this headline">¶</a></h1>
+<p>Welcome to the documentation for <code class="docutils literal notranslate"><span class="pre">k-seq</span></code>, a python package to analyze the data from <em>k</em>-Seq (a kinetic assay using
+high throughput sequencing). It contains the function to process the FASTQ reads to a count table, preprocess
+count table, quantify the extend of reaction, and fitting the data into kinetic model with bootstrapping to quantify
+the uncertainty.</p>
+<p>Please check <a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> to set up the environment to run <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package. For quick start, check
+<a class="reference internal" href="getting_started.html"><span class="doc">Getting Started Tutorial</span></a>.</p>
+<div class="section" id="table-of-content">
+<h2>Table of content<a class="headerlink" href="#table-of-content" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Package Content</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api/k_seq.data.html">k_seq.data</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.data.html#id1">k_seq.data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.data.html#module-k_seq.data.pre_processing">k_seq.data.pre_processing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.data.html#module-k_seq.data.analysis">k_seq.data.analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.data.html#module-k_seq.data.io">k_seq.data.io</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.data.html#k-seq-data-simu">k_seq.data.simu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#python-only-installation">Python-only installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#complete-installation">Complete installation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api/k_seq.fitting.html">k_seq.fitting</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.fitting.html#module-k_seq.fitting.fitting">k_seq.fitting.fitting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/k_seq.fitting.html#module-k_seq.fitting.analysis">k_seq.fitting.analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#data-preprocessing">Data preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#sequence-quantification">Sequence quantification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#model-fitting-with-bootstrapping">Model fitting with bootstrapping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#additional-analysis">Additional analysis</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api/k_seq.utility.html">k_seq.utility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html"><code class="docutils literal notranslate"><span class="pre">k_seq.data</span></code>: data preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.model.html"><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code>: kinetics and pool models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.estimate.html"><code class="docutils literal notranslate"><span class="pre">k_seq.estimate</span></code>: least squares fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.utility.html"><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
-<div class="section" id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="api-reference">
+<h2>API reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+<li><p><a class="reference internal" href="k-seq_package.html"><span class="doc">k-seq package</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 </ul>
 </div>
+</div>
+<div class="section" id="contact">
+<h1>Contact<a class="headerlink" href="#contact" title="Permalink to this headline">¶</a></h1>
+<p>For any question and issues: <a class="reference external" href="https://github.com/ichen-lab-ucsb/k-seq/issues">issue report</a>
+or Yuning Shen (<a class="reference external" href="mailto:yuningshen&#37;&#52;&#48;ucsb&#46;edu">yuningshen<span>&#64;</span>ucsb<span>&#46;</span>edu</a>)</p>
 </div>
 
 
@@ -252,7 +204,7 @@ Package Content for details</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="api/k_seq.data.html" class="btn btn-neutral float-right" title="k_seq.data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
@@ -262,7 +214,7 @@ Package Content for details</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Yuning Shen
+        &copy; Copyright 2020, Yuning Shen
 
     </p>
   </div>

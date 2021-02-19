@@ -1,63 +1,36 @@
-.. k-seq documentation master file, created by Sphinx
+.. k-seq documentation master file, created by
+   sphinx-quickstart on Sun Feb 16 22:19:53 2020.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
 
-===================================================
-k-seq: kinetic sequencing data analysis
-===================================================
+``k-seq``: a package for kinetic measurements with high throughput sequencing
+===========================================================================
 
-Introduction
-=============
-This is the developing package for ``k-seq`` with limited functions.
-To use this package, please clone the repo to ``/your/local/dir/k-seq`` by
+Welcome to the documentation for ``k-seq``, a python package to analyze the data from *k*-Seq (a kinetic assay using
+high throughput sequencing). It contains the function to process the FASTQ reads to a count table, preprocess
+count table, quantify the extend of reaction, and fitting the data into kinetic model with bootstrapping to quantify
+the uncertainty.
 
->>> clone git@github.com:ynshen/k-seq.git /your/local/dirctory/
+Please check :doc:`installation` to set up the environment to run ``k-seq`` package. For quick start, check
+:doc:`getting_started`.
 
-You will be asked for your github.com credentials. **Only Collaborator can download the package during the develop.**
-
-Add the package directory on top of the python ``sys.path`` to import package for each script or python session.
-Example:
-
-.. code-block:: python
-
-   import sys
-   sys.path.insert(0, '/your/local/dirctory/k-seq/src/')
-   import k_seq.data.io as io
-
-
-To update to newer version of ``k-seq``:
-
->>> git pull
-
-As the repo is updated very frequently during the develop, always ``pull`` before use it.
-
-Please let me know if there is any bug.
-
-Documentation for each module and functions please see below.
-
-[More introduction of project coming up]
-
-.. todo::
-
-   - Add content on package source file documents
-   - Add stand-alone CLI scripts for core functions (e.g. ``convert_count_to_seq_table.py``)
-   - Package the source file to install k-seq from ``pip k-seq``
-
-
-API
-=============
-.. automodule:: k_seq
-
+Table of content
+-----------------
 .. toctree::
    :maxdepth: 2
-   :caption: Package Content
-   :glob:
 
-   api/k_seq.data
-   api/k_seq.fitting
-   api/k_seq.utility
+   installation
+   getting_started
+   k-seq_package
 
-Indices and tables
-=====
 
-* :ref:`genindex`
+API reference
+-------------------
+* :doc:`k-seq_package`
 * :ref:`modindex`
-* :ref:`search`
+
+
+Contact
+==========
+For any question and issues: `issue report <https://github.com/ichen-lab-ucsb/k-seq/issues>`_
+or Yuning Shen (yuningshen@ucsb.edu)
