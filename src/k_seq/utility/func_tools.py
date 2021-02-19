@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import subprocess
+import os
 from yutility import logging
 
 
@@ -149,9 +151,21 @@ def param_to_dict(key_list, **kwargs):
     return {key:parse_args(kwargs, key, ix) for ix,key in enumerate(key_list)}
 
 
-
 def check_attr_value(obj, **attr):
     for name, value in attr.items():
         if value is None:
             attr[name] = getattr(obj, name)
     return attr
+
+
+def run_subprocess(cmd, name=None, **kwargs):
+    if name is None:
+        name = cmd[0]
+    logging.info(f"Running {name}...")
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=os.environ, **kwargs)
+    logging.info('Output:')
+    while True:
+        output = p.stdout.readline()
+        if not output:
+            break
+        logging.info(output)

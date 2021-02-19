@@ -5,8 +5,11 @@ from .least_squares import SingleFitter, FitResults, doc_helper
 from ._estimator import Estimator
 import numpy as np
 import pandas as pd
+import ctypes
 from ..utility.file_tools import check_dir, read_json, dump_json, dump_pickle, read_pickle
 from pathlib import Path
+
+info = logging.info
 
 __all__ = ['BatchFitter', 'BatchFitResults']
 
@@ -241,7 +244,9 @@ class BatchFitter(Estimator):
         """De-duplicate rows before fitting"""
 
         def hash_series(row):
-            return hash(tuple(row))
+            """Return a positive hash value"""
+
+            return ctypes.c_size_t(hash(tuple(row)))
 
         self._y_dataframe_dup = self.y_dataframe.copy()
         if self.seq_to_fit is not None:
@@ -417,18 +422,25 @@ class BatchFitResults:
             seq_to_hash = self._bs_record
 
         if seq is None:
-            return pd.Series(seq_to_hash)
+            return seq_to_hash
 
-        if self.result_path.joinpath('seqs').exists():
-            logging.info(f"load result from {seq_to_hash[seq]}.json")
-            result = FitResults.from_json(self.result_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
-        elif self.result_path.joinpath('seqs.tar.gz').exists():
-            try:
-                result = FitResults.from_json(json_path=f'seqs/{seq_to_hash[seq]}.json',
-                                              tarfile=self.result_path.joinpath('seqs.tar.gz'))
-            except:
-                result = FitResults.from_json(json_path=f'results/seqs/{seq_to_hash[seq]}.json',
-                                              tarfile=self.result_path.joinpath('seqs.tar.gz'))
+        if isinstance(seq_to_hash[seq], (list, tuple)):
+            # new hierarchical format
+            tg_ix, hash_ix = seq_to_hash[seq]
+            result = FitResults.from_json(json_path=f'{hash_ix}.json',
+                                          tarfile=self.result_path.joinpath('seqs', f'{tg_ix}.tar.gz'))
+        else:
+            # old format
+            if self.result_path.joinpath('seqs', f"{seq_to_hash[seq]}.json").exists():
+                logging.info(f"load result from {seq_to_hash[seq]}.json")
+                result = FitResults.from_json(self.result_path.joinpath('seqs', f'{seq_to_hash[seq]}.json'))
+            elif self.result_path.joinpath('seqs.tar.gz').exists():
+                try:
+                    result = FitResults.from_json(json_path=f'seqs/{seq_to_hash[seq]}.json',
+                                                  tarfile=self.result_path.joinpath('seqs.tar.gz'))
+                except:
+                    result = FitResults.from_json(json_path=f'results/seqs/{seq_to_hash[seq]}.json',
+                                                  tarfile=self.result_path.joinpath('seqs.tar.gz'))
 
         if result.data.x_data is None and self.data.y_dataframe is not None:
             # add from data attribute
@@ -515,9 +527,6 @@ class BatchFitResults:
              bs_record (bool): if output bs_record, default True
              conv_record (bool): if output conv_record, default True
         """
-        from ..utility.file_tools import dump_pickle
-        from pathlib import Path
-
         check_dir(Path(output_dir).parent)
         data_to_dump = {'summary': self.summary}
         if bs_record:
@@ -576,24 +585,31 @@ class BatchFitResults:
     @classmethod
     def from_json(cls, path_to_folder, estimator=None, model=None, x_data=None, y_dataframe=None, sigma=None):
         """Load results from folder of results with json format"""
-
         result = cls(estimator=estimator, model=model, x_data=x_data, y_dataframe=y_dataframe, sigma=sigma)
         path_to_folder = Path(path_to_folder)
+        info(f'loading data from {str(path_to_folder)}...')
         if path_to_folder.joinpath('summary.csv').exists():
             result.summary = pd.read_csv(path_to_folder.joinpath('summary.csv'), index_col=0)
         elif path_to_folder.joinpath('summary.json').exists():
             result.summary = pd.read_json(path_to_folder.joinpath('summary.json'))
+            result.summary.index.name = 'seq'
 
         if path_to_folder.joinpath('seqs').exists():
+            info("'seqs' folder found" )
             seq_to_hash = read_json(path_to_folder.joinpath('seqs', 'seq_to_hash.json'))
         elif path_to_folder.joinpath('seqs.tar.gz').exists():
+            # for previous saving formats
             import tarfile
+            info("'seqs.tar.gz' found" )
             with tarfile.open(path_to_folder.joinpath('seqs.tar.gz'), mode='r:gz') as tf:
                 import json
                 try:
                     seq_to_hash = json.load(tf.extractfile('seqs/seq_to_hash.json'))
                 except:
                     seq_to_hash = json.load(tf.extractfile('results/seqs/seq_to_hash.json'))
+        else:
+            logging.warning("'seqs' folder or 'seqs.tar.gz' not found - no individual sequence fitting results loaded")
+            seq_to_hash = None
 
         result._bs_record = seq_to_hash
         result._conv_record = seq_to_hash

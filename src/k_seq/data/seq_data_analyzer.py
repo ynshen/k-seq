@@ -1,8 +1,4 @@
-
-"""
-todo:
-  - convert spike-in vis to the spike-in normalizer?
-
+"""Functions for SeqData and SeqTable analysis
 """
 
 from .seq_data import SeqData, SeqTable

@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This is a pipeline for joining sequence reads and extracting primers
-# by Sam Verbanic and Celia Blanco
-# See EasyDIVER: https://github.com/ichen-lab-ucsb/EasyDIVER for published version
+# This is pipeline.protocol.v3 for joining sequence reads, extracting primers, pooling samples, and counting unique
+#   sequences by Sam Verbanic and Celia Blanco
+# See EasyDIVER: https://github.com/ichen-lab-ucsb/EasyDIVER for updated version
 # contact: samuel.verbanic@lifesci.ucsb.edu or cblanco@chem.ucsb.edu
 
-# this version is updated by Yuning Shen (yuningshen@ucsb.edu) with
-#   add "-c" to use completely_miss_the_point in pandaSeq joining
+# this version is updated by Yuning Shen (yuningshen@ucsb.edu):
+#   add "-c" to use completely_miss_the_point:0 in pandaSeq joining
 #   add "-a" to strip the primers after assembly in pandaSeq joining, for paired-end reads with heavily overlapped region
 
 # Dependencies
@@ -17,11 +17,19 @@
 	# seqkit
 	# bbmap
 
-usage="USAGE: bash proto.pipeline.v3.sh -i [-o -p -q -r -T -h -c -a]
+prog="This is a pipeline for joining sequence reads and extracting primers by Sam Verbanic and Celia Blanco
+See EasyDIVER: https://github.com/ichen-lab-ucsb/EasyDIVER for published version
+
+This version (proto.pipeline.v3) is an older version modified by Yuning Shen (yuningshen@ucsb.edu):
+  Added '-c' option to use completely_miss_the_point:0 in pandaSeq joining
+  Added '-a' option to strip the primers after assembly in pandaSeq joining, for paired-end reads with heavily overlapped region
+"
+
+usage="USAGE: bash fastq-to-counts.sh -i [-o -p -q -r -T -h -c -a]
 where:
 	REQUIRED
         -i input directory filepath
-        
+
 	OPTIONAL
         -o output directory filepath
         -p forward primer sequence for extraction
@@ -29,8 +37,8 @@ where:
         -r retain individual lane outputs
         -T # of threads
         -h prints this friendly message
-        -c use completely_miss_the_point in pandaSeq joining
-        -a strip the primers after assembly in pandaSeq joining for paried-end reads with heavily overlapped region. Slower"
+        -c use completely_miss_the_point:0 in pandaSeq joining
+        -a strip the primers after assembly in pandaSeq joining for pair-end reads with heavily overlapped region. Slower"
 
 # set home directory
 hdir=$(pwd)
@@ -41,7 +49,7 @@ do
   case "${option}" in
     h) helpm="TRUE"
       printf "%$(tput cols)s"|tr ' ' '#'
-	    echo "$usage"
+	    echo "$prog$usage"
 	    printf "%$(tput cols)s"|tr ' ' '#'
 	    exit 1;;
     i) inopt=${OPTARG};;
@@ -62,7 +70,7 @@ done
 if [ -z $helpm ];
 	then
 		printf "%$(tput cols)s"|tr ' ' '#'
-		echo "-----Welcome to the Unnamed Chen Lab Pipeline!-----"
+		echo "-----Welcome to the EasyDIVER Pipeline by Chen Lab!-----"
 		echo "--------You passed the following arguments---------"
 fi
 
@@ -71,19 +79,20 @@ if [ -z "$inopt" ];
   then
     printf "%$(tput cols)s"|tr ' ' '#'
 		echo "ERROR: No input filepath supplied." >&2
-		echo "$usage" >&2
+		echo "$prog$usage" >&2
 		printf "%$(tput cols)s"|tr ' ' '#'
 		exit 1
   else
     # define input variable with correct path name
     cd "$inopt" || exit 1
     fastqs=$(pwd)
+    cd "$hdir" || exit 1
     echo "-----Input directory path: $fastqs"
 fi
 
 if [ -z "$outopt" ];
   then
-    outdir=$hdir/pipeline.output
+    outdir=$hdir/pipeline-output
     mkdir "$outdir"
 		echo "-----No output directory supplied. New output directory is: $outdir"
   else
@@ -189,7 +198,7 @@ do
   ldir=$dir/indiv.lanes
 	lhist=$ldir/histos
 	fadir=$ldir/fastas
-	fqdir=$ldir/fastqs        
+	fqdir=$ldir/fastqs
 	mkdir $ldir $lhist $fadir $fqdir 2>/dev/null
 
 	# check for primers, use corresponding pandaseq command
@@ -218,11 +227,11 @@ do
       ${assembly_first:+-a} \
       2> $fqdir/$lbase.joined.fastq.log
 	fi
-	
-	# Convert to fasta	
+
+	# Convert to fasta
 	echo "Converting joined $lbase FASTQ to FASTA..."
-	sed '/^@/!d;s//>/;N' $fqdir/$lbase.joined.fastq > $fadir/$lbase.joined.fasta
-	
+	awk 'NR%4 == 1 {print ">" substr($0, 2)} NR%4 == 2 {print}' $fqdir/$lbase.joined.fastq > $fadir/$lbase.joined.fasta
+
 	# Combine sequences from each lane into single files
 	echo "Adding $lbase reads to total $sbase reads..."
 	cat $fqdir/$lbase.joined.fastq >> $dir/$sbase.joined.fastq
@@ -240,17 +249,14 @@ done
 cd "${outdir}/joined.reads" || exit 1
 
 # loop through directories and generate count files
-# temporaraly modify PATH to
-
-export PATH=/home/yuning/scripts/bbmap:$PATH
 
 ls -1 | while read d
 do
   test -d "$d" || continue
-  echo $d
+  echo "$d"
   # define variables
-  base=$(basename ${d})
-  (cd $d ;
+  base=$(basename "$d")
+  (cd "$d" || exit;
 
     # Generate nt length distribution for all lanes combined
     echo "Generating $base nt length distribution..."
@@ -289,7 +295,7 @@ do
     mv $base.joined.fastq $outdir/fastqs/$base.joined.fastq
     mv $base.nt.histo $outdir/histos/$base.nt.histo
     rm $base.nt.counts
-	
+
   )
 done
 
@@ -315,24 +321,23 @@ cd ..
 echo ""  >> $outdir/log.txt
 echo "sample" "fastq_R1" "fastq_R2" "unique" "total" "recovered(%)"| column -t >> "$outdir/log.txt"
 
-
 # Add log file with number of sequences in fastq files and count files
-alias gzcat=zcat
 
-for R1 in *R1*
+for R1 in "$fastqs"/*R1*
 do
-  basename=$(basename ${R1})
+  basename=$(basename "${R1}")
   lbase=${basename//_R*}
   sbase=${basename//_L00*}
   R2=${R1//R1_001.fastq*/R2_001.fastq*}
 
   echo $sbase \
-    $(gzcat $R1 | awk 'END {print NR/4}') \
-    $(gzcat $R2 | awk 'END {print NR/4}')  \
-    $(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==1{print $6}' ) \
-    $(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==2{print $6}' ) \
+    "$(gunzip -c $R1 | awk 'END {print NR/4}')" \
+    "$(gunzip -c $R2 | awk 'END {print NR/4}')" \
+    "$(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==1{print $6}')" \
+    "$(cat ${outdir}/counts/$sbase\_counts.txt | awk 'BEGIN {ORS=" "}; NR==2{print $6}')" \
     | column -t >> $outdir/log_temp.txt
-					
+  echo "$sbase finished"
+
 done
 
 awk '{seenR1[$1]+=$2; seenR2[$1]+=$3; unique[$1]=$4; total[$1]=$5}END{for (i in seenR1) print i, seenR1[i], seenR2[i], unique[i], total[i]}'  $outdir/log_temp.txt | column -t >> $outdir/log_temp2.txt

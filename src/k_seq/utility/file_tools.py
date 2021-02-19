@@ -238,6 +238,20 @@ def dump_json(obj, path=None, indent=2):
         return json.dumps(obj)
 
 
+def load_tar_gz(tarfile, file_to_extract, load_fn, gzip=True):
+    import tarfile as tar
+    import json
+    default_load_fn = {
+        'txt': lambda x: x.readlines(),
+        'json': json.load
+    }
+    if load_fn in default_load_fn.keys():
+        load_fn = default_load_fn[load_fn]
+    with tar.open(tarfile, mode='r:gz' if gzip else 'r') as tf:
+        loaded = load_fn(tf.extractfile(file_to_extract))
+    return loaded
+
+
 def read_table_files(file_path, col_name=None, header=1):
     """Read common seq_table files
     - .xls or .xlsx: first sheet will be read with first row as header
