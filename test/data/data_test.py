@@ -6,6 +6,8 @@ import numpy as np
 
 PKG_ROOT = Path(__file__).parent.parent.parent.resolve()
 
+# TODO: remove the dependency on datasets.load_dataset
+
 
 def test_easyDiver():
     from k_seq.data import preprocess
