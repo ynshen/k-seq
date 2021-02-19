@@ -1,43 +1,22 @@
-kinetic sequencing: high through-put kinetic parameter estimation for genetic encoded biomolecules 
+k-seq: analytic toolbox for data from kinetic assay with DNA sequencing
 ==============================
 
-### Issue report:
-https://github.com/ynshen/k-seq/issues
+`k-seq` is a Python package for analyzing the data from *k*-Seq experiments, kinetic assay for biomolecules with DNA sequencing. Check out our paper [*Kinetic sequencing (k-Seq) as a massively parallel assay for ribozyme kinetics: utility and critical parameters*](https://www.biorxiv.org/content/10.1101/2020.12.02.407346v1)
+for the *k*-Seq experiment method and how we used the package for data analysis. To repeat the analysis in the paper using the code version snapshot, see the [`paper-archive` branch](https://github.com/ichen-lab-ucsb/k-seq/tree/paper-archive).
 
-## Installation / update 
 
-*This is the temporary installation for `k-seq` package before publication, we will upload to pypi so it could be installed through `pip install k-seq`* 
 
-Step 1: Clone the this git repo to your local
+## Install `k-seq`
 
-```bash
-> cd /dir/to/save/repo
-> git clone https://github.com/ichen-lab-ucsb/k-seq.git
-
+`k-seq` package and its dependencies can be installed from `pip` directly:
+```shell script
+pip install k-seq
 ```
 
-Step 2: run installation code
+## Quick start and documentation
 
-```bash
-> cd /dir/to/save/repo/k-seq/
-> sh ./install.sh
-```
+Please check out the package [documentation]() and [quick start]() for further details on using the package
 
-There might be a prop to uninstall the old `k-seq` package, if installed.
-
-#### To varify the installation of package
-```bash
-> python -c "import k-seq"
-# No error shows
-```
-
-## Getting started examples
-
-#### [Getting started](https://github.com/ynshen/k-seq/tree/master/examples/)
-
-#### [Getting started notebook to run interactively: `/examples/getting_started.ipynb`](https://github.com/ynshen/k-seq/blob/master/examples/getting_started.ipynb)
-
-## See [documentation website](https://ynshen.github.io/k-seq/) for usage
-
-## TODO
-- Clean up archived old code and notebooks
+----
+##### Contact
+For any question and issues: [issue report](https://github.com/ichen-lab-ucsb/k-seq/issues) or Yuning Shen (yuningshen@ucsb.edu)
