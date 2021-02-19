@@ -1,4 +1,5 @@
 """Groupers slice seq_table into groups. E.g. input samples, reacted samples, different concentrations
+TODO: simplify code
 """
 
 from .seq_data import slice_table

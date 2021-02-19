@@ -8,4 +8,6 @@ Todo:
 
 """
 
-from . import utility, model, data, estimator
+from . import utility, model, data, estimate
+from yutility import logging
+logging.set_level('info')

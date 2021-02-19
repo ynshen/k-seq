@@ -1,6 +1,7 @@
 """
 This module contains project level utility functions
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -110,6 +111,56 @@ def ax_none(ax, figsize=None):
     return ax
 
 
+def regplot(x, y, ax=None, xlabel=None, ylabel=None, digit=4, equation_loc='best',
+            xlog=False, ylog=False,
+            kwargs_scatter=None, kwargs_line=None):
+
+    ax = ax_none(ax, figsize=(6, 4))
+    if kwargs_scatter is None: kwargs_scatter = {}
+    if kwargs_line is None: kwargs_line = {}
+
+    if xlabel is None:
+        try:
+            xlabel = x.name
+        except ArithmeticError:
+            pass
+
+    if ylabel is None:
+        try:
+            ylabel = y.name
+        except AttributeError:
+            pass
+
+    x = np.array(x)
+    y = np.array(y)
+
+    ax.scatter(x, y, **kwargs_scatter)
+
+    from scipy import stats
+    slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(x) if xlog else x,
+                                                                   np.log(y) if ylog else y)
+
+    predicted = np.log(x) * slope + intercept if xlog else x * slope + intercept
+    if ylog:
+        predicted = np.exp(predicted)
+
+    eq_formatter = f"{'ln(y)' if ylog else 'y'} = {{:.{digit}f}} {'ln(x)' if xlog else 'x'} + {{:.{digit}f}}\n" \
+                   f"R-squared={{:.{digit}f}}"
+
+    ax.plot(x, predicted, label=eq_formatter.format(slope, intercept, r_value ** 2), **kwargs_line)
+    if equation_loc is not None:
+        ax.legend(loc=equation_loc)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if xlog:
+        ax.set_xscale('log')
+        ax.set_xlim(min(x) / 2, max(x) * 2)
+    if ylog:
+        ax.set_yscale('log')
+        ax.set_ylim(min(y) / 2, max(y) * 2)
+    return ax
+
+
 def barplot(series, ax, label=None, yticklabels=None, barplot_kwargs=None):
     """General barplot for single series"""
     import numpy as np
@@ -149,7 +200,8 @@ def plot_curve(model, x=None, y=None, param=None, major_param=None, subsample=20
                x_label=None, y_label=None, x_lim=None, y_lim=None,
                major_curve_kwargs=None, curve_kwargs=None, datapoint_kwargs=None,
                major_curve_label='major curve', curve_label='curves', datapoint_label='data',
-               legend=False, legend_loc='upper right', fontsize=12, ax=None):
+               legend=False, legend_loc='upper right', fontsize=12, ax=None,
+               x_tick_formatter=None, y_tick_formatter=None, **kwargs):
     """Plot fitting results with
         i) data points (scatter), ii) major curve, iii) a set of curves (e.g. from bootstrap or convergence)
 
@@ -255,6 +307,35 @@ def value_to_loc(value, range, resolution, log):
         return (value - vmin) / (vmax - vmin) * resolution
 
 
+def format_ticks(ax, axis, tick_num=3, log=False, int_tick_only=False, tick_formatter=None):
+    """Manual formatting for figure ticks"""
+
+    if axis == 'x':
+        get_lim = ax.get_xlim
+        set_ticks = ax.set_xticks
+        set_ticklabels = ax.set_xticklabels
+    else:
+        get_lim = ax.get_ylim
+        set_ticks = ax.set_yticks
+        set_ticklabels = ax.set_yticklabels
+
+    # set ticks
+    lim = get_lim()
+    if log:
+        tick_ix = np.logspace(np.log(lim[0]), np.log(lim[1]), tick_num, dtype=int if int_tick_only else float)
+    else:
+        tick_ix = np.linspace(lim[0], lim[1], tick_num, dtype=int if int_tick_only else float)
+
+    set_ticks(tick_ix)
+
+    # set tick labels
+    if tick_formatter is None:
+        tick_formatter = lambda tick: f'$\mathregular{{10^{{{np.log10(tick):.1f}}}}}$' if log \
+            else lambda tick: f'{tick:.2f}'
+
+    set_ticklabels([tick_formatter(tick) for tick in tick_ix])
+
+
 def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range,
                       param_log=False, resolution=100, subsample=20,
                       fixed_params=None,
@@ -262,7 +343,7 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
                       datapoint_color='#E45756', datapoint_label='data', datapoint_kwargs=None,
                       colorbar=True,
                       legend=False, legend_loc='upper left', fontsize=12,
-                      ax=None):
+                      ax=None, tick_num=3, x_tick_formatter=None, y_tick_formatter=None):
     """Plot a heatmap to show the energy landscape for cost function, on two params
 
     Args:
@@ -326,7 +407,6 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
         hm = ax.pcolormesh(cost, vmax=np.max(cost), cmap='viridis')
     ax.set_xlabel(param_name[0], fontsize=fontsize)
     ax.set_ylabel(param_name[1], fontsize=fontsize)
-    ax.tick_params(labelsize=fontsize)
 
     # plot marker
 
@@ -340,24 +420,27 @@ def plot_loss_heatmap(model, x, y, param, param_name, param1_range, param2_range
                color=datapoint_color, label=datapoint_label, **datapoint_kwargs)
 
     # add ticks
-    tick_num = 3
-    tick_ix = np.linspace(0, resolution[0] - 1, tick_num, dtype=int)
-    ax.set_xticks(tick_ix)
+    if x_tick_formatter is None:
+        if not param_log[0]:
+            x_tick_formatter = lambda tick: f'{tick / resolution  * (param1_range[1] - param1_range[0]):.2f}'
+        else:
+            x_tick_formatter = lambda tick: f'$\mathregular{{10^{{{np.log10(param1_range[0] * (param1_range[1] / param1_range[0]) ** (tick / resolution[0])):.1f}}}}}$'
 
-    if param_log[0]:
-        ax.set_xticklabels([f'$\mathregular{{10^{{{np.log10(tick):.1f}}}}}$' for tick in param1_list[tick_ix]])
-    else:
-        ax.set_xticklabels([f'{tick:.2f}' for tick in param1_list[tick_ix]])
+    format_ticks(ax=ax, axis='x', tick_num=tick_num, log=False, int_tick_only=False,
+                 tick_formatter=x_tick_formatter)
 
-    tick_ix = np.linspace(0, resolution[1] - 1, tick_num, dtype=int)
-    ax.set_yticks(tick_ix)
-    if param_log[1]:
-        ax.set_yticklabels([f'$\mathregular{{10^{{{np.log10(tick):.1f}}}}}$' for tick in param2_list[tick_ix]])
-    else:
-        ax.set_yticklabels([f'{tick:.2f}' for tick in param2_list[tick_ix]])
+    if y_tick_formatter is None:
+        if not param_log[1]:
+            y_tick_formatter = lambda tick: f'{tick / resolution  * (param2_range[1] - param2_range[0]):.2f}'
+        else:
+            y_tick_formatter = lambda tick: f'$\mathregular{{10^{{{np.log10(param2_range[0] * (param2_range[1] / param2_range[0]) ** (tick / resolution[1])):.1f}}}}}$'
 
-    ax.set_xlim([-0.5, resolution[0] - 0.5])
-    ax.set_ylim([-0.5, resolution[1] - 0.5])
+    format_ticks(ax=ax, axis='y', tick_num=tick_num, log=False, int_tick_only=False,
+                 tick_formatter=y_tick_formatter)
+    ax.tick_params(labelsize=fontsize)
+
+    ax.set_xlim([-0.5, resolution[0] + 0.5])
+    ax.set_ylim([-0.5, resolution[1] + 0.5])
 
     if colorbar is True:
         fig = plt.gcf()
