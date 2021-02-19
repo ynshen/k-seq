@@ -1,6 +1,10 @@
-"""Parse, convert, characterize count files generated from Chen lab's customized scripts
+"""This module contains following preprocessing function for sequencing data:
 
-TODO: add Sam and Celia's code reference here
+1. Preprocessing DNA sequencing results from fastq.gz files using EasyDIVER pipeline
+(https://github.com/ichen-lab-ucsb/EasyDIVER), including joining paired-end reads, trimming primers,
+pooling same sample in different lanes, and deduplicate to generate count files of unique sequences.
+
+2. Parse count files and load as a ``SeqTable`` object
 """
 
 from yutility import logging
@@ -8,6 +12,50 @@ from .seq_data import _doc
 from ..utility.file_tools import _name_template_example
 import numpy as np
 import pandas as pd
+import os
+
+
+_count_file_format = """Count file format:
+::
+    number of unique sequences = 2825
+    total number of molecules = 29348173
+
+    AAAAAAAACACCACACA               2636463
+    AATATTACATCATCTATC              86763
+    ...
+"""
+
+
+def fastq_to_count(fastq_root, output_path='pipeline-output', threads=os.cpu_count(),
+                   forward_primer=None, reverse_primer=None, pandas_abs_match=True, join_first=True):
+    """Call `fastq_to_count.sh` subprocess for raw reads joining, pooling, and de-duplicating using
+    the EasyDIVER pipeline (https://github.com/ichen-lab-ucsb/EasyDIVER)
+
+    Args:
+        fastq_root (path): path to the root folder contains paired-end raw FASTQ.gz files
+        output_path (path): path to save output. By default it saves to 'pipeline-output' folder
+        threads (int): number of threads to run pandaSeq for joining. By default it uses all CPUs
+        forward_primer (str): specify the forward primer for pandaSeq joining and trimming
+        reverse_primer (str): specify the reverse primer for pandaSeq joining and trimming
+        pandas_abs_match (bool): if enforce absolute matching in pandaSeq joining. Default True.
+        join_first (bool): if join before trimming in pandaSeq. Suitable for heavily overlapped paired-end reads.
+            Default True.
+
+    Example:
+         TODO: add an example
+
+    """
+    from ..utility.func_tools import run_subprocess
+    cmd = ['fastq-to-counts.sh', '-i', str(fastq_root), '-o', str(output_path), '-T', str(threads)]
+    if forward_primer is not None:
+        cmd += ['-p', str(forward_primer)]
+    if reverse_primer is not None:
+        cmd += ['-q', str(reverse_primer)]
+    if pandas_abs_match:
+        cmd += ['-c']
+    if join_first:
+        cmd += ['-a']
+    run_subprocess(cmd=cmd)
 
 
 def _load_single_source(count_files, file_list=None, pattern_filter=None, name_template=None, black_list=None):
@@ -17,6 +65,7 @@ def _load_single_source(count_files, file_list=None, pattern_filter=None, name_t
     """
 
     from ..utility.file_tools import get_file_list, extract_metadata
+
     # parse file metadata
     file_list = get_file_list(file_root=count_files, file_list=file_list,
                               pattern=pattern_filter, black_list=black_list, full_path=True)
@@ -29,6 +78,55 @@ def _load_single_source(count_files, file_list=None, pattern_filter=None, name_t
             samples[f_meta['name']] = {**f_meta, **{'file_path': str(file)}}
 
     return samples
+
+
+@_doc.compose(f"""Read a single count file generated from EasyDIVER pipeline with format:
+    
+{_count_file_format}
+
+Args:
+    file_path (str): full directory to the count file
+    as_dict (bool): return a dictionary instead of a `pd.DataFrame`
+    number_only (bool): only return number of unique seqs and total counts if True
+
+Returns:
+    unique_seqs (int): number of unique sequences in the count file
+    total_counts (int): number of total reads in the count file
+    sequence_counts (pd.DataFrame): with ``sequence`` as index and ``counts`` as the first column
+""")
+def read_count_file(file_path, as_dict=False, number_only=False):
+    """Read a single count file generated from EasyDIVER pipeline
+    
+    {}
+
+    Args:
+        file_path (str): full directory to the count file
+        as_dict (bool): return a dictionary instead of a `pd.DataFrame`
+        number_only (bool): only return number of unique seqs and total counts if True
+
+    Returns:
+        unique_seqs (int): number of unique sequences in the count file
+        total_counts (int): number of total reads in the count file
+        sequence_counts (pd.DataFrame): with ``sequence`` as index and ``counts`` as the first column
+    """.format(_count_file_format)
+
+    with open(file_path, 'r') as file:
+        unique_seqs = int([elem for elem in next(file).strip().split()][-1])
+        total_counts = int([elem for elem in next(file).strip().split()][-1])
+        if number_only:
+            sequence_counts = None
+            as_dict = True
+        else:
+            next(file)
+            sequence_counts = {}
+            for line in file:
+                seq = line.strip().split()
+                sequence_counts[seq[0]] = int(seq[1])
+
+    if as_dict:
+        return unique_seqs, total_counts, sequence_counts
+    else:
+        return unique_seqs, total_counts, pd.DataFrame.from_dict(sequence_counts, orient='index', columns=['counts'])
 
 
 @_doc.compose(f"""Create a ``SeqData`` instance from count files.
@@ -108,47 +206,7 @@ def load_Seqtable_from_count_files(
                    x_values=x_values, x_unit=x_unit, note=note)
 
 
-_count_file_format = """Count file format:
-::
-    number of unique sequences = 2825
-    total number of molecules = 29348173
-
-    AAAAAAAACACCACACA               2636463
-    AATATTACATCATCTATC              86763
-    ...
-"""
 
 
-def read_count_file(file_path, as_dict=False, number_only=False):
-    """Read a single count file generated from Chen lab's customized scripts
-    
-    {}
 
-    Args:
-        file_path (str): full directory to the count file
-        as_dict (bool): return a dictionary instead of a `pd.DataFrame`
-        number_only (bool): only return number of unique seqs and total counts if True
 
-    Returns:
-        unique_seqs (int): number of unique sequences in the count file
-        total_counts (int): number of total reads in the count file
-        sequence_counts (pd.DataFrame): with ``sequence`` as index and ``counts`` as the first column
-    """.format(_count_file_format)
-
-    with open(file_path, 'r') as file:
-        unique_seqs = int([elem for elem in next(file).strip().split()][-1])
-        total_counts = int([elem for elem in next(file).strip().split()][-1])
-        if number_only:
-            sequence_counts = None
-            as_dict = True
-        else:
-            next(file)
-            sequence_counts = {}
-            for line in file:
-                seq = line.strip().split()
-                sequence_counts[seq[0]] = int(seq[1])
-
-    if as_dict:
-        return unique_seqs, total_counts, sequence_counts
-    else:
-        return unique_seqs, total_counts, pd.DataFrame.from_dict(sequence_counts, orient='index', columns=['counts'])

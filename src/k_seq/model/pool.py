@@ -1,4 +1,4 @@
-"""Model a kinetic reaction pool"""
+"""Model for a sequence pool with constituent change from reaction"""
 
 from . import ModelBase
 from yutility import logging

@@ -1,6 +1,20 @@
 import os
+from pathlib import Path
+import shutil
 from k_seq.data.seq_data import SeqData
 import numpy as np
+
+PKG_ROOT = Path(__file__).parent.parent.parent.resolve()
+
+# TODO: remove the dependency on datasets.load_dataset
+
+
+def test_easyDiver():
+    from k_seq.data import preprocess
+    preprocess.fastq_to_count(fastq_root=PKG_ROOT/'data/fastq', output_path=PKG_ROOT/'tmp/test-fastq-output',
+                              forward_primer='CTACGAATTC', reverse_primer='CTGCAGTGAA',
+                              pandas_abs_match=True, join_first=True)
+    shutil.rmtree(PKG_ROOT/'tmp/test-fastq-output')
 
 
 def test_count_file_can_load():

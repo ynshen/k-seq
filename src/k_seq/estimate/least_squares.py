@@ -11,10 +11,11 @@ Several functions are included:
 from ._estimator import Estimator
 from doc_helper import DocHelper
 from ..utility import plot_tools
-from ..utility.file_tools import read_json, dump_json, check_dir
+from ..utility.file_tools import read_json, dump_json, check_dir, load_tar_gz
 from yutility import logging
 import pandas as pd
 import numpy as np
+import json
 
 
 __all__ = ['doc_helper', 'SingleFitter', 'FitResults']
@@ -505,7 +506,7 @@ class FitResults:
 
          model (callable): model used in fitting
 
-         data (AttrScope): a scope stores the fitting dat
+         data (AttrScope): a scope stores the fitting data
              x_data (pd.Series):
              y_data (pd.Series):
              sigma (pd.Series):
@@ -642,10 +643,7 @@ class FitResults:
         if tarfile is None:
             json_data = read_json(json_path)
         else:
-            import tarfile as tf
-            import json
-            with tf.open(tarfile, mode='r:gz' if gzip else 'r') as tf_file:
-                json_data = json.load(tf_file.extractfile(json_path))
+            json_data = load_tar_gz(tarfile=tarfile, file_to_extract=json_path, gzip=gzip, load_fn=json.load)
 
         result = cls(estimator=estimator)
 
