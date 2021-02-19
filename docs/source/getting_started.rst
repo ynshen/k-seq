@@ -81,7 +81,15 @@ The output are the deduplicated count files with format::
 
 Load count files
 -----------------
-We next load and parse count files to Python using :py:class:`k_seq.data.SeqData`:
+We next load and parse count files to Python using :class:`k_seq.data.SeqData <k_seq.data.seq_data.SeqData>`.
+:class:`SeqData <k_seq.data.seq_data.SeqData>` is the main class to store and manipulate *k-Seq* data.
+:meth:`SeqData.from_count_files <k_seq.data.seq_data.SeqData.from_count_files>` can load preprocessed count files
+in a count file folder and extract metadata from the file name.
+
+Here is a short example to load all count files under the folder ``count_files`` where these count files are named with
+a pattern ``s-{exp_cond: A, B, C, ...}{rep: 1, 2, 3, ...}-_S{sample_id}_counts.txt``. To extract such metadata
+during the loading and name each sample as "exp_cond + exp", we can use "{}" to label the position of metadata with name
+(and type ``int`` or ``float``) in the braces and use "[]" to define the substring as the sample name:
 
 .. code-block:: python
   :linenos:
@@ -89,22 +97,60 @@ We next load and parse count files to Python using :py:class:`k_seq.data.SeqData
   from k_seq.data import SeqData
 
   dataset = SeqData.from_count_files(
-      count_files='path/to/count/file',
+      count_files='path/to/count_files',
       pattern_filter='_counts.',
-      name_template='[{byo}{exp_rep}]-{}{}_S{smpl}_counts.txt',
-      sort_by='name',
+      name_template='[{cond}{exp_rep, int}]_S{smpl, int}_counts.txt',
+      sort_by='smpl',
       x_values='',
       x_unit='M',
       input_sample_name=['R0'],
-      note='k-seq results of doped-pool BYO aminoacylation. Total DNA amount in each reacted sample were '
-           'quantified with spike-in sequence with 2 edit distance as radius or qPCR + Qubit'
+      note='Example data'
   )
 
+For the complete usage, please refer to the function documentation
+:meth:`SeqData.from_count_files <k_seq.data.seq_data.SeqData.from_count_files>`
+
+The counts in all samples are pooled in to a count table accessible under :code:`dataset.table.original`.
+
+
+Filter sequences and samples
+-----------------------------
+The loaded dataset with count table in :class:`SeqData` can be further filtered according to selected quality control
+criteria. For example, sequences contain ambiguous nucleotides ('N') and with undesired length could be removed using
+:class:`NoAmbiguityFilter <k_seq.data.filters.NoAmbiguityFilter>` and
+:class:`SeqLengthFilter <k_seq.data.filters.SeqLengthFilter>`. Some sample failed in the quality control for the experiment
+can also be removed by :class:`SampleFilter <k_seq.data.filters.Samplefilter>`.
+
+
+These tables can be save as processed tables under :class:`SeqData.tables`.
+
+.. code-block:: python
+
+    from k_seq.data.filters import NoAmbiguityFilter, SeqLengthFilter
+
+    dataset.table.filtered = SeqLengthFilter(min_len=19, max_len=23)(
+        NoAmbiguityFilter()(
+            dataset.table.original
+        )
+    )
 
 Sequence quantification
 ***********************
 
+Quantify the sequence
+----------------------
 
+Depending on the design of the *k*-Seq experiment design, different quantification method could be used. The ``k-seq``
+package implemented two quantification functions: 1) by total sequence (DNA/RNA/protein) amount and 2) by amount of
+external standards (spike-in sequence).
+
+Specifically,
+
+
+
+
+Calculate the dependent variable
+---------------------------------
 
 
 
