@@ -17,7 +17,8 @@ pip install k-seq
 
 ## Quick start and documentation
 
-Please check out the package [documentation](https://ichen-lab-ucsb.github.io/k-seq/) and [quick start](https://ichen-lab-ucsb.github.io/k-seq/) for further details on using the package
+Please check out the package [documentation](https://ichen-lab-ucsb.github.io/k-seq/) and [quick start](https://ichen-lab-ucsb.github.io/k-seq/getting_started.html) 
+for further details on using the package
 
 ----
 ##### Contact
