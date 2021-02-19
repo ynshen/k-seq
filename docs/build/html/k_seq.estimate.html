@@ -1,0 +1,2104 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>k_seq.estimate: least squares fitting &mdash; k-seq 0.4.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/my_theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="k_seq.utility: miscellaneous utility functions" href="k_seq.utility.html" />
+    <link rel="prev" title="k_seq.model: kinetics and pool models" href="k_seq.model.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> k-seq
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="k_seq.data.html"><code class="docutils literal notranslate"><span class="pre">k_seq.data</span></code>: data preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.model.html"><code class="docutils literal notranslate"><span class="pre">k_seq.model</span></code>: kinetics and pool models</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">k_seq.estimate</span></code>: least squares fitting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimate.least_squares">k_seq.estimate.least_squares</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#k-seq-estimate-least-squares-batch">k_seq.estimate.least_squares_batch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id20">k_seq.estimate.least_squares_batch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimate.bootstrap">k_seq.estimate.bootstrap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimate.replicates">k_seq.estimate.replicates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimate.convergence">k_seq.estimate.convergence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-k_seq.estimate.model_ident">k_seq.estimate.model_ident</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#k-seq-estimate-visualizer">k_seq.estimate.visualizer</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="k_seq.utility.html"><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">k-seq</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="k-seq_package.html"><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package</a> &raquo;</li>
+        
+      <li><code class="docutils literal notranslate"><span class="pre">k_seq.estimate</span></code>: least squares fitting</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/k_seq.estimate.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="k-seq-estimate-least-squares-fitting">
+<h1><code class="docutils literal notranslate"><span class="pre">k_seq.estimate</span></code>: least squares fitting<a class="headerlink" href="#k-seq-estimate-least-squares-fitting" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-k_seq.estimate"></span><p>This module contains the submodule needed for estimator</p>
+<div class="section" id="module-k_seq.estimate.least_squares">
+<span id="k-seq-estimate-least-squares"></span><h2>k_seq.estimate.least_squares<a class="headerlink" href="#module-k_seq.estimate.least_squares" title="Permalink to this headline">¶</a></h2>
+<p>Least-squares fitting to a kinetic model,</p>
+<dl class="simple">
+<dt>Several functions are included:</dt><dd><ul class="simple">
+<li><p>point estimation using <cite>scipy.optimize.curve_fit</cite></p></li>
+<li><p>option to exclude zero in fitting</p></li>
+<li><p>option to initialize values</p></li>
+<li><p>weighted fitting depends on the customized weights</p></li>
+<li><p>confidence interval estimation using bootstrap</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py class">
+<dt id="k_seq.estimate.least_squares.FitResults">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.least_squares.</code><code class="sig-name descname">FitResults</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class to store, process, and visualize fitting results for single estimator, contains almost all information
+needed to further analysis</p>
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.FitResults.estimator">
+<code class="sig-name descname">estimator</code><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the estimator</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Estimator</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.FitResults.model">
+<code class="sig-name descname">model</code><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.model" title="Permalink to this definition">¶</a></dt>
+<dd><p>model used in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.FitResults.data">
+<code class="sig-name descname">data</code><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores the fitting data
+x_data (pd.Series):
+y_data (pd.Series):
+sigma (pd.Series):
+x_label (str): name for x data
+y_label (str): name for y data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.FitResults.point_estimation">
+<code class="sig-name descname">point_estimation</code><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.point_estimation" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores point estimation results, includes
+params (pd.Series): stores the parameter estimation, with extra metrics calculation
+pcov (pd.DataFrame): covariance matrix for estimated parameter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.FitResults.uncertainty">
+<code class="sig-name descname">uncertainty</code><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.uncertainty" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores uncertainty estimation results, includes
+summary (pd.Series): summary of each parameter or metric from records
+bs_records (pd.DataFrame): records for stored bootstrapping results
+rep_results (pd.DataFrame): results from fitting of replicates</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.FitResults.convergence">
+<code class="sig-name descname">convergence</code><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.convergence" title="Permalink to this definition">¶</a></dt>
+<dd><p>a scope stores convergence test results, includes
+summary (pd.DataFrame): summary for each parameter or metric from records
+records (pd.DataFrame): records for repeated fitting results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.FitResults.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>estimator</strong> (<a class="reference internal" href="#k_seq.estimate.least_squares.SingleFitter" title="k_seq.estimate.least_squares.SingleFitter"><em>SingleFitter</em></a>) – estimator used to generate this fitting result</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.FitResults.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">json_path</span></em>, <em class="sig-param"><span class="n">tarfile</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">gzip</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">data</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>load fitting results from json records, option to load from tar.gz files
+Note: no estimator info if estimator is None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>json_path</strong> (<em>str</em>) – path to json file, or file name under tarball file if tar_file_name is true tarfile (str):
+if not None, the json file is in a tarfile (.tar/.tar.gz)</p></li>
+<li><p><strong>gzip</strong> (<em>bool</em>) – if True, the tarfile is compressed with gzip (<cite>.tar.gz</cite>); if False, the tarfile is not
+compressed (<cite>.tar</cite>)</p></li>
+<li><p><strong>estimator</strong> (<a class="reference internal" href="#k_seq.estimate.least_squares.SingleFitter" title="k_seq.estimate.least_squares.SingleFitter"><em>SingleFitter</em></a>) – optional. Recover the estimator instance.</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – supplied dictionary to add data info</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.FitResults.plot_fitting_curves">
+<code class="sig-name descname">plot_fitting_curves</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plot_on</span><span class="o">=</span><span class="default_value">'bootstrap'</span></em>, <em class="sig-param"><span class="n">subsample</span><span class="o">=</span><span class="default_value">20</span></em>, <em class="sig-param"><span class="n">x_lim</span><span class="o">=</span><span class="default_value">- 3e-05, 0.002</span></em>, <em class="sig-param"><span class="n">y_lim</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">legend</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">legend_loc</span><span class="o">=</span><span class="default_value">'upper left'</span></em>, <em class="sig-param"><span class="n">fontsize</span><span class="o">=</span><span class="default_value">12</span></em>, <em class="sig-param"><span class="n">params</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.plot_fitting_curves" title="Permalink to this definition">¶</a></dt>
+<dd><p>plot fitting results for Aminoacylation ribozyme fitting curves
+obj should be a FitResults instance</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.FitResults.plot_loss_heatmap">
+<code class="sig-name descname">plot_loss_heatmap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plot_on</span><span class="o">=</span><span class="default_value">'bootstrap'</span></em>, <em class="sig-param"><span class="n">subsample</span><span class="o">=</span><span class="default_value">20</span></em>, <em class="sig-param"><span class="n">param1_range</span><span class="o">=</span><span class="default_value">0.01, 10000.0</span></em>, <em class="sig-param"><span class="n">param2_range</span><span class="o">=</span><span class="default_value">0.001, 1</span></em>, <em class="sig-param"><span class="n">legend</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">legend_loc</span><span class="o">=</span><span class="default_value">'upper left'</span></em>, <em class="sig-param"><span class="n">colorbar</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">resolution</span><span class="o">=</span><span class="default_value">101</span></em>, <em class="sig-param"><span class="n">fontsize</span><span class="o">=</span><span class="default_value">12</span></em>, <em class="sig-param"><span class="n">param_name</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">add_lines</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_label</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.plot_loss_heatmap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the 2-D heatmap of loss function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.FitResults.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert results into a json string/file contains
+{</p>
+<blockquote>
+<div><dl class="simple">
+<dt>point_estimation: { params: jsonfy(pd.Series)</dt><dd><p>pcov: jsonfy(pd.DataFrame) }</p>
+</dd>
+<dt>uncertainty: { summary: jsonfy(pd.Series)</dt><dd><p>bs_records: jsonfy(pd.DataFrame)
+rep_results: jsonfy(pd.Series) }</p>
+</dd>
+<dt>convergence: { summary: jsonfy(pd.DataFrame)</dt><dd><p>records: jsonfy(pd.DataFrame) }</p>
+</dd>
+<dt>data: {x_data: jsonfy(pd.Series)</dt><dd><p>y_data: jsonfy(pd.Series),
+sigma: jsonfy(pd.Series),
+x_label: str,
+y_label: str}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>}</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.FitResults.to_series">
+<code class="sig-name descname">to_series</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.FitResults.to_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert point_estimation, uncertainty (if possible), and convergence (if possible) to a series include
+flattened info:
+e.g. columns will include [param1, param2, bs_param1_mean, bs_param1_std, bs_param1_2.5%, …, param1_range]</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="k_seq.estimate.least_squares.SingleFitter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.least_squares.</code><code class="sig-name descname">SingleFitter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">y_data</span></em>, <em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounds</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">init_guess</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">opt_method</span><span class="o">=</span><span class="default_value">'trf'</span></em>, <em class="sig-param"><span class="n">exclude_zero</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">metrics</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rnd_seed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">curve_fit_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'pct_res'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">save_to</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.estimate._estimator.Estimator</span></code></p>
+<p>Use <cite>scipy.optimize.curve_fit</cite> to fit a model for a sequence time/concentration series
+It can conduct point estimation, uncertainty estimation for bootstrap, empirical CI estimation</p>
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.x_data">
+<code class="sig-name descname">x_data</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.x_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of x values in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.y_data">
+<code class="sig-name descname">y_data</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.y_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>y values in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list, pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.model">
+<code class="sig-name descname">model</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.model" title="Permalink to this definition">¶</a></dt>
+<dd><p>model to fit</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.parameter">
+<code class="sig-name descname">parameter</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.parameter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.silent">
+<code class="sig-name descname">silent</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.silent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional. Estimator’s name</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.bootstrap">
+<code class="sig-name descname">bootstrap</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.bootstrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the bootstrap object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#k_seq.estimate.bootstrap.Bootstrap" title="k_seq.estimate.bootstrap.Bootstrap">Bootstrap</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the FitResult object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>FitResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.config">
+<code class="sig-name descname">config</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.config" title="Permalink to this definition">¶</a></dt>
+<dd><p>name space for fitting, contains</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.opt_method">
+<code class="sig-name descname">opt_method</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.opt_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimization methods in <cite>scipy.optimize</cite>. Default ‘trf’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.exclude_zero">
+<code class="sig-name descname">exclude_zero</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.exclude_zero" title="Permalink to this definition">¶</a></dt>
+<dd><p>If exclude zero/missing data in fitting. Default False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.init_guess">
+<code class="sig-name descname">init_guess</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.init_guess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initial guess estimate parameters, random value from 0 to 1 will be use if None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of float or generator</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.rnd_seed">
+<code class="sig-name descname">rnd_seed</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.rnd_seed" title="Permalink to this definition">¶</a></dt>
+<dd><p>random seed used in fitting for reproducibility</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.sigma">
+<code class="sig-name descname">sigma</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.sigma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list, pd.Series, or pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.bounds">
+<code class="sig-name descname">bounds</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional, [[lower bounds], [higher bounds]] for each parameter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>2 by m <cite>list</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.metric">
+<code class="sig-name descname">metric</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.metric" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.curve_fit_kwargs">
+<code class="sig-name descname">curve_fit_kwargs</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.curve_fit_kwargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.bootstrap_config">
+<code class="sig-name descname">bootstrap_config</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.bootstrap_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>name space for bootstrap, contains</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.bootstrap_num">
+<code class="sig-name descname">bootstrap_num</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.bootstrap_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of bootstrap to perform, 0 means no bootstrap</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.bs_record_num">
+<code class="sig-name descname">bs_record_num</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.bs_record_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares.SingleFitter.bs_method">
+<code class="sig-name descname">bs_method</code><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.bs_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">y_data</span></em>, <em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounds</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">init_guess</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">opt_method</span><span class="o">=</span><span class="default_value">'trf'</span></em>, <em class="sig-param"><span class="n">exclude_zero</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">metrics</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rnd_seed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">curve_fit_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'pct_res'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">save_to</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a <cite>SingleFitter</cite> instance</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x_data</strong> (<em>list</em>) – list of x values in fitting</p></li>
+<li><p><strong>y_data</strong> (<em>list</em><em>, </em><em>pd.Series</em>) – y values in fitting</p></li>
+<li><p><strong>model</strong> (<em>callable</em>) – model to fit</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – Optional. Estimator’s name</p></li>
+<li><p><strong>x_label</strong> (<em>str</em>) – name of x data</p></li>
+<li><p><strong>y_label</strong> (<em>str</em>) – name of y data</p></li>
+<li><p><strong>sigma</strong> (<em>list</em><em>, </em><em>pd.Series</em><em>, or </em><em>pd.DataFrame</em>) – Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p></li>
+<li><p><strong>bounds</strong> (2 by m <cite>list</cite>) – Optional, [[lower bounds], [higher bounds]] for each parameter</p></li>
+<li><p><strong>init_guess</strong> (<em>list of float</em><em> or </em><em>generator</em>) – Initial guess estimate parameters, random value from 0 to 1 will be use if None</p></li>
+<li><p><strong>opt_method</strong> (<em>str</em>) – Optimization methods in <cite>scipy.optimize</cite>. Default ‘trf’</p></li>
+<li><p><strong>exclude_zero</strong> (<em>bool</em>) – If exclude zero/missing data in fitting. Default False.</p></li>
+<li><p><strong>metrics</strong> (<em>dict of callable</em>) – Optional. Extra metric/parameters to calculate for each estimation</p></li>
+<li><p><strong>rnd_seed</strong> (<em>int</em>) – random seed used in fitting for reproducibility</p></li>
+<li><p><strong>curve_fit_kwargs</strong> (<em>dict</em>) – other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite></p></li>
+<li><p><strong>replicates</strong> (<em>list of list</em>) – List of list of sample names for each replicates</p></li>
+<li><p><strong>bootstrap_num</strong> (<cite>int</cite>) – Number of bootstrap to perform, 0 means no bootstrap</p></li>
+<li><p><strong>bs_record_num</strong> (<cite>int</cite>) – Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption</p></li>
+<li><p><strong>bs_method</strong> (<cite>str</cite>) – Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)</p></li>
+<li><p><strong>bs_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+<li><p><strong>grouper</strong> (<em>dict</em><em> or </em><a class="reference internal" href="k_seq.data.html#k_seq.data.grouper.Grouper" title="k_seq.data.grouper.Grouper"><em>Grouper</em></a>) – Indicate the grouping of samples</p></li>
+<li><p><strong>record_full</strong> (<em>bool</em>) – if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.</p></li>
+<li><p><strong>conv_reps</strong> (<em>int</em>) – number of repeated fitting from perturbed initial points for convergence test</p></li>
+<li><p><strong>conv_init_range</strong> (<em>list of 2-tuple</em>) – a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw</p></li>
+<li><p><strong>conv_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+<li><p><strong>save_to</strong> (<em>str</em>) – </p></li>
+<li><p><strong>overwrite</strong> (<em>bool</em>) – </p></li>
+<li><p><strong>verbose</strong> (<em>0</em><em>, </em><em>1</em><em>, </em><em>2</em>) – </p></li>
+<li><p><strong>save_to</strong> – optional. If not None, save results to the given path when fitting finishes</p></li>
+<li><p><strong>overwrite</strong> – if True, overwrite the save_to file if already exists;
+if False, read results and skip estimation. Default False</p></li>
+<li><p><strong>verbose</strong> – set different verbose level. 0: WARNING, 1: INFO, 2: DEBUG</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.convergence_test">
+<code class="sig-name descname">convergence_test</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.convergence_test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Empirically estimate convergence by repeated fittings,
+:param conv_reps: number of repeated fitting from perturbed initial points for convergence test
+:type conv_reps: int
+:param conv_init_range: a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw
+:type conv_init_range: list of 2-tuple
+:param conv_stats: a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+:type conv_stats: dict of callable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pd.Series
+records: pd.DataFrame of full records</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">point_estimate</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">bootstrap</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">convergence_test</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run fitting, configuration are from the object
+:param point_estimate: if do point estimation, default True
+:type point_estimate: bool
+:param replicates: if use replicate for uncertainty estimation, default False
+:type replicates: bool
+:param bootstrap: if do bootstrap, default False
+:type bootstrap: bool
+:param convergence_test: if do convergence test, default False
+:type convergence_test: bool</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">file_path</span></em>, <em class="sig-param"><span class="n">model</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a estimator from saved json file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<em>str</em>) – path to saved json file</p></li>
+<li><p><strong>model</strong> (<em>callable</em>) – as callable is not json-able, need to reassign</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>bs_stats, conv_stats currently can not be recovered</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.point_estimate">
+<code class="sig-name descname">point_estimate</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.point_estimate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fitting using <cite>scipy.optimize.curve_fit</cite>,
+Arguments will be inferred from instance’s attributes if not provided</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>callable</em>) – model to fit</p></li>
+<li><p><strong>x_data</strong> (<em>list</em>) – list of x values in fitting</p></li>
+<li><p><strong>y_data</strong> (<em>list</em><em>, </em><em>pd.Series</em>) – y values in fitting</p></li>
+<li><p><strong>sigma</strong> (<em>list</em><em>, </em><em>pd.Series</em><em>, or </em><em>pd.DataFrame</em>) – Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p></li>
+<li><p><strong>bounds</strong> (2 by m <cite>list</cite>) – Optional, [[lower bounds], [higher bounds]] for each parameter</p></li>
+<li><p><strong>metrics</strong> (<em>dict of callable</em>) – Optional. Extra metric/parameters to calculate for each estimation</p></li>
+<li><p><strong>init_guess</strong> (<em>list of float</em><em> or </em><em>generator</em>) – Initial guess estimate parameters, random value from 0 to 1 will be use if None</p></li>
+<li><p><strong>curve_fit_kwargs</strong> (<em>dict</em>) – other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite></p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Returns: A dictionary contains least-squares fitting results</dt><dd><ul class="simple">
+<li><p>params: pd.Series of estimated parameter</p></li>
+<li><p>pcov: <cite>pd.Dataframe</cite> of covariance matrix</p></li>
+<li><p>metrics: None or pd.Series of calculated metrics</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.run_bootstrap">
+<code class="sig-name descname">run_bootstrap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.run_bootstrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use bootstrap to estimate uncertainty
+:param bs_method: Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)
+:type bs_method: <cite>str</cite>
+:param bootstrap_num: Number of bootstrap to perform, 0 means no bootstrap
+:type bootstrap_num: <cite>int</cite>
+:param grouper: Indicate the grouping of samples
+:type grouper: dict or Grouper
+:param bs_record_num: Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption
+:type bs_record_num: <cite>int</cite>
+:param bs_stats: a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+:type bs_stats: dict of callable
+:param record_full: if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.
+:type record_full: bool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pd.Series
+results: pd.DataFrame subsampled if 0 &lt;= bs_record_num &lt;= bootstrap_num</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.run_replicates">
+<code class="sig-name descname">run_replicates</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.run_replicates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use replicates to estimate uncertainty
+:param replicates: List of list of sample names for each replicates
+:type replicates: list of list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a pd.Dataframe of results from each replicates</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a pd.series as fitting summary with flatten info</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.to_dict">
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save estimator configuration as a dictionary</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dict of configurations for the estimator</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares.SingleFitter.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_to_file</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares.SingleFitter.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the estimator configuration as a json file, except for <cite>model</cite>, <cite>bs_stats</cite>, <cite>conv_stats</cite> as
+these are not json-able</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="k-seq-estimate-least-squares-batch">
+<h2>k_seq.estimate.least_squares_batch<a class="headerlink" href="#k-seq-estimate-least-squares-batch" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-k_seq.estimate.least_squares_batch"></span><p>Least-squares fitting for a batch of sequences</p>
+<dl class="py class">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.least_squares_batch.</code><code class="sig-name descname">BatchFitResults</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parse, store, and visualize BatchFitter results
+Only save results (separate from each estimator), corresponding estimator should be found by sequence
+We used two data storage strategies:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><dl class="simple">
+<dt>smaller dataset that was saved as <code class="docutils literal notranslate"><span class="pre">results.pkl</span></code>: the pickled file is passed, and the results will be</dt><dd><p>loaded to self.summary, self.bs_record, self.conv_record</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>larger dataset that was saved in <code class="docutils literal notranslate"><span class="pre">results/</span></code> folder: self. summary will be loaded, self.bs_record and</dt><dd><p>self.conv_record will be linked</p>
+</dd>
+</dl>
+</li>
+</ol>
+</div></blockquote>
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.estimator">
+<code class="sig-name descname">estimator</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the <cite>BatchFitter</cite></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.model">
+<code class="sig-name descname">model</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.model" title="Permalink to this definition">¶</a></dt>
+<dd><p>model function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.data">
+<code class="sig-name descname">data</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>contains data information:
+x_data (list-like): x_data for fitting
+y_dataframe (pd.DataFrame): a table of y_data for sequences
+simga (pd.DataFrame): a table representing each sigma for sequence in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.large_data">
+<code class="sig-name descname">large_data</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.large_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>if True, it will not load all bootstrap or convergence results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.summary">
+<code class="sig-name descname">summary</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>summarized results with each sequence as index</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.bs_record">
+<code class="sig-name descname">bs_record</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.bs_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>get bootstrap results {seq: <cite>SingleFitter.results.uncertainty.records</cite>}</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.conv_record">
+<code class="sig-name descname">conv_record</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.conv_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>{seq: <a href="#id1"><span class="problematic" id="id2">`</span></a>SingleFitter.results.convergence.records}</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.summary_to_csv">
+<code class="sig-name descname">summary_to_csv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.summary_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>export summary dataframe as csv file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>storage strategy for large files: save results as a folder of json files</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.to_pickle">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>storage strategy for small files: save results as pickled dictionary</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.from_pickle">
+<code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.from_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>load from a picked dictionary</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.from_json">
+<code class="sig-name descname">from_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>load from a folder of json files</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.load_result">
+<code class="sig-name descname">load_result</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.load_result" title="Permalink to this definition">¶</a></dt>
+<dd><p>overall method to infer either load <cite>BatchFitResults</cite> from pickled or a folder</p>
+</dd></dl>
+
+<p>Analysis:</p>
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Init a BatchFitResults instance
+:param estimator: corresponding estimator
+:type estimator: <cite>BatchFitter</cite></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id0">
+<code class="sig-name descname">bs_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seqs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve bootstrap records</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id3">
+<code class="sig-name descname">conv_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seqs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve convergence records</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id4">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path_to_folder</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id4" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load results from folder of results with json format</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id5">
+<em class="property">classmethod </em><code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path_to_pickle</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a <cite>BatchFitResults</cite> instance with results loaded from pickle
+Notice:</p>
+<blockquote>
+<div><p>this could take a very long time if the pickled file is large, suggest to use to_json for large dataset</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.generate_summary">
+<em class="property">static </em><code class="sig-name descname">generate_summary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_folder_path</span></em>, <em class="sig-param"><span class="n">n_core</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">save_to</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.generate_summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a summary csv file from given result folder. This could be used if summary was not successfully
+generated during fitting</p>
+<dl class="simple">
+<dt>Result folder should have a structure of:</dt><dd><ul class="simple">
+<li><p>seqs
+- [seq name or hash].json
+- [if hash] seq_to_hash.json</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result_folder_path</strong> (<em>str</em>) – path to the root of <cite>results</cite> folder</p></li>
+<li><p><strong>n_core</strong> (<em>int</em>) – number of threads to process in parallel. Default 1</p></li>
+<li><p><strong>save_to</strong> (<em>str</em>) – save CSV file to local path</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>pd.DataFrame of summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitResults.get_FitResult">
+<code class="sig-name descname">get_FitResult</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seq</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitResults.get_FitResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get FitResults from a JSON file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id6">
+<em class="property">classmethod </em><code class="sig-name descname">load_result</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_path</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id6" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="id7">
+<code class="sig-name descname">summary_to_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id7" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save summary table as csv file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id8">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_dir</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id8" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Save results in json format, with the structure of</dt><dd><dl>
+<dt><a href="#id9"><span class="problematic" id="id10">|</span></a>output_dir/</dt><dd><p><a href="#id11"><span class="problematic" id="id12">|</span></a>- summary.csv
+<a href="#id13"><span class="problematic" id="id14">|</span></a>- seqs</p>
+<blockquote>
+<div><p><a href="#id15"><span class="problematic" id="id16">|</span></a>- seq1.json
+<a href="#id17"><span class="problematic" id="id18">|</span></a>- seq2.json</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Bootstrap and convergence records should already be streamed as separate JSON files under /seqs/</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output_dir</strong> (<em>str</em>) – path of folder to save results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id19">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_dir</span></em>, <em class="sig-param"><span class="n">bs_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">conv_record</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id19" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save fitting results as a single pickled dict, suitable for small dataset.
+For large dataset <cite>to_json</cite> is preferred</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>str</em>) – path to saved results, should have suffix of <code class="docutils literal notranslate"><span class="pre">.pkl</span></code></p></li>
+<li><p><strong>bs_record</strong> (<em>bool</em>) – if output bs_record, default True</p></li>
+<li><p><strong>conv_record</strong> (<em>bool</em>) – if output conv_record, default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.least_squares_batch.</code><code class="sig-name descname">BatchFitter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_dataframe</span></em>, <em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">seq_to_fit</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounds</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">init_guess</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">opt_method</span><span class="o">=</span><span class="default_value">'trf'</span></em>, <em class="sig-param"><span class="n">exclude_zero</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">metrics</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rnd_seed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">curve_fit_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'pct_res'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">note</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">large_dataset</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">result_path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.estimate._estimator.Estimator</span></code></p>
+<p>Least-squares fitting for batch of sequences</p>
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.y_dataframe">
+<code class="sig-name descname">y_dataframe</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.y_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Table of y values for sequences (rows) to fit kinetic models</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.model">
+<code class="sig-name descname">model</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.model" title="Permalink to this definition">¶</a></dt>
+<dd><p>model to fit</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.x_data">
+<code class="sig-name descname">x_data</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.x_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of x values in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.seq_to_fit">
+<code class="sig-name descname">seq_to_fit</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.seq_to_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>pick top n sequences in the table for fitting or only fit selected sequences</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int or list of seq</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.sigma">
+<code class="sig-name descname">sigma</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.sigma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list, pd.Series, or pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.note">
+<code class="sig-name descname">note</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.note" title="Permalink to this definition">¶</a></dt>
+<dd><p>note about this fitting job</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>accessor to fitting results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>BatchFitResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.fit_params">
+<code class="sig-name descname">fit_params</code><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.fit_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>collection of arguments pass to each single seq fitting, includes:
+x_data (list): list of x values in fitting
+model (callable): model to fit
+bounds (2 by m <cite>list</cite> ): Optional, [[lower bounds], [higher bounds]] for each parameter
+init_guess (list of float or generator): Initial guess estimate parameters, random value from 0 to 1 will be use if None
+opt_method (str): Optimization methods in <cite>scipy.optimize</cite>. Default ‘trf’
+exclude_zero (bool): If exclude zero/missing data in fitting. Default False.
+metrics (dict of callable): Optional. Extra metric/parameters to calculate for each estimation
+rnd_seed (int): random seed used in fitting for reproducibility
+curve_fit_kwargs (dict): other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite>
+replicates (list of list): List of list of sample names for each replicates
+bootstrap_num (<cite>int</cite>): Number of bootstrap to perform, 0 means no bootstrap
+bs_record_num (<cite>int</cite>): Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption
+bs_method (<cite>str</cite>): Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)
+bs_stats (dict of callable): a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+grouper (dict or Grouper): Indicate the grouping of samples
+record_full (bool): if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.
+conv_reps (int): number of repeated fitting from perturbed initial points for convergence test
+conv_init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw
+conv_stats (dict of callable): a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+overwrite:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_dataframe</span></em>, <em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">seq_to_fit</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounds</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">init_guess</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">opt_method</span><span class="o">=</span><span class="default_value">'trf'</span></em>, <em class="sig-param"><span class="n">exclude_zero</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">metrics</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rnd_seed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">curve_fit_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'pct_res'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">note</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">large_dataset</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">result_path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a BatchFitter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_dataframe</strong> (<em>pd.DataFrame</em>) – </p></li>
+<li><p><strong>y_dataframe</strong> – Table of y values for sequences (rows) to fit kinetic models</p></li>
+<li><p><strong>x_data</strong> (<em>list</em>) – list of x values in fitting</p></li>
+<li><p><strong>model</strong> (<em>callable</em>) – model to fit</p></li>
+<li><p><strong>seq_to_fit</strong> (<em>int</em><em> or </em><em>list of seq</em>) – pick top n sequences in the table for fitting or only fit selected sequences</p></li>
+<li><p><strong>sigma</strong> (<em>list</em><em>, </em><em>pd.Series</em><em>, or </em><em>pd.DataFrame</em>) – Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p></li>
+<li><p><strong>bounds</strong> (2 by m <cite>list</cite>) – Optional, [[lower bounds], [higher bounds]] for each parameter</p></li>
+<li><p><strong>init_guess</strong> (<em>list of float</em><em> or </em><em>generator</em>) – Initial guess estimate parameters, random value from 0 to 1 will be use if None</p></li>
+<li><p><strong>opt_method</strong> (<em>str</em>) – Optimization methods in <cite>scipy.optimize</cite>. Default ‘trf’</p></li>
+<li><p><strong>exclude_zero</strong> (<em>bool</em>) – If exclude zero/missing data in fitting. Default False.</p></li>
+<li><p><strong>metrics</strong> (<em>dict of callable</em>) – Optional. Extra metric/parameters to calculate for each estimation</p></li>
+<li><p><strong>rnd_seed</strong> (<em>int</em>) – random seed used in fitting for reproducibility</p></li>
+<li><p><strong>curve_fit_kwargs</strong> (<em>dict</em>) – other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite></p></li>
+<li><p><strong>bootstrap_num</strong> (<cite>int</cite>) – Number of bootstrap to perform, 0 means no bootstrap</p></li>
+<li><p><strong>bs_record_num</strong> (<cite>int</cite>) – Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption</p></li>
+<li><p><strong>bs_method</strong> (<cite>str</cite>) – Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)</p></li>
+<li><p><strong>bs_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+<li><p><strong>grouper</strong> (<em>dict</em><em> or </em><a class="reference internal" href="k_seq.data.html#k_seq.data.grouper.Grouper" title="k_seq.data.grouper.Grouper"><em>Grouper</em></a>) – Indicate the grouping of samples</p></li>
+<li><p><strong>record_full</strong> (<em>bool</em>) – if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.</p></li>
+<li><p><strong>conv_reps</strong> (<em>int</em>) – number of repeated fitting from perturbed initial points for convergence test</p></li>
+<li><p><strong>conv_init_range</strong> (<em>list of 2-tuple</em>) – a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw</p></li>
+<li><p><strong>conv_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+<li><p><strong>note</strong> (<em>str</em>) – optional notes for the estimator</p></li>
+<li><p><strong>(</strong><strong>bool</strong> (<em>large_dataset</em>) – if trigger strategy to work on large dataset (e.g. &gt; 1000 seqs). If True, deduplicate of
+sequences with same reacted fractions in each concentration will be performed and results will be streamed
+to hard drive</p></li>
+<li><p><strong>result_path</strong> (<em>str</em>) – if not None, load results from the path</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parallel_cores</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">point_estimate</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">bootstrap</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">convergence_test</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">stream_to</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the estimation
+:param parallel_cores: number of parallel cores to use. Default 1
+:type parallel_cores: int
+:param point_estimate: if perform point estimation, default True
+:type point_estimate: bool
+:param bootstrap: if perform bootstrap uncertainty estimation, default False
+:type bootstrap: bool
+:param replicates: if perform replicates for uncertainty estimation, default False
+:type replicates: bool
+:param convergence_test: if perform convergence test, default False
+:type convergence_test: bool
+:param stream_to: Directly stream fitting results to disk if output path is given</p>
+<blockquote>
+<div><p>will create a folder with name of seq/hash with pickled dict of fitting results</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>overwrite</strong> (<em>bool</em>) – if overwrite existing results when stream to disk. Default False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.load_model">
+<em class="property">classmethod </em><code class="sig-name descname">load_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_path</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">result_path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.load_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a model from pickled config file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_path</strong> (<em>str</em>) – path to picked model configuration file or the saved folder</p></li>
+<li><p><strong>y_dataframe</strong> (<em>pd.DataFrame</em><em> or </em><em>str</em>) – y_data table for fitting</p></li>
+<li><p><strong>sigma</strong> (<em>pd.DataFrame</em><em> or </em><em>str</em>) – optional sigma table for fitting</p></li>
+<li><p><strong>result_path</strong> (<em>str</em>) – path to fitting results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a BatchFitter instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.save_model">
+<code class="sig-name descname">save_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_dir</span></em>, <em class="sig-param"><span class="n">results</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">bs_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">conv_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">tables</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.save_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save model to a given directory
+model_config will be saved as a pickled dictionary to recover the model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>except for <cite>y_dataframe</cite> and <cite>sigma</cite> which are too large</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>str</em>) – path to save the model, create if the path does not exist</p></li>
+<li><p><strong>results</strong> (<em>bool</em>) – if save estimation results to <cite>results</cite> as well, to be load by <cite>BatchFitResults</cite>,
+Default True</p></li>
+<li><p><strong>bs_record</strong> (<em>bool</em>) – if save bootstrap records, default True</p></li>
+<li><p><strong>conv_record</strong> (<em>bool</em>) – if save convergence records, default True</p></li>
+<li><p><strong>tables</strong> (<em>bool</em>) – if save tables (y_dataframe, sigma) in the folder. Default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.save_results">
+<code class="sig-name descname">save_results</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_path</span></em>, <em class="sig-param"><span class="n">bs_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">conv_record</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.save_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save results to disk as JSON or pickle
+JSON is preferred for speed, readability, compatibility, and security</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.least_squares_batch.BatchFitter.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_to</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.least_squares_batch.BatchFitter.summary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id20">
+<h2>k_seq.estimate.least_squares_batch<a class="headerlink" href="#id20" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-0"></span><p>Least-squares fitting for a batch of sequences</p>
+<dl class="py class">
+<dt id="id21">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.least_squares_batch.</code><code class="sig-name descname">BatchFitResults</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id21" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parse, store, and visualize BatchFitter results
+Only save results (separate from each estimator), corresponding estimator should be found by sequence
+We used two data storage strategies:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><dl class="simple">
+<dt>smaller dataset that was saved as <code class="docutils literal notranslate"><span class="pre">results.pkl</span></code>: the pickled file is passed, and the results will be</dt><dd><p>loaded to self.summary, self.bs_record, self.conv_record</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>larger dataset that was saved in <code class="docutils literal notranslate"><span class="pre">results/</span></code> folder: self. summary will be loaded, self.bs_record and</dt><dd><p>self.conv_record will be linked</p>
+</dd>
+</dl>
+</li>
+</ol>
+</div></blockquote>
+<dl class="py attribute">
+<dt id="id22">
+<code class="sig-name descname">estimator</code><a class="headerlink" href="#id22" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the <cite>BatchFitter</cite></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id23">
+<code class="sig-name descname">model</code><a class="headerlink" href="#id23" title="Permalink to this definition">¶</a></dt>
+<dd><p>model function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id24">
+<code class="sig-name descname">data</code><a class="headerlink" href="#id24" title="Permalink to this definition">¶</a></dt>
+<dd><p>contains data information:
+x_data (list-like): x_data for fitting
+y_dataframe (pd.DataFrame): a table of y_data for sequences
+simga (pd.DataFrame): a table representing each sigma for sequence in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id25">
+<code class="sig-name descname">large_data</code><a class="headerlink" href="#id25" title="Permalink to this definition">¶</a></dt>
+<dd><p>if True, it will not load all bootstrap or convergence results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id26">
+<code class="sig-name descname">summary</code><a class="headerlink" href="#id26" title="Permalink to this definition">¶</a></dt>
+<dd><p>summarized results with each sequence as index</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id27">
+<code class="sig-name descname">bs_record</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id27" title="Permalink to this definition">¶</a></dt>
+<dd><p>get bootstrap results {seq: <cite>SingleFitter.results.uncertainty.records</cite>}</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id28">
+<code class="sig-name descname">conv_record</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id28" title="Permalink to this definition">¶</a></dt>
+<dd><p>{seq: <a href="#id29"><span class="problematic" id="id30">`</span></a>SingleFitter.results.convergence.records}</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id31">
+<code class="sig-name descname">summary_to_csv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id31" title="Permalink to this definition">¶</a></dt>
+<dd><p>export summary dataframe as csv file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id32">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id32" title="Permalink to this definition">¶</a></dt>
+<dd><p>storage strategy for large files: save results as a folder of json files</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id33">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id33" title="Permalink to this definition">¶</a></dt>
+<dd><p>storage strategy for small files: save results as pickled dictionary</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id34">
+<code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id34" title="Permalink to this definition">¶</a></dt>
+<dd><p>load from a picked dictionary</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id35">
+<code class="sig-name descname">from_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id35" title="Permalink to this definition">¶</a></dt>
+<dd><p>load from a folder of json files</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id36">
+<code class="sig-name descname">load_result</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id36" title="Permalink to this definition">¶</a></dt>
+<dd><p>overall method to infer either load <cite>BatchFitResults</cite> from pickled or a folder</p>
+</dd></dl>
+
+<p>Analysis:</p>
+<dl class="py method">
+<dt id="id37">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id37" title="Permalink to this definition">¶</a></dt>
+<dd><p>Init a BatchFitResults instance
+:param estimator: corresponding estimator
+:type estimator: <cite>BatchFitter</cite></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id38">
+<code class="sig-name descname">bs_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seqs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id38" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve bootstrap records</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id39">
+<code class="sig-name descname">conv_record</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seqs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id39" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve convergence records</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id40">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path_to_folder</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id40" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load results from folder of results with json format</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id41">
+<em class="property">classmethod </em><code class="sig-name descname">from_pickle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path_to_pickle</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id41" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a <cite>BatchFitResults</cite> instance with results loaded from pickle
+Notice:</p>
+<blockquote>
+<div><p>this could take a very long time if the pickled file is large, suggest to use to_json for large dataset</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id42">
+<em class="property">static </em><code class="sig-name descname">generate_summary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_folder_path</span></em>, <em class="sig-param"><span class="n">n_core</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">save_to</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id42" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a summary csv file from given result folder. This could be used if summary was not successfully
+generated during fitting</p>
+<dl class="simple">
+<dt>Result folder should have a structure of:</dt><dd><ul class="simple">
+<li><p>seqs
+- [seq name or hash].json
+- [if hash] seq_to_hash.json</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result_folder_path</strong> (<em>str</em>) – path to the root of <cite>results</cite> folder</p></li>
+<li><p><strong>n_core</strong> (<em>int</em>) – number of threads to process in parallel. Default 1</p></li>
+<li><p><strong>save_to</strong> (<em>str</em>) – save CSV file to local path</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>pd.DataFrame of summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id43">
+<code class="sig-name descname">get_FitResult</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seq</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id43" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get FitResults from a JSON file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id44">
+<em class="property">classmethod </em><code class="sig-name descname">load_result</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_path</span></em>, <em class="sig-param"><span class="n">estimator</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id44" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="id45">
+<code class="sig-name descname">summary_to_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id45" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save summary table as csv file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id46">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_dir</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id46" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Save results in json format, with the structure of</dt><dd><dl>
+<dt><a href="#id47"><span class="problematic" id="id48">|</span></a>output_dir/</dt><dd><p><a href="#id49"><span class="problematic" id="id50">|</span></a>- summary.csv
+<a href="#id51"><span class="problematic" id="id52">|</span></a>- seqs</p>
+<blockquote>
+<div><p><a href="#id53"><span class="problematic" id="id54">|</span></a>- seq1.json
+<a href="#id55"><span class="problematic" id="id56">|</span></a>- seq2.json</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Bootstrap and convergence records should already be streamed as separate JSON files under /seqs/</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output_dir</strong> (<em>str</em>) – path of folder to save results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id57">
+<code class="sig-name descname">to_pickle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_dir</span></em>, <em class="sig-param"><span class="n">bs_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">conv_record</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id57" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save fitting results as a single pickled dict, suitable for small dataset.
+For large dataset <cite>to_json</cite> is preferred</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>str</em>) – path to saved results, should have suffix of <code class="docutils literal notranslate"><span class="pre">.pkl</span></code></p></li>
+<li><p><strong>bs_record</strong> (<em>bool</em>) – if output bs_record, default True</p></li>
+<li><p><strong>conv_record</strong> (<em>bool</em>) – if output conv_record, default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="id58">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.least_squares_batch.</code><code class="sig-name descname">BatchFitter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_dataframe</span></em>, <em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">seq_to_fit</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounds</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">init_guess</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">opt_method</span><span class="o">=</span><span class="default_value">'trf'</span></em>, <em class="sig-param"><span class="n">exclude_zero</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">metrics</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rnd_seed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">curve_fit_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'pct_res'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">note</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">large_dataset</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">result_path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id58" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">k_seq.estimate._estimator.Estimator</span></code></p>
+<p>Least-squares fitting for batch of sequences</p>
+<dl class="py attribute">
+<dt id="id59">
+<code class="sig-name descname">y_dataframe</code><a class="headerlink" href="#id59" title="Permalink to this definition">¶</a></dt>
+<dd><p>Table of y values for sequences (rows) to fit kinetic models</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id60">
+<code class="sig-name descname">model</code><a class="headerlink" href="#id60" title="Permalink to this definition">¶</a></dt>
+<dd><p>model to fit</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id61">
+<code class="sig-name descname">x_data</code><a class="headerlink" href="#id61" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of x values in fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id62">
+<code class="sig-name descname">seq_to_fit</code><a class="headerlink" href="#id62" title="Permalink to this definition">¶</a></dt>
+<dd><p>pick top n sequences in the table for fitting or only fit selected sequences</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int or list of seq</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id63">
+<code class="sig-name descname">sigma</code><a class="headerlink" href="#id63" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list, pd.Series, or pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id64">
+<code class="sig-name descname">note</code><a class="headerlink" href="#id64" title="Permalink to this definition">¶</a></dt>
+<dd><p>note about this fitting job</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id65">
+<code class="sig-name descname">results</code><a class="headerlink" href="#id65" title="Permalink to this definition">¶</a></dt>
+<dd><p>accessor to fitting results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>BatchFitResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id66">
+<code class="sig-name descname">fit_params</code><a class="headerlink" href="#id66" title="Permalink to this definition">¶</a></dt>
+<dd><p>collection of arguments pass to each single seq fitting, includes:
+x_data (list): list of x values in fitting
+model (callable): model to fit
+bounds (2 by m <cite>list</cite> ): Optional, [[lower bounds], [higher bounds]] for each parameter
+init_guess (list of float or generator): Initial guess estimate parameters, random value from 0 to 1 will be use if None
+opt_method (str): Optimization methods in <cite>scipy.optimize</cite>. Default ‘trf’
+exclude_zero (bool): If exclude zero/missing data in fitting. Default False.
+metrics (dict of callable): Optional. Extra metric/parameters to calculate for each estimation
+rnd_seed (int): random seed used in fitting for reproducibility
+curve_fit_kwargs (dict): other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite>
+replicates (list of list): List of list of sample names for each replicates
+bootstrap_num (<cite>int</cite>): Number of bootstrap to perform, 0 means no bootstrap
+bs_record_num (<cite>int</cite>): Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption
+bs_method (<cite>str</cite>): Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)
+bs_stats (dict of callable): a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+grouper (dict or Grouper): Indicate the grouping of samples
+record_full (bool): if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.
+conv_reps (int): number of repeated fitting from perturbed initial points for convergence test
+conv_init_range (list of 2-tuple): a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw
+conv_stats (dict of callable): a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+overwrite:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="k_seq.utility.html#k_seq.utility.func_tools.AttrScope" title="k_seq.utility.func_tools.AttrScope">AttrScope</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id67">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_dataframe</span></em>, <em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">x_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">seq_to_fit</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounds</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">init_guess</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">opt_method</span><span class="o">=</span><span class="default_value">'trf'</span></em>, <em class="sig-param"><span class="n">exclude_zero</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">metrics</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rnd_seed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">curve_fit_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'pct_res'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">note</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">large_dataset</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">result_path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id67" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a BatchFitter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_dataframe</strong> (<em>pd.DataFrame</em>) – </p></li>
+<li><p><strong>y_dataframe</strong> – Table of y values for sequences (rows) to fit kinetic models</p></li>
+<li><p><strong>x_data</strong> (<em>list</em>) – list of x values in fitting</p></li>
+<li><p><strong>model</strong> (<em>callable</em>) – model to fit</p></li>
+<li><p><strong>seq_to_fit</strong> (<em>int</em><em> or </em><em>list of seq</em>) – pick top n sequences in the table for fitting or only fit selected sequences</p></li>
+<li><p><strong>sigma</strong> (<em>list</em><em>, </em><em>pd.Series</em><em>, or </em><em>pd.DataFrame</em>) – Optional, same size as y_data/y_dataframe.Sigma (variance) for data points for weighted fitting</p></li>
+<li><p><strong>bounds</strong> (2 by m <cite>list</cite>) – Optional, [[lower bounds], [higher bounds]] for each parameter</p></li>
+<li><p><strong>init_guess</strong> (<em>list of float</em><em> or </em><em>generator</em>) – Initial guess estimate parameters, random value from 0 to 1 will be use if None</p></li>
+<li><p><strong>opt_method</strong> (<em>str</em>) – Optimization methods in <cite>scipy.optimize</cite>. Default ‘trf’</p></li>
+<li><p><strong>exclude_zero</strong> (<em>bool</em>) – If exclude zero/missing data in fitting. Default False.</p></li>
+<li><p><strong>metrics</strong> (<em>dict of callable</em>) – Optional. Extra metric/parameters to calculate for each estimation</p></li>
+<li><p><strong>rnd_seed</strong> (<em>int</em>) – random seed used in fitting for reproducibility</p></li>
+<li><p><strong>curve_fit_kwargs</strong> (<em>dict</em>) – other keyword parameters to pass to <cite>scipy.optimize.curve_fit</cite></p></li>
+<li><p><strong>bootstrap_num</strong> (<cite>int</cite>) – Number of bootstrap to perform, 0 means no bootstrap</p></li>
+<li><p><strong>bs_record_num</strong> (<cite>int</cite>) – Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption</p></li>
+<li><p><strong>bs_method</strong> (<cite>str</cite>) – Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)</p></li>
+<li><p><strong>bs_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+<li><p><strong>grouper</strong> (<em>dict</em><em> or </em><a class="reference internal" href="k_seq.data.html#k_seq.data.grouper.Grouper" title="k_seq.data.grouper.Grouper"><em>Grouper</em></a>) – Indicate the grouping of samples</p></li>
+<li><p><strong>record_full</strong> (<em>bool</em>) – if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.</p></li>
+<li><p><strong>conv_reps</strong> (<em>int</em>) – number of repeated fitting from perturbed initial points for convergence test</p></li>
+<li><p><strong>conv_init_range</strong> (<em>list of 2-tuple</em>) – a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw</p></li>
+<li><p><strong>conv_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+<li><p><strong>note</strong> (<em>str</em>) – optional notes for the estimator</p></li>
+<li><p><strong>(</strong><strong>bool</strong> (<em>large_dataset</em>) – if trigger strategy to work on large dataset (e.g. &gt; 1000 seqs). If True, deduplicate of
+sequences with same reacted fractions in each concentration will be performed and results will be streamed
+to hard drive</p></li>
+<li><p><strong>result_path</strong> (<em>str</em>) – if not None, load results from the path</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id68">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parallel_cores</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">point_estimate</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">replicates</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">bootstrap</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">convergence_test</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">stream_to</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id68" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the estimation
+:param parallel_cores: number of parallel cores to use. Default 1
+:type parallel_cores: int
+:param point_estimate: if perform point estimation, default True
+:type point_estimate: bool
+:param bootstrap: if perform bootstrap uncertainty estimation, default False
+:type bootstrap: bool
+:param replicates: if perform replicates for uncertainty estimation, default False
+:type replicates: bool
+:param convergence_test: if perform convergence test, default False
+:type convergence_test: bool
+:param stream_to: Directly stream fitting results to disk if output path is given</p>
+<blockquote>
+<div><p>will create a folder with name of seq/hash with pickled dict of fitting results</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>overwrite</strong> (<em>bool</em>) – if overwrite existing results when stream to disk. Default False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id69">
+<em class="property">classmethod </em><code class="sig-name descname">load_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_path</span></em>, <em class="sig-param"><span class="n">y_dataframe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigma</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">result_path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id69" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a model from pickled config file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_path</strong> (<em>str</em>) – path to picked model configuration file or the saved folder</p></li>
+<li><p><strong>y_dataframe</strong> (<em>pd.DataFrame</em><em> or </em><em>str</em>) – y_data table for fitting</p></li>
+<li><p><strong>sigma</strong> (<em>pd.DataFrame</em><em> or </em><em>str</em>) – optional sigma table for fitting</p></li>
+<li><p><strong>result_path</strong> (<em>str</em>) – path to fitting results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a BatchFitter instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id70">
+<code class="sig-name descname">save_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_dir</span></em>, <em class="sig-param"><span class="n">results</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">bs_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">conv_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">tables</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id70" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save model to a given directory
+model_config will be saved as a pickled dictionary to recover the model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>except for <cite>y_dataframe</cite> and <cite>sigma</cite> which are too large</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>str</em>) – path to save the model, create if the path does not exist</p></li>
+<li><p><strong>results</strong> (<em>bool</em>) – if save estimation results to <cite>results</cite> as well, to be load by <cite>BatchFitResults</cite>,
+Default True</p></li>
+<li><p><strong>bs_record</strong> (<em>bool</em>) – if save bootstrap records, default True</p></li>
+<li><p><strong>conv_record</strong> (<em>bool</em>) – if save convergence records, default True</p></li>
+<li><p><strong>tables</strong> (<em>bool</em>) – if save tables (y_dataframe, sigma) in the folder. Default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id71">
+<code class="sig-name descname">save_results</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_path</span></em>, <em class="sig-param"><span class="n">bs_record</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">conv_record</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id71" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save results to disk as JSON or pickle
+JSON is preferred for speed, readability, compatibility, and security</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id72">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_to</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id72" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.estimate.bootstrap">
+<span id="k-seq-estimate-bootstrap"></span><h2>k_seq.estimate.bootstrap<a class="headerlink" href="#module-k_seq.estimate.bootstrap" title="Permalink to this headline">¶</a></h2>
+<p>Uncertainty estimation through bootstrap</p>
+<dl class="py class">
+<dt id="k_seq.estimate.bootstrap.Bootstrap">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.bootstrap.</code><code class="sig-name descname">Bootstrap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span></em>, <em class="sig-param"><span class="n">bs_record_num</span></em>, <em class="sig-param"><span class="n">bs_method</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Perform bootstrap for fitting uncertainty estimation</p>
+<dl class="simple">
+<dt>Three types of bootstrap supported:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt><cite>rel_res</cite>: resample the percent residue, based on the assumption that variance are proportional to the mean</dt><dd><p>(from data property)</p>
+</dd>
+</dl>
+</li>
+<li><p><cite>data</cite>: directly resample data points</p></li>
+<li><p><cite>stratified</cite>: resample within groups, <cite>grouper</cite> is required</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.estimator">
+<code class="sig-name descname">estimator</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>accessor to the associated estimator</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>EstimatorBase</cite> type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.bs_method">
+<code class="sig-name descname">bs_method</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.bs_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.bootstrap_num">
+<code class="sig-name descname">bootstrap_num</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.bootstrap_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of bootstrap to perform, 0 means no bootstrap</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.bs_record_num">
+<code class="sig-name descname">bs_record_num</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.bs_record_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><cite>int</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.bs_stats">
+<code class="sig-name descname">bs_stats</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.bs_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict of callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.grouper">
+<code class="sig-name descname">grouper</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.grouper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicate the grouping of samples</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict or <a class="reference internal" href="k_seq.data.html#k_seq.data.grouper.Grouper" title="k_seq.data.grouper.Grouper">Grouper</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.record_full">
+<code class="sig-name descname">record_full</code><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.record_full" title="Permalink to this definition">¶</a></dt>
+<dd><p>if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span></em>, <em class="sig-param"><span class="n">bs_record_num</span></em>, <em class="sig-param"><span class="n">bs_method</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>estimator</strong> (<em>Estimator</em>) – the estimator generates the results</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>bootstrap_num (<cite>int</cite>): Number of bootstrap to perform, 0 means no bootstrap</dt><dd><p>bs_record_num (<cite>int</cite>): Number of bootstrap results to store. Negative number means store all results.Not recommended due to memory consumption
+bs_method (<cite>str</cite>): Bootstrap method, choose from ‘pct_res’ (resample percent residue),’data’ (resample data), or ‘stratified’ (resample within replicates)
+bs_stats (dict of callable): a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series
+grouper (dict or Grouper): Indicate the grouping of samples
+record_full (bool): if record the x_value and y_value for each bootstrapped sample; if False, only parameters and metrics are recorded. Default False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id73">
+<em class="property">property </em><code class="sig-name descname">bs_method</code><a class="headerlink" href="#id73" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.bootstrap.Bootstrap.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.bootstrap.Bootstrap.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform bootstrap with arguments indicated in instance attributes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>summarized results for each parameter and metrics from bootstrap
+records (pd.DataFrame): records of bootstrapped results, each row is a bootstrapped result</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>summary (pd.Series)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.estimate.replicates">
+<span id="k-seq-estimate-replicates"></span><h2>k_seq.estimate.replicates<a class="headerlink" href="#module-k_seq.estimate.replicates" title="Permalink to this headline">¶</a></h2>
+<p>Uncertainty estimation using replicates</p>
+<dl class="py class">
+<dt id="k_seq.estimate.replicates.Replicates">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.replicates.</code><code class="sig-name descname">Replicates</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">replicates</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.replicates.Replicates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="k_seq.estimate.replicates.Replicates.n_replicates">
+<em class="property">property </em><code class="sig-name descname">n_replicates</code><a class="headerlink" href="#k_seq.estimate.replicates.Replicates.n_replicates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.replicates.Replicates.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.replicates.Replicates.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform fitting for replicates</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.estimate.convergence">
+<span id="k-seq-estimate-convergence"></span><h2>k_seq.estimate.convergence<a class="headerlink" href="#module-k_seq.estimate.convergence" title="Permalink to this headline">¶</a></h2>
+<p>Module to access the convergence of fitting, e.g. model identifiability</p>
+<dl class="py class">
+<dt id="k_seq.estimate.convergence.ConvergenceTester">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.convergence.</code><code class="sig-name descname">ConvergenceTester</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Apply repeated fitting on a Estimator with perturbed initial value to test empirical convergence
+Store the convergence test results as these are separate tests from estimation</p>
+<dl class="py attribute">
+<dt id="k_seq.estimate.convergence.ConvergenceTester.conv_reps">
+<code class="sig-name descname">conv_reps</code><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester.conv_reps" title="Permalink to this definition">¶</a></dt>
+<dd><p>number of repeated fitting from perturbed initial points for convergence test</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.convergence.ConvergenceTester.estimator">
+<code class="sig-name descname">estimator</code><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester.estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>estimator for fitting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Estimator</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.convergence.ConvergenceTester.conv_init_range">
+<code class="sig-name descname">conv_init_range</code><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester.conv_init_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of 2-tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="k_seq.estimate.convergence.ConvergenceTester.conv_stats">
+<code class="sig-name descname">conv_stats</code><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester.conv_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict of callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.convergence.ConvergenceTester.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>run converge test and return a summary and full records</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.convergence.ConvergenceTester.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">estimator</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.convergence.ConvergenceTester.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply convergence test to given estimator</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator</strong> (<em>Estimator</em>) – estimator for fitting</p></li>
+<li><p><strong>conv_reps</strong> (<em>int</em>) – number of repeated fitting from perturbed initial points for convergence test</p></li>
+<li><p><strong>conv_init_range</strong> (<em>list of 2-tuple</em>) – a list of two tuple range (min, max) with same length as model parameters. If None, all parameters are initialized from (0, 1) with random uniform draw</p></li>
+<li><p><strong>conv_stats</strong> (<em>dict of callable</em>) – a dict of stats functions to input the full record table (pd.DataFrame with parameters and metrics as columns) and return a single value, dict, or pd.Series</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id74">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id74" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run convergence test, report a summary and full records</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A pd.Series contains the <cite>mean</cite>, <cite>sd</cite>, <cite>range</cite> for each reported parameter, and conv_stats result
+records: A pd.Dataframe contains the full records</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-k_seq.estimate.model_ident">
+<span id="k-seq-estimate-model-ident"></span><h2>k_seq.estimate.model_ident<a class="headerlink" href="#module-k_seq.estimate.model_ident" title="Permalink to this headline">¶</a></h2>
+<p>Modules for model identifiability analysis</p>
+<dl class="py class">
+<dt id="k_seq.estimate.model_ident.ParamMap">
+<em class="property">class </em><code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">ParamMap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">sample_n</span></em>, <em class="sig-param"><span class="n">x_data</span></em>, <em class="sig-param"><span class="n">save_to</span></em>, <em class="sig-param"><span class="n">param1_name</span></em>, <em class="sig-param"><span class="n">param1_range</span></em>, <em class="sig-param"><span class="n">param2_name</span></em>, <em class="sig-param"><span class="n">param2_range</span></em>, <em class="sig-param"><span class="n">param1_log</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">param2_log</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">model_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bootstrap_num</span><span class="o">=</span><span class="default_value">100</span></em>, <em class="sig-param"><span class="n">bs_record_num</span><span class="o">=</span><span class="default_value">50</span></em>, <em class="sig-param"><span class="n">bs_method</span><span class="o">=</span><span class="default_value">'data'</span></em>, <em class="sig-param"><span class="n">bs_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouper</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">record_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">conv_reps</span><span class="o">=</span><span class="default_value">20</span></em>, <em class="sig-param"><span class="n">conv_stats</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">conv_init_range</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fitting_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">seed</span><span class="o">=</span><span class="default_value">23</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.ParamMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate a 2d convergence map for randomly sampled data points from given parameter range
+it simulates sample_n sequence samples with random params selected from the range of (param1_range, param2_range),
+on the optional log scale</p>
+<dl class="py method">
+<dt id="k_seq.estimate.model_ident.ParamMap.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.ParamMap.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Batch fit simulated result</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.model_ident.ParamMap.get_metric_values">
+<code class="sig-name descname">get_metric_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">metric</span></em>, <em class="sig-param"><span class="n">finite_only</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.ParamMap.get_metric_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a pd.Series contains the metric value</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.model_ident.ParamMap.load_result">
+<em class="property">classmethod </em><code class="sig-name descname">load_result</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">result_path</span></em>, <em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.ParamMap.load_result" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.model_ident.ParamMap.plot_map">
+<code class="sig-name descname">plot_map</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">metric</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">metric_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">scatter</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">gridsize</span><span class="o">=</span><span class="default_value">50</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">5, 5</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cax_pos</span><span class="o">=</span><span class="default_value">0.91, 0.58, 0.03, 0.3</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">plot_kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.ParamMap.plot_map" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="k_seq.estimate.model_ident.ParamMap.simulate_samples">
+<code class="sig-name descname">simulate_samples</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grid</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">const_err</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rel_err</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_enforce_positive</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.ParamMap.simulate_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate a set of samples (param1 and param2)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.estimate.model_ident.kendall_log">
+<code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">kendall_log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">records</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.kendall_log" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.estimate.model_ident.pearson">
+<code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">pearson</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">records</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.pearson" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.estimate.model_ident.pearson_log">
+<code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">pearson_log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">records</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.pearson_log" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.estimate.model_ident.remove_nan">
+<code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">remove_nan</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.remove_nan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.estimate.model_ident.spearman">
+<code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">spearman</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">records</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.spearman" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.estimate.model_ident.spearman_log">
+<code class="sig-prename descclassname">k_seq.estimate.model_ident.</code><code class="sig-name descname">spearman_log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">records</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.estimate.model_ident.spearman_log" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="k-seq-estimate-visualizer">
+<h2>k_seq.estimate.visualizer<a class="headerlink" href="#k-seq-estimate-visualizer" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="k_seq.utility.html" class="btn btn-neutral float-right" title="k_seq.utility: miscellaneous utility functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="k_seq.model.html" class="btn btn-neutral float-left" title="k_seq.model: kinetics and pool models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Yuning Shen
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

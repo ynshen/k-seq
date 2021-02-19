@@ -1,35 +1,38 @@
-``k_seq.data`` package
-===================
-.. toctree::
-   :maxdepth: 4
+``k_seq.data``: data preprocessing
+===================================
 
-   getting_started
+.. automodule:: k_seq.data
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
-
-k\_seq.data.count\_data module
+k\_seq.data.preprocess
 ------------------------------
 
-.. automodule:: k_seq.data.count_data
+.. automodule:: k_seq.data.preprocess
    :members:
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.count\_file module
-------------------------------
 
-.. automodule:: k_seq.data.count_file
-   :members:
-   :undoc-members:
-   :show-inheritance:
+k\_seq.data.seq\_data
+-----------------------------
 
-k\_seq.data.datasets module
----------------------------
+.. automodule:: k_seq.data.seq_data
+  :members:
+  :undoc-members:
+  :show-inheritance:
 
-.. automodule:: k_seq.data.datasets
-   :members:
-   :undoc-members:
-   :show-inheritance:
+
+k\_seq.data.seq\_data\_analyzer
+-----------------------------
+
+.. automodule:: k_seq.data.seq_data_analyzer
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
 
 k\_seq.data.filters module
 --------------------------
@@ -39,6 +42,16 @@ k\_seq.data.filters module
    :undoc-members:
    :show-inheritance:
 
+
+ k\_seq.data.transform module
+ ----------------------------
+
+ .. automodule:: k_seq.data.transform
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 k\_seq.data.grouper module
 --------------------------
 
@@ -47,37 +60,23 @@ k\_seq.data.grouper module
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.io module
----------------------
+.. k\_seq.data.landscape module
+.. ----------------------------
+..
+.. .. automodule:: k_seq.data.landscape
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
-.. automodule:: k_seq.data.io
+
+k\_seq.data.variant\_pool module
+-----------------------
+
+.. automodule:: k_seq.data.variant_pool
    :members:
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.landscape module
-----------------------------
-
-.. automodule:: k_seq.data.landscape
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-k\_seq.data.seq\_table module
------------------------------
-
-.. automodule:: k_seq.data.seq_table
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-k\_seq.data.seq\_table\_vis module
-----------------------------------
-
-.. automodule:: k_seq.data.seq_table_vis
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 k\_seq.data.simu module
 -----------------------
@@ -87,27 +86,11 @@ k\_seq.data.simu module
    :undoc-members:
    :show-inheritance:
 
-k\_seq.data.transform module
-----------------------------
 
-.. automodule:: k_seq.data.transform
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-k\_seq.data.visualizer module
+k\_seq.data.visualzation module
 -----------------------------
 
-.. automodule:: k_seq.data.visualizer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: k_seq.data
+.. automodule:: k_seq.data.visualzation
    :members:
    :undoc-members:
    :show-inheritance:
