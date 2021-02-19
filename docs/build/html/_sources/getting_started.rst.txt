@@ -121,6 +121,7 @@ criteria. For example, sequences contain ambiguous nucleotides ('N') and with un
 :class:`SeqLengthFilter <k_seq.data.filters.SeqLengthFilter>`. Some sample failed in the quality control for the experiment
 can also be removed by :class:`SampleFilter <k_seq.data.filters.Samplefilter>`.
 
+
 These tables can be save as processed tables under :class:`SeqData.tables`.
 
 .. code-block:: python
@@ -132,6 +133,11 @@ These tables can be save as processed tables under :class:`SeqData.tables`.
             dataset.table.original
         )
     )
+
+
+.. note::
+
+	This tutorial is under working progress and is frequently updated
 
 Sequence quantification
 ***********************

@@ -6,8 +6,8 @@
 ``k-seq``: a package for kinetic measurements with high throughput sequencing
 ===========================================================================
 
-Welcome to the documentation for ``k-seq``, a python package to analyze the data from kinetic measurement using
-high throughput sequencing. It contains the function to process the FASTQ reads to a count table, preprocess
+Welcome to the documentation for ``k-seq``, a python package to analyze the data from *k*-Seq (a kinetic assay using
+high throughput sequencing). It contains the function to process the FASTQ reads to a count table, preprocess
 count table, quantify the extend of reaction, and fitting the data into kinetic model with bootstrapping to quantify
 the uncertainty.
 
@@ -28,3 +28,9 @@ API reference
 -------------------
 * :doc:`k-seq_package`
 * :ref:`modindex`
+
+
+Contact
+==========
+For any question and issues: `issue report <https://github.com/ichen-lab-ucsb/k-seq/issues>`_
+or Yuning Shen (yuningshen@ucsb.edu)

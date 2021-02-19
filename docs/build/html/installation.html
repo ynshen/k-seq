@@ -83,8 +83,12 @@
             
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#option-1-create-a-new-conda-environment">Option 1: create a new <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#option-2-install-through-pip">Option 2: install through <code class="docutils literal notranslate"><span class="pre">pip</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#python-only-installation">Python-only installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#complete-installation">Complete installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#option-1-install-with-conda">Option 1: install with <code class="docutils literal notranslate"><span class="pre">conda</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#option-2-install-manually">Option 2: install manually</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started Tutorial</a></li>
@@ -155,26 +159,45 @@
             
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="option-1-create-a-new-conda-environment">
-<h2>Option 1: create a new <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment<a class="headerlink" href="#option-1-create-a-new-conda-environment" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="python-only-installation">
+<h2>Python-only installation<a class="headerlink" href="#python-only-installation" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> package can directly install from <code class="docutils literal notranslate"><span class="pre">pip</span></code> (<a class="reference external" href="https://pypi.org/project/k-seq/">https://pypi.org/project/k-seq/</a>):</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install k-seq
+</pre></div>
+</div>
+<p>The python-only package has most functionalities ready-to-use for count data
+(e.g., preprocessed count files or a CSV table).
+For FASTQ read joining, trimming, and deduplication, we use <a class="reference external" href="https://github.com/ichen-lab-ucsb/EasyDIVER">EasyDIVER</a>
+and require additional dependencies on <a class="reference external" href="https://github.com/neufeld/pandaseq/wiki/Installation">PANDAseq</a>.</p>
+</div>
+<div class="section" id="complete-installation">
+<h2>Complete installation<a class="headerlink" href="#complete-installation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="option-1-install-with-conda">
+<h3>Option 1: install with <code class="docutils literal notranslate"><span class="pre">conda</span></code><a class="headerlink" href="#option-1-install-with-conda" title="Permalink to this headline">¶</a></h3>
 <p>We recommend to use <a class="reference external" href="https://anaconda.org/">Anaconda</a> to create a separate <cite>k-seq</cite> environment.
 Or a minimal installation: <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>.</p>
 <p>To crate <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> environment once <cite>conda</cite> in installed:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># change directory to downloaded repo</span>
 <span class="nb">cd</span> /to/k-seq-git-repo
+
 <span class="c1"># create a k-seq environment</span>
 conda create -f environment.yml
+
 <span class="c1"># activate k-seq environment</span>
 conda activate k-seq
+
+<span class="c1"># install k-seq python package</span>
+pip install k-seq
 </pre></div>
 </div>
 </div>
-<div class="section" id="option-2-install-through-pip">
-<h2>Option 2: install through <code class="docutils literal notranslate"><span class="pre">pip</span></code><a class="headerlink" href="#option-2-install-through-pip" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">k-seq</span></code> can also install through <code class="docutils literal notranslate"><span class="pre">pip</span></code> (<a class="reference external" href="https://pypi.org/project/k-seq/">https://pypi.org/project/k-seq/</a>)</p>
-<p>In your python environment, install <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> and dependencies</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install k-seq
+<div class="section" id="option-2-install-manually">
+<h3>Option 2: install manually<a class="headerlink" href="#option-2-install-manually" title="Permalink to this headline">¶</a></h3>
+<p>Before install <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> python packge, please install to <a class="reference external" href="https://github.com/ichen-lab-ucsb/EasyDIVER">EasyDIVER</a> for
+sequencing reads processing. Once EasyDIVER is installed, install <code class="docutils literal notranslate"><span class="pre">k-seq</span></code> python package through <code class="docutils literal notranslate"><span class="pre">pip</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">k</span><span class="o">-</span><span class="n">seq</span>
 </pre></div>
+</div>
 </div>
 </div>
 </div>

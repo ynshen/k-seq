@@ -134,6 +134,11 @@ These tables can be save as processed tables under :class:`SeqData.tables`.
         )
     )
 
+
+.. note::
+
+	This tutorial is under working progress and is frequently updated
+
 Sequence quantification
 ***********************
 

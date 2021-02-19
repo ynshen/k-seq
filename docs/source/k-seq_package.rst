@@ -2,6 +2,10 @@
 ``k-seq`` package
 *****************
 
+.. note::
+
+	This tutorial is under working progress and is frequently updated
+  
 ``k-seq`` package contains following modules:
 
 .. toctree::
