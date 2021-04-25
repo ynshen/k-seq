@@ -4,8 +4,8 @@
 
 .. note::
 
-	This tutorial is under working progress and is frequently updated
-  
+	This API document is on working process and is frequently updated
+
 ``k-seq`` package contains following modules:
 
 .. toctree::
@@ -16,7 +16,6 @@
    k_seq.estimate
    k_seq.utility
 
-..
 ..
 .. data
 .. ===================

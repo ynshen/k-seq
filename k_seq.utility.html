@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>k_seq.utility: miscellaneous utility functions &mdash; k-seq 0.4.0 documentation</title>
+  <title>k_seq.utility: miscellaneous utility functions &mdash; k-seq 1.0.0 documentation</title>
   
 
   
@@ -33,10 +33,11 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/my_theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="k_seq.estimate: least squares fitting" href="k_seq.estimate.html" /> 
+    <link rel="prev" title="k_seq.estimate: least squares fitting" href="k_seq.estimate.html" />
+    <link href="_static/update_theme.css" rel="stylesheet" type="text/css">
+
 </head>
 
 <body class="wy-body-for-nav">
@@ -163,7 +164,13 @@
             
   <div class="section" id="k-seq-utility-miscellaneous-utility-functions">
 <h1><code class="docutils literal notranslate"><span class="pre">k_seq.utility</span></code>: miscellaneous utility functions<a class="headerlink" href="#k-seq-utility-miscellaneous-utility-functions" title="Permalink to this headline">¶</a></h1>
-<span class="target" id="module-k_seq.utility"></span><div class="section" id="module-k_seq.utility.file_tools">
+<span class="target" id="module-k_seq.utility"></span><dl class="py function">
+<dt id="k_seq.utility.mp_job">
+<code class="sig-prename descclassname">k_seq.utility.</code><code class="sig-name descname">mp_job</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fn</span></em>, <em class="sig-param"><span class="n">itr</span></em>, <em class="sig-param"><span class="n">n_proc</span><span class="o">=</span><span class="default_value">12</span></em>, <em class="sig-param"><span class="n">chunksize</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">use_fork</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.utility.mp_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run jobs in the iterator in parallel</p>
+</dd></dl>
+
+<div class="section" id="module-k_seq.utility.file_tools">
 <span id="k-seq-utility-file-tools-module"></span><h2>k_seq.utility.file_tools module<a class="headerlink" href="#module-k_seq.utility.file_tools" title="Permalink to this headline">¶</a></h2>
 <dl class="py function">
 <dt id="k_seq.utility.file_tools.check_dir">
@@ -257,6 +264,11 @@ only file name will be returned; if file_root contains multiple strings, full pa
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py function">
+<dt id="k_seq.utility.file_tools.load_tar_gz">
+<code class="sig-prename descclassname">k_seq.utility.file_tools.</code><code class="sig-name descname">load_tar_gz</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tarfile</span></em>, <em class="sig-param"><span class="n">file_to_extract</span></em>, <em class="sig-param"><span class="n">load_fn</span></em>, <em class="sig-param"><span class="n">gzip</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#k_seq.utility.file_tools.load_tar_gz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt id="k_seq.utility.file_tools.read_json">
@@ -607,7 +619,7 @@ implemented with x as the innest dimension</p></li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2020, Yuning Shen
+        &copy; Copyright 2021, Yuning Shen
 
     </p>
   </div>
